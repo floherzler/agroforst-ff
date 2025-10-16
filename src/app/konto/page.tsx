@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { databases } from "@/models/client/config";
-import { functions } from "@/models/client/config";
+import { account, databases, functions } from "@/models/client/config";
 import env from "@/app/env";
 import { Query } from "appwrite";
 import Link from "next/link";
@@ -18,6 +17,14 @@ export default function AccountPage() {
   const { user, logout } = useAuthStore();
   const [orders, setOrders] = React.useState<Bestellung[] | null>(null);
   const [loadingOrders, setLoadingOrders] = React.useState(true);
+  const [verificationStatus, setVerificationStatus] = React.useState<
+    { state: "idle" | "loading" | "sent" | "error"; message?: string }
+  >({ state: "idle" });
+  const [membershipType, setMembershipType] = React.useState<"privat" | "business">("privat");
+  const [membershipStatus, setMembershipStatus] = React.useState<
+    { state: "idle" | "loading" | "success" | "error"; message?: string }
+  >({ state: "idle" });
+  const membershipFunctionId = env.appwrite.membership_function_id;
 
   React.useEffect(() => {
     if (!user) return;
@@ -103,6 +110,69 @@ export default function AccountPage() {
     return <Badge variant={variant}>{label}</Badge>;
   }
 
+  const sendVerificationEmail = React.useCallback(async () => {
+    if (!user || user.emailVerification || verificationStatus.state === "loading") return;
+    setVerificationStatus({ state: "loading" });
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      if (!origin) {
+        throw new Error("Die aktuelle Seitenadresse konnte nicht ermittelt werden.");
+      }
+      await account.createVerification(`${origin}/verify-email`);
+      setVerificationStatus({
+        state: "sent",
+        message: "Wir haben eine Verifizierungs-E-Mail versendet.",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Die Verifizierungs-E-Mail konnte nicht gesendet werden.";
+      setVerificationStatus({ state: "error", message });
+    }
+  }, [user, verificationStatus.state]);
+
+  const requestMembership = React.useCallback(async () => {
+    if (!user) return;
+    if (!user.emailVerification) {
+      setMembershipStatus({
+        state: "error",
+        message: "Bitte verifizieren Sie Ihre Email, bevor Sie eine Mitgliedschaft beantragen.",
+      });
+      return;
+    }
+    if (!membershipFunctionId || membershipFunctionId === "undefined") {
+      setMembershipStatus({
+        state: "error",
+        message: "Mitgliedschaftsanfragen sind derzeit nicht konfiguriert.",
+      });
+      return;
+    }
+
+    setMembershipStatus({ state: "loading" });
+    try {
+      await functions.createExecution(
+        membershipFunctionId,
+        JSON.stringify({ type: membershipType })
+      );
+      setMembershipStatus({
+        state: "success",
+        message: "Ihre Anfrage wurde versendet. Wir melden uns schnellstmöglich.",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Die Anfrage konnte nicht gesendet werden.";
+      setMembershipStatus({ state: "error", message });
+    }
+  }, [membershipFunctionId, membershipType, user]);
+
+  const selectMembershipType = React.useCallback((type: "privat" | "business") => {
+    setMembershipType(type);
+    setMembershipStatus((prev) => (prev.state === "loading" ? prev : { state: "idle" }));
+  }, []);
+
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -140,6 +210,24 @@ export default function AccountPage() {
                   <Badge variant={user.emailVerification ? "default" : "secondary"} className="text-xs">
                     {user.emailVerification ? "Email verifiziert" : "Email nicht verifiziert"}
                   </Badge>
+                  {!user.emailVerification && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={sendVerificationEmail}
+                      disabled={verificationStatus.state === "loading"}
+                    >
+                      {verificationStatus.state === "loading" ? "Sende…" : "Email verifizieren"}
+                    </Button>
+                  )}
+                  {verificationStatus.message && (
+                    <div
+                      className={`basis-full text-xs ${verificationStatus.state === "error" ? "text-destructive" : "text-muted-foreground"
+                        }`}
+                    >
+                      {verificationStatus.message}
+                    </div>
+                  )}
                   {user.labels?.includes("admin") && (
                     <Badge variant="destructive" className="text-xs">Admin</Badge>
                   )}
@@ -156,10 +244,10 @@ export default function AccountPage() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="orders" className="space-y-4 sm:space-y-6">
+        <Tabs defaultValue="settings" className="space-y-4 sm:space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="orders" className="text-xs sm:text-sm">Bestellungen</TabsTrigger>
             <TabsTrigger value="settings" className="text-xs sm:text-sm">Kontoeinstellungen</TabsTrigger>
+            <TabsTrigger value="orders" className="text-xs sm:text-sm">Bestellungen</TabsTrigger>
           </TabsList>
 
           <TabsContent value="settings" className="space-y-4 sm:space-y-6">
@@ -167,16 +255,59 @@ export default function AccountPage() {
               <CardHeader>
                 <CardTitle>Mitglied werden</CardTitle>
                 <CardDescription>
-                  Die Mitgliedschaftsfunktion wird bald verfügbar sein.
+                  Wählen Sie den passenden Mitgliedschaftstyp und senden Sie Ihre Anfrage.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col items-center py-6">
-                <Button disabled variant="default" size="lg">
-                  Mitgliedschaft beantragen
-                </Button>
-                <p className="text-muted-foreground text-sm mt-4 text-center">
-                  Bald können Sie direkt hier Ihre Mitgliedschaft beantragen und exklusive Vorteile erhalten.
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={membershipType === "privat" ? "default" : "outline"}
+                    onClick={() => selectMembershipType("privat")}
+                    disabled={membershipStatus.state === "loading"}
+                  >
+                    Privat
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={membershipType === "business" ? "default" : "outline"}
+                    onClick={() => selectMembershipType("business")}
+                    disabled={membershipStatus.state === "loading"}
+                  >
+                    Business
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {membershipType === "privat"
+                    ? "Für Privatpersonen mit einer Laufzeit von einem Jahr."
+                    : "Für Unternehmen und Organisationen – wir melden uns zur weiteren Abstimmung."}
                 </p>
+                {!user.emailVerification && (
+                  <p className="text-sm text-muted-foreground">
+                    Bitte verifizieren Sie Ihre Email-Adresse, bevor Sie eine Mitgliedschaft beantragen.
+                  </p>
+                )}
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={requestMembership}
+                  disabled={!user.emailVerification || membershipStatus.state === "loading"}
+                >
+                  {membershipStatus.state === "loading" ? "Sende…" : "Mitgliedschaft beantragen"}
+                </Button>
+                {membershipStatus.message && (
+                  <p
+                    className={
+                      membershipStatus.state === "success"
+                        ? "text-sm text-green-600"
+                        : "text-sm text-destructive"
+                    }
+                  >
+                    {membershipStatus.message}
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -259,9 +390,12 @@ export default function AccountPage() {
                 {loadingOrders ? (
                   <div className="text-center py-12">Lädt…</div>
                 ) : orders && orders.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {orders.map((o) => {
                       const mengeNum = Number((o as any).menge);
+                      const unitRaw = (o.einheit || '').toString().toLowerCase();
+                      const isGram = unitRaw === 'gramm' || unitRaw === 'g';
+                      const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
                       return (
                         <Card key={o.$id} className="border bg-white/70">
                           <CardHeader className="pb-2">
@@ -281,11 +415,15 @@ export default function AccountPage() {
                             <div className="flex flex-col gap-2 text-sm">
                               <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground">Menge</span>
-                                <span className="font-medium">{Number.isFinite(mengeNum) ? mengeNum : (o as any).menge} {o.einheit}</span>
+                                <span className="font-medium">
+                                  {displayAsKg ? '1' : (Number.isFinite(mengeNum) ? mengeNum : (o as any).menge)} {displayAsKg ? 'kg' : o.einheit}
+                                </span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground">Preis pro Einheit</span>
-                                <span className="font-medium">{formatPrice(o.preis_einheit)} / {o.einheit}</span>
+                                <span className="font-medium">
+                                  {formatPrice(o.preis_einheit)} / {displayAsKg ? 'kg' : o.einheit}
+                                </span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground">Gesamt</span>
@@ -332,4 +470,3 @@ export default function AccountPage() {
     </div>
   );
 }
-

@@ -86,6 +86,30 @@ export default async ({ req, res, log, error }: any) => {
         const url = new URL(req.url);
         const angebotID = (body.angebotID ?? url.searchParams.get("angebotID") ?? "").trim();
         const mitgliedschaftID = ((body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? "") as string).trim();
+        // TODO(Flo): fail when not mitgliedschaft available
+        // TODO(Flo): get type of mitgliedschaft and zahlungsart
+        // TODO(Flo): fail when unbezahlteRechnungen > 3
+
+        // if (istPrivat) {
+        //     // Guthaben abbuchen
+        //     await db.updateDocument(DB, COLL_MITGLIEDSCHAFT, mitgliedschaftID, {
+        //         kontingent_aktuell: mitgliedschaft.kontingent_aktuell - preisGesamt,
+        //     });
+        // } else {
+        //     // Rechnungssystem vorbereiten
+        //     const offene = mitgliedschaft.offene_rechnungen ?? 0;
+        //     const limit = mitgliedschaft.zahlungslimit ?? 0;
+
+        //     if (limit > 0 && offene + preisGesamt > limit)
+        //         throw new Error("Zahlungslimit überschritten");
+
+        //     await db.updateDocument(DB, COLL_MITGLIEDSCHAFT, mitgliedschaftID, {
+        //         offene_rechnungen: offene + preisGesamt,
+        //     });
+        //     // TODO(Flo): trigger invoice generation
+        //     // TODO(Flo): send invoice pdf via message to user
+        // }
+
         const menge = Number(body.menge ?? url.searchParams.get("menge"));
         log(`[placeOrder] Inputs -> angebotIDProvided=${!!angebotID} mitgliedschaftProvided=${!!mitgliedschaftID} menge=${menge} 🔎`)
 
