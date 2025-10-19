@@ -138,6 +138,7 @@ export default async ({ req, res, log, error }: any) => {
                 const newPayment = await tablesDB.createRow({
                     databaseId: databaseID,
                     tableId: tableID,
+                    rowId: ID.unique(),
                     data: {
                         mitgliedschaft: newMembership.$id,
                         betrag_eur: 100.0,
