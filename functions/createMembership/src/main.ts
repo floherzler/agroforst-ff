@@ -107,6 +107,8 @@ export default async ({ req, res, log, error }: any) => {
             if (existing.total > 0) {
                 log(`[requestMembership] Caller already has an active or pending membership (total=${existing.total}) ❌`)
                 return fail(res, "You already have an active or pending membership", 400);
+            } else {
+                log(`[requestMembership] No existing active or pending membership found for caller ✅`)
             }
 
             // --- Create membership row ---
@@ -117,6 +119,7 @@ export default async ({ req, res, log, error }: any) => {
                 beantragungs_datum: new Date().toISOString(),
                 ...(type === "privat" ? { dauer_jahre: 1 } : {}), // default duration for privat
             };
+            log(`[requestMembership] Creating membership record with data: ${JSON.stringify(membershipData)} 🆕`)
             const newMembership = await tablesDB.createRow(
                 {
                     databaseId: databaseID,
@@ -130,7 +133,8 @@ export default async ({ req, res, log, error }: any) => {
                 }
             );
             log(`[requestMembership] Created new membership record (ID: ${newMembership.$id}) ✅`)
-        } catch {
+        } catch (e: any) {
+            log(`[requestMembership] Error creating membership record: ${e.message} 🚨`)
             return fail(res, "Failed to create membership record", 500);
         }
     } catch (e: any) {
