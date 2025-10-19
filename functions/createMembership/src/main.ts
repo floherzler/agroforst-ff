@@ -133,6 +133,7 @@ export default async ({ req, res, log, error }: any) => {
                 }
             );
             log(`[requestMembership] Created new membership record (ID: ${newMembership.$id}) ✅`)
+            return ok(res, { success: true, membership: newMembership });
         } catch (e: any) {
             log(`[requestMembership] Error creating membership record: ${e.message} 🚨`)
             return fail(res, "Failed to create membership record", 500);
