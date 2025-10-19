@@ -156,10 +156,10 @@ export default async ({ req, res, log, error }: any) => {
                 const seqStr = String(newPayment.$sequence ?? '').padStart(3, '0');
                 const ref = `MB${new Date().getFullYear()}-${seqStr}`;
 
-                const updatedMembership = await tablesDB.updateRow({
+                const updatedPayment = await tablesDB.updateRow({
                     databaseId: databaseID,
                     tableId: tableID,
-                    rowId: newMembership.$id,
+                    rowId: newPayment.$id,
                     data: {
                         ref,
                     },
