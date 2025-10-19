@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { account, databases, functions } from "@/models/client/config";
 import env from "@/app/env";
 import { Query } from "appwrite";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, RefreshCw, AlertTriangle } from "lucide-react";
+import { Plus, RefreshCw, Copy, Check } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type Membership = {
   $id: string;
@@ -26,6 +28,17 @@ type Membership = {
   kontingent_aktuell?: number | null;
   kontingent_start?: number | null;
   adresse?: string | null;
+  payments?: Payment[];
+};
+
+type Payment = {
+  $id: string;
+  status?: string;
+  ref?: string;
+  betrag?: number | null;
+  betrag_eur?: number | null;
+  faellig_am?: string | null;
+  $createdAt?: string | null;
 };
 
 function normalizeMembership(raw: any): Membership {
@@ -59,7 +72,7 @@ function normalizeMembership(raw: any): Membership {
     kontingent_aktuell:
       raw.kontingent_aktuell ??
       raw.aktuelles_kontingent ??
-      raw.kontingent ?? 
+      raw.kontingent ??
       raw.balance ??
       raw.guthaben ??
       undefined,
@@ -69,6 +82,41 @@ function normalizeMembership(raw: any): Membership {
       raw.kontingent_gesamt ??
       undefined,
     adresse: raw.rechnungsadresse ?? raw.adresse ?? raw.address ?? undefined,
+    payments: (() => {
+      const paymentsRaw =
+        raw.zahlungen ?? raw.payments ?? raw.payment ?? raw.rechnungen ?? [];
+      if (!Array.isArray(paymentsRaw)) return [];
+      return paymentsRaw.map(normalizePayment).filter((p) => p.$id);
+    })(),
+  };
+}
+
+function normalizePayment(raw: any): Payment {
+  if (!raw) {
+    return { $id: "" };
+  }
+  return {
+    $id: String(raw.$id ?? raw.id ?? ""),
+    status: raw.status ?? raw.state ?? undefined,
+    ref: raw.ref ?? raw.reference ?? raw.verwendungszweck ?? undefined,
+    betrag:
+      typeof raw.betrag === "number"
+        ? raw.betrag
+        : typeof raw.betrag === "string"
+          ? Number(raw.betrag)
+          : typeof raw.amount === "number"
+            ? raw.amount
+            : undefined,
+    betrag_eur:
+      typeof raw.betrag_eur === "number"
+        ? raw.betrag_eur
+        : typeof raw.rechnung?.betrag_eur === "number"
+          ? raw.rechnung.betrag_eur
+          : typeof raw.invoice_amount === "number"
+            ? raw.invoice_amount
+            : undefined,
+    faellig_am: raw.faellig_am ?? raw.fällig_am ?? raw.due_at ?? undefined,
+    $createdAt: raw.$createdAt ?? raw.createdAt ?? undefined,
   };
 }
 
@@ -139,6 +187,23 @@ function formatMembershipTypeLabel(type?: string): string {
   return type ?? "—";
 }
 
+function formatPaymentStatusLabel(status?: string | null): string {
+  const value = (status ?? "").toString().toLowerCase();
+  if (value === "offen") return "Offen";
+  if (value === "teilbezahlt") return "Teilbezahlt";
+  if (value === "bezahlt") return "Bezahlt";
+  return status ?? "Unbekannt";
+}
+
+function extractPaymentAmount(payment?: Payment | null): number | null {
+  if (!payment) return null;
+  const fields = [payment.betrag_eur, payment.betrag];
+  for (const value of fields) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
 function translateMembershipError(message: string): string {
   const text = (message ?? "").toString();
   const lowered = text.toLowerCase();
@@ -183,6 +248,10 @@ export default function AccountPage() {
   const [showApplicationForm, setShowApplicationForm] = React.useState(false);
   const membershipFunctionId = env.appwrite.membership_function_id;
   const membershipCollectionId = env.appwrite.membership_collection_id;
+  const [copiedPaymentRef, setCopiedPaymentRef] = React.useState<string | null>(null);
+  const [copiedEmail, setCopiedEmail] = React.useState(false);
+  const copyEmailTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ibanPlaceholder = "DE12345678901234567890";
   const hasPrivatMembership = React.useMemo(
     () => memberships.some((m) => (m.typ ?? "").toLowerCase() === "privat"),
     [memberships]
@@ -195,6 +264,51 @@ export default function AccountPage() {
     () => !hasPrivatMembership || !hasBusinessMembership,
     [hasPrivatMembership, hasBusinessMembership]
   );
+  const primaryMembership = React.useMemo(() => {
+    if (memberships.length === 0) return null;
+    const activeMembership = memberships.find(
+      (membership) => (membership.status ?? "").toLowerCase() === "aktiv"
+    );
+    return activeMembership ?? memberships[0];
+  }, [memberships]);
+
+  const handleCopyPaymentRef = React.useCallback(async (refKey: string, value: string) => {
+    if (!value || typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedPaymentRef(refKey);
+      setTimeout(() => {
+        setCopiedPaymentRef((prev) => (prev === refKey ? null : prev));
+      }, 2000);
+    } catch {
+      setCopiedPaymentRef(null);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (copyEmailTimeout.current) {
+        clearTimeout(copyEmailTimeout.current);
+      }
+    };
+  }, []);
+
+  const handleCopyEmail = React.useCallback(async () => {
+    if (!user?.email || typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(user.email);
+      setCopiedEmail(true);
+      if (copyEmailTimeout.current) {
+        clearTimeout(copyEmailTimeout.current);
+      }
+      copyEmailTimeout.current = setTimeout(() => {
+        setCopiedEmail(false);
+        copyEmailTimeout.current = null;
+      }, 2000);
+    } catch {
+      setCopiedEmail(false);
+    }
+  }, [user?.email]);
 
   React.useEffect(() => {
     if (!user) return;
@@ -249,6 +363,20 @@ export default function AccountPage() {
         Query.equal("userID", user.$id),
         Query.orderDesc("$createdAt"),
         Query.limit(10),
+        Query.select([
+          "*",
+          "zahlungen.$id",
+          "zahlungen.status",
+          "zahlungen.ref",
+          "zahlungen.betrag",
+          "zahlungen.betrag_eur",
+          "zahlungen.amount",
+          "zahlungen.rechnung.betrag_eur",
+          "zahlungen.faellig_am",
+          "zahlungen.fällig_am",
+          "zahlungen.due_at",
+          "zahlungen.$createdAt",
+        ]),
       ]
     );
     return response.documents.map((doc: any) => normalizeMembership(doc));
@@ -340,7 +468,7 @@ export default function AccountPage() {
     }
   }
 
-  function formatDateShort(iso?: string) {
+  function formatDateShort(iso?: string | null) {
     if (!iso) return "—";
     try {
       const d = new Date(iso);
@@ -497,6 +625,22 @@ export default function AccountPage() {
     );
   }
 
+  const memberLabels = Array.isArray(user.labels) ? user.labels : [];
+  const roleLabels = memberLabels.filter((label) => {
+    const value = label.toLowerCase();
+    return value === "admin" || value === "dev";
+  });
+  const contextualLabels = memberLabels.filter((label) => {
+    const value = label.toLowerCase();
+    return value !== "admin" && value !== "dev" && value !== "newsletter";
+  });
+  const newsletterOptIn = memberLabels.some((label) => label.toLowerCase() === "newsletter");
+  const themePreference = (user.prefs?.theme ?? "light").toString().toLowerCase();
+  const themeLabel = themePreference === "dark" ? "Dunkel" : themePreference === "system" ? "System" : "Hell";
+  const membershipStatusStyle = primaryMembership ? getMembershipStatusStyle(primaryMembership.status) : null;
+  const membershipTypeLabel = primaryMembership ? formatMembershipTypeLabel(primaryMembership.typ) : null;
+  const isEmailVerified = Boolean(user.emailVerification);
+
   return (
     <div className="container mx-auto px-4 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto">
@@ -506,55 +650,6 @@ export default function AccountPage() {
           <p className="text-gray-600 text-sm sm:text-base">Verwalten Sie Ihre Kontoeinstellungen und Bestellungen</p>
         </div>
 
-        {/* User Info Card */}
-        <Card className="mb-6">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
-                <AvatarImage src="" alt={user.name} />
-                <AvatarFallback className="text-sm sm:text-lg bg-permdal-100 text-permdal-800">
-                  {user.name?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{user.name}</h2>
-                <p className="text-gray-600 text-sm truncate">{user.email}</p>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <Badge variant={user.emailVerification ? "default" : "secondary"} className="text-xs">
-                    {user.emailVerification ? "Email verifiziert" : "Email nicht verifiziert"}
-                  </Badge>
-                  {!user.emailVerification && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={sendVerificationEmail}
-                      disabled={verificationStatus.state === "loading"}
-                    >
-                      {verificationStatus.state === "loading" ? "Sende…" : "Email verifizieren"}
-                    </Button>
-                  )}
-                  {verificationStatus.message && (
-                    <div
-                      className={`basis-full text-xs ${verificationStatus.state === "error" ? "text-destructive" : "text-muted-foreground"
-                        }`}
-                    >
-                      {verificationStatus.message}
-                    </div>
-                  )}
-                  {user.labels?.includes("admin") && (
-                    <Badge variant="destructive" className="text-xs">Admin</Badge>
-                  )}
-                  {user.labels?.includes("dev") && (
-                    <Badge variant="destructive" className="text-xs">Dev</Badge>
-                  )}
-                </div>
-              </div>
-              <Button variant="outline" onClick={logout} className="w-full sm:w-auto">
-                Abmelden
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="settings" className="space-y-4 sm:space-y-6">
@@ -586,7 +681,7 @@ export default function AccountPage() {
                     </Button>
                     <span className="hidden sm:inline">
                       {loadingMemberships
-                        ? "Mitgliedschaften werden geladen…"
+                        ? "Daten werden geladen…"
                         : memberships.length > 0
                           ? "Aktuelle Übersicht Ihrer Mitgliedschaften."
                           : "Noch keine Mitgliedschaft."}
@@ -627,30 +722,48 @@ export default function AccountPage() {
                     const startBalance =
                       typeof membership.kontingent_start === "number" && membership.kontingent_start > 0
                         ? membership.kontingent_start
-                        : 1200;
-                    const currentBalanceRaw =
+                        : null;
+                    const currentBalance =
                       typeof membership.kontingent_aktuell === "number" && membership.kontingent_aktuell >= 0
                         ? membership.kontingent_aktuell
-                        : 800;
-                    const balancePercent = startBalance > 0 ? Math.min(100, Math.max(0, (currentBalanceRaw / startBalance) * 100)) : 0;
-                    const currentBalanceDisplay =
-                      typeof membership.kontingent_aktuell === "number"
-                        ? formatPrice(membership.kontingent_aktuell)
-                        : formatPrice(currentBalanceRaw);
+                        : null;
                     const addressDisplay =
                       membership.adresse ?? "Muster GmbH\nMusterstraße 1\n12345 Musterstadt";
+                    const paymentsForMembership = membership.payments ?? [];
+                    const primaryPayment = paymentsForMembership[0];
+                    const openPayment = paymentsForMembership.find((payment) => (payment.status ?? "").toLowerCase() === "offen");
+                    const openPaymentRef = openPayment?.ref;
+                    const openPaymentsCount = paymentsForMembership.filter((payment) => (payment.status ?? "").toLowerCase() === "offen").length;
+                    const totalPaidAmount = paymentsForMembership
+                      .filter((payment) => (payment.status ?? "").toLowerCase() === "bezahlt")
+                      .map((payment) => extractPaymentAmount(payment))
+                      .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+                      .reduce((acc, value) => acc + value, 0);
+                    const totalPaidDisplay = totalPaidAmount > 0 ? formatPrice(totalPaidAmount) : formatPrice(0);
+                    const paymentStatusLabel = formatPaymentStatusLabel(primaryPayment?.status ?? membership.bezahl_status);
+                    const relevantPayment = openPayment ?? primaryPayment;
+                    const outstandingAmount = extractPaymentAmount(relevantPayment);
+                    const outstandingDisplay =
+                      typeof outstandingAmount === "number" && Number.isFinite(outstandingAmount)
+                        ? formatPrice(outstandingAmount)
+                        : null;
+                    const hasActiveBalance = membership.status === "aktiv" && startBalance !== null && startBalance > 0 && currentBalance !== null;
+                    const balancePercent = hasActiveBalance
+                      ? Math.min(100, Math.max(0, (currentBalance / startBalance) * 100))
+                      : null;
+                    const membershipSince = formatDateShort(membership.beantragungs_datum ?? membership.$createdAt);
+                    const headerMeta = isPrivat ? (validUntilFormatted !== "—" ? `gültig bis ${validUntilFormatted}` : null) : (membershipSince !== "—" ? `seit ${membershipSince}` : null);
                     return (
                       <Card
                         key={membership.$id}
-                        className={`relative overflow-hidden border-none text-white shadow-[0_12px_30px_-12px_rgba(23,16,80,0.5)] transition-transform duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_-15px_rgba(23,16,80,0.6)] ${
-                          isPrivat
-                            ? "bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800"
-                            : "bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-900"
-                        }`}
+                        className={`relative overflow-hidden border border-white/10 text-white shadow-[0_12px_30px_-12px_rgba(23,16,80,0.4)] transition duration-200 hover:scale-[1.01] hover:border-white/30 hover:shadow-[0_20px_50px_-20px_rgba(23,16,80,0.7)] ${isPrivat
+                          ? "bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800"
+                          : "bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-900"
+                          }`}
                       >
                         <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
                         <CardContent className="relative flex h-full flex-col gap-6 p-6">
-                          <div className="flex items-start justify-between gap-4">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex items-center gap-3">
                               <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/15">
                                 <Image
@@ -674,22 +787,25 @@ export default function AccountPage() {
                               {statusStyle.label}
                             </Badge>
                           </div>
-                            <div className="space-y-5">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-white/50">Mitglied</p>
-                                  <p className="text-lg font-medium">{user.name ?? "Ihr Name"}</p>
-                                </div>
-                                {validUntilFormatted !== "—" && (
-                                  <span className="text-xs text-white/70">gültig bis {validUntilFormatted}</span>
-                                )}
+                          <div className="space-y-5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-white/50">Mitglied</p>
+                                <p className="text-lg font-medium">{user.name ?? "Ihr Name"}</p>
                               </div>
-                              {isPrivat ? (
-                                <div className="space-y-4">
+                              {headerMeta && (
+                                <span className="text-xs text-white/70">{headerMeta}</span>
+                              )}
+                            </div>
+                            {isPrivat ? (
+                              <div className="space-y-4">
+                                {hasActiveBalance && balancePercent !== null ? (
                                   <div>
                                     <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wide text-white/50">
                                       <span>Guthaben</span>
-                                      <span>{currentBalanceDisplay}</span>
+                                      <span>
+                                        {formatPrice(currentBalance)} / {formatPrice(startBalance)}
+                                      </span>
                                     </div>
                                     <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
                                       <div
@@ -698,76 +814,121 @@ export default function AccountPage() {
                                       />
                                     </div>
                                   </div>
-                                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/80">
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      className="h-7 bg-amber-100 text-amber-900 hover:bg-amber-100/90"
-                                      disabled
+                                ) : (
+                                  <Accordion type="single" collapsible className="w-full">
+                                    <AccordionItem value="payment" className="border-none">
+                                      <AccordionTrigger className="w-full flex-col items-start gap-2 rounded-lg bg-amber-50/80 px-4 py-3 text-left text-xs text-amber-900 shadow-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:shadow-inner sm:flex-row sm:items-center sm:gap-4 sm:text-sm">
+                                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                          <div className="space-y-1">
+                                            <p className="font-semibold uppercase tracking-wide text-amber-900/70">Offener Betrag</p>
+                                            <p className="text-lg font-semibold">{outstandingDisplay ?? "wird berechnet…"}</p>
+                                          </div>
+                                          <span className="text-xs text-amber-900/70 sm:ml-auto">Details</span>
+                                        </div>
+                                      </AccordionTrigger>
+                                      <AccordionContent className="space-y-4 rounded-b-lg bg-white px-4 text-sm text-slate-900 shadow-inner sm:text-base">
+                                        <div className="pt-3 text-xs text-slate-700 sm:text-sm">
+                                          Bitte überweisen Sie den offenen Betrag. Nach Eingang aktivieren wir Ihre Mitgliedschaft und
+                                          laden Ihr Guthaben auf.
+                                        </div>
+                                        <div className="space-y-2">
+                                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">IBAN</p>
+                                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                            <span className="font-mono text-sm text-slate-900">{ibanPlaceholder}</span>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
+                                              onClick={() => handleCopyPaymentRef(`${membership.$id}-iban`, ibanPlaceholder)}
+                                            >
+                                              <Copy className="mr-1 h-3.5 w-3.5" />
+                                              {copiedPaymentRef === `${membership.$id}-iban` ? "Kopiert!" : "Kopieren"}
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        {openPaymentRef && (
+                                          <div className="space-y-2">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verwendungszweck</p>
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                              <span className="font-mono text-sm text-slate-900">{openPaymentRef}</span>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
+                                                onClick={() => handleCopyPaymentRef(`${membership.$id}-ref`, openPaymentRef)}
+                                              >
+                                                <Copy className="mr-1 h-3.5 w-3.5" />
+                                                {copiedPaymentRef === `${membership.$id}-ref` ? "Kopiert!" : "Kopieren"}
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                        <p className="text-xs text-slate-600">
+                                          Verwenden Sie bitte exakt den angegebenen Verwendungszweck, damit wir Ihre Zahlung automatisch
+                                          zuordnen können.
+                                        </p>
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                )}
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/80">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold uppercase tracking-wide text-white/60">Zahlungsstatus:</span>
+                                    <Badge
+                                      variant={paymentStatusLabel === "Bezahlt" ? "secondary" : "outline"}
+                                      className={paymentStatusLabel === "Offen" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-white/30 text-white"}
                                     >
-                                      Rechnung prüfen
-                                    </Button>
-                                    {balancePercent <= 10 && (
-                                      <span className="font-semibold text-amber-200">Nur noch wenig Guthaben</span>
-                                    )}
+                                      {paymentStatusLabel}
+                                    </Badge>
                                   </div>
-                                  {(!membership.kontingent_aktuell || membership.kontingent_aktuell === 0) &&
-                                    (membership.status ?? "").toLowerCase() === "beantragt" && (
-                                      <div className="flex items-center gap-2 rounded-md bg-amber-100/90 px-3 py-2 text-xs font-medium text-amber-900">
-                                        <AlertTriangle className="h-4 w-4" />
-                                        Virtuelle Rechnung wird geprüft – bitte begleichen Sie den offenen Betrag.
+                                  {hasActiveBalance && balancePercent !== null && balancePercent <= 10 && (
+                                    <span className="font-semibold text-amber-200">Nur noch wenig Guthaben</span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-5 text-sm text-white/90">
+                                <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="address" className="border-none">
+                                    <AccordionTrigger className="w-full rounded-lg bg-white/10 px-4 py-3 text-left text-xs uppercase tracking-wide hover:no-underline data-[state=open]:rounded-b-none">
+                                      Rechnungsadresse
+                                    </AccordionTrigger>
+                                    <AccordionContent className="rounded-b-lg bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-inner">
+                                      <p className="whitespace-pre-line">{addressDisplay ?? "Noch keine Adresse hinterlegt."}</p>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                                <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                                  <div className="rounded-lg bg-white/10 px-4 py-3">
+                                    <p className="uppercase tracking-wide text-white/60">Offene Rechnungen</p>
+                                    <p className="mt-1 text-2xl font-semibold text-white">{openPaymentsCount}</p>
+                                  </div>
+                                  <div className="rounded-lg bg-white/10 px-4 py-3">
+                                    <p className="uppercase tracking-wide text-white/60">Summe bezahlt</p>
+                                    <p className="mt-1 text-2xl font-semibold text-white">{totalPaidDisplay}</p>
+                                  </div>
+                                </div>
+                                {/* <div className="flex flex-col gap-2 text-xs text-white/70">
+                                    <div className="flex flex-col gap-1">
+                                      <span className="font-semibold uppercase tracking-wide text-white/60">Nächste Verlängerung</span>
+                                      <span>{validUntilFormatted}</span>
+                                    </div>
+                                    {openPaymentRef && (
+                                      <div className="flex flex-col gap-1">
+                                        <span className="font-semibold uppercase tracking-wide text-white/60">Aktueller Verwendungszweck</span>
+                                        <span className="font-mono text-sm text-white">{openPaymentRef}</span>
                                       </div>
                                     )}
-                                  {membership.bezahl_status && (
-                                    <div className="text-xs text-white/70">
-                                      Zahlungsstatus: {formatPaymentStatus(membership.bezahl_status)}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="space-y-4 text-sm">
-                                  <div>
-                                    <p className="text-xs uppercase tracking-wide text-white/50">Rechnungsadresse</p>
-                                    <p className="whitespace-pre-line text-sm font-medium text-white/90">{addressDisplay}</p>
-                                  </div>
-                                  <div className="flex items-center justify-between text-xs text-white/70">
-                                    <span>Nächste Verlängerung</span>
-                                    <span>{validUntilFormatted}</span>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      className="h-7 bg-white/20 text-white hover:bg-white/30"
-                                      onClick={() => refreshMemberships()}
-                                      disabled={membershipStatus.state === "loading"}
-                                    >
-                                      <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                                      Status
-                                    </Button>
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      className="h-7 bg-white/15 text-white hover:bg-white/25"
-                                      disabled
-                                    >
-                                      Rechnung einsehen
-                                    </Button>
-                                  </div>
-                                  {membership.bezahl_status && (
-                                    <p className="text-xs text-white/70">
-                                      Zahlungsstatus: {formatPaymentStatus(membership.bezahl_status)}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                                  </div> */}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                   {canAddMoreMemberships && showApplicationForm && (
-                    <Card className="relative flex min-h-[220px] flex-col justify-between border border-dashed border-gray-300 bg-gray-50/80 text-gray-600 shadow-inner transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+                    <Card className="relative flex min-h-[220px] flex-col justify-between border border-dashed border-gray-300 bg-gray-50/80 text-gray-600 shadow-inner transition duration-200 hover:scale-[1.01] hover:border-gray-400 hover:shadow-lg">
                       <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -847,27 +1008,220 @@ export default function AccountPage() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Profil</CardTitle>
-                <CardDescription>Ihre Basisdaten</CardDescription>
+                <CardTitle>Kontoinformationen</CardTitle>
+                <CardDescription>Profil, Sicherheit und persönliche Einstellungen</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Name</label>
-                    <p className="text-gray-900 mt-1 text-sm sm:text-base">{user.name}</p>
+              <CardContent className="space-y-8">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                      <AvatarImage src="" alt={user.name} />
+                      <AvatarFallback className="bg-permdal-100 text-lg text-permdal-800 sm:text-xl">
+                        {user.name?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Mitglied</p>
+                        <p className="text-xl font-semibold text-foreground break-words">{user.name}</p>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
+                        <span className="break-all sm:break-normal">{user.email}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleCopyEmail}
+                          className="h-8 w-8"
+                        >
+                          {copiedEmail ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          <span className="sr-only">E-Mail kopieren</span>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Email</label>
-                    <p className="text-gray-900 mt-1 text-sm sm:text-base">{user.email}</p>
+                  <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto md:justify-end">
+                    <Badge
+                      variant={isEmailVerified ? "default" : "secondary"}
+                      className={
+                        isEmailVerified ? undefined : "border border-amber-500/40 bg-amber-100 text-amber-900"
+                      }
+                    >
+                      {isEmailVerified ? "E-Mail verifiziert" : "E-Mail nicht verifiziert"}
+                    </Badge>
+                    {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${membershipStatusStyle.className}`}
+                      >
+                        {membershipTypeLabel} • {membershipStatusStyle.label}
+                      </span>
+                    )}
+                    {roleLabels.map((label) => (
+                      <Badge key={label} variant="destructive" className="text-xs capitalize">
+                        {label}
+                      </Badge>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={logout} className="w-full sm:w-auto">
+                      Abmelden
+                    </Button>
                   </div>
                 </div>
                 <Separator />
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Funktionen zur Bearbeitung werden bald verfügbar sein</p>
-                  <Button disabled variant="outline">
-                    Bearbeiten
-                  </Button>
-                </div>
+                <Tabs defaultValue="overview" className="w-full">
+                  <TabsList className="grid w-full max-w-md grid-cols-3">
+                    <TabsTrigger value="overview">Profil</TabsTrigger>
+                    <TabsTrigger value="security">Sicherheit</TabsTrigger>
+                    <TabsTrigger value="preferences">Präferenzen</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="overview" className="space-y-4 pt-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
+                        <p className="mt-2 font-medium text-foreground break-words">{user.name}</p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</p>
+                        <p className="mt-2 font-medium text-foreground break-words">{user.email}</p>
+                      </div>
+                      {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
+                        <div className="rounded-lg border bg-muted/20 p-4 sm:col-span-2">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Aktive Mitgliedschaft</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-foreground">{membershipTypeLabel}</span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${membershipStatusStyle.className}`}
+                            >
+                              {membershipStatusStyle.label}
+                            </span>
+                          </div>
+                          {primaryMembership.$createdAt && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Erstellt am {formatDateShort(primaryMembership.$createdAt)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="security" className="space-y-4 pt-4">
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">E-Mail-Bestätigung</p>
+                          <p className="text-sm text-muted-foreground">
+                            {isEmailVerified
+                              ? "Ihre E-Mail-Adresse ist bestätigt."
+                              : "Bitte bestätigen Sie Ihre E-Mail-Adresse, um alle Funktionen nutzen zu können."}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={isEmailVerified ? "default" : "secondary"}
+                          className={
+                            isEmailVerified
+                              ? undefined
+                              : "border border-amber-500/40 bg-amber-100 text-amber-900"
+                          }
+                        >
+                          {isEmailVerified ? "Aktiv" : "Offen"}
+                        </Badge>
+                      </div>
+                      {!isEmailVerified && (
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={sendVerificationEmail}
+                            disabled={verificationStatus.state === "loading"}
+                          >
+                            {verificationStatus.state === "loading" ? "Sende…" : "E-Mail verifizieren"}
+                          </Button>
+                          {verificationStatus.message && (
+                            <span
+                              className={`text-xs ${
+                                verificationStatus.state === "error" ? "text-destructive" : "text-muted-foreground"
+                              }`}
+                            >
+                              {verificationStatus.message}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {isEmailVerified && verificationStatus.message && (
+                        <p className="mt-3 text-xs text-muted-foreground">{verificationStatus.message}</p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">Sitzung</p>
+                          <p className="text-sm text-muted-foreground">
+                            Melden Sie sich ab, um diese Sitzung zu beenden.
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={logout}>
+                          Abmelden
+                        </Button>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Weitere Sicherheitsoptionen werden bald direkt hier verfügbar sein.
+                      </p>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="preferences" className="space-y-4 pt-4">
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">Designmodus</p>
+                          <p className="text-sm text-muted-foreground">
+                            {themePreference === "dark"
+                              ? "Bevorzugt dunkles Erscheinungsbild."
+                              : themePreference === "system"
+                                ? "Folgt den Systemeinstellungen."
+                                : "Bevorzugt helles Erscheinungsbild."}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="uppercase">
+                            {themeLabel}
+                          </Badge>
+                          <Switch checked={themePreference === "dark"} disabled aria-readonly />
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Die Anpassung des Erscheinungsbildes direkt im Konto folgt in Kürze.
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">Community-Updates</p>
+                          <p className="text-sm text-muted-foreground">
+                            Steuern Sie, ob Sie über neue Permdal-Inhalte informiert werden möchten.
+                          </p>
+                        </div>
+                        <Switch checked={newsletterOptIn} disabled aria-readonly />
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Diese Einstellung wird zurzeit durch das Permdal-Team verwaltet.
+                      </p>
+                    </div>
+                    {contextualLabels.length > 0 && (
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <p className="text-sm font-medium text-foreground">Weitere Labels</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {contextualLabels.map((label) => (
+                            <Badge key={label} variant="secondary" className="capitalize">
+                              {label.replace(/_/g, " ")}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
+                      Selbstverwaltung für weitere Präferenzen ist in Vorbereitung. Bei Änderungen wenden Sie sich bitte an das Permdal-Team.
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
