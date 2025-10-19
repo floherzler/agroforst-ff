@@ -136,7 +136,7 @@ export default async ({ req, res, log, error }: any) => {
             if (type === 'privat') {
                 const tableID = "zahlungen";
                 const newPayment = await tablesDB.createRow({
-                    databaseID,
+                    databaseId: databaseID,
                     tableId: tableID,
                     data: {
                         mitgliedschaft: newMembership.$id,
