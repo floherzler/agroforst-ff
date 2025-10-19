@@ -101,7 +101,7 @@ export default async ({ req, res, log, error }: any) => {
                 queries: [
                     Query.equal("userID", callerId),
                     Query.equal("typ", type),
-                    Query.in("status", ["aktiv", "beantragt"]),
+                    Query.equal("status", ["aktiv", "beantragt"]),
                 ]
             });
             if (existing.total > 0) {
