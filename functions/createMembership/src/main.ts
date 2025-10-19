@@ -158,7 +158,7 @@ export default async ({ req, res, log, error }: any) => {
 
                 const updatedMembership = await tablesDB.updateRow({
                     databaseId: databaseID,
-                    tableId: "mitgliedschaft",
+                    tableId: tableID,
                     rowId: newMembership.$id,
                     data: {
                         ref,
