@@ -11,6 +11,8 @@ const env = {
         order_collection_id: String(process.env.NEXT_PUBLIC_ORDER_COLLECTION_ID),
         order_function_id: String(process.env.NEXT_PUBLIC_ORDER_FUNCTION_ID),
         membership_function_id: String(process.env.NEXT_PUBLIC_MEMBERSHIP_FUNCTION_ID),
+        membership_collection_id: String(process.env.NEXT_PUBLIC_MEMBERSHIP_COLLECTION_ID),
+        payment_collection_id: String(process.env.NEXT_PUBLIC_PAYMENT_COLLECTION_ID),
     }
 }
 

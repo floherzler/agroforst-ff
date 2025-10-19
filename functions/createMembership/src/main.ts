@@ -128,11 +128,43 @@ export default async ({ req, res, log, error }: any) => {
                     data: membershipData,
                     permissions: [
                         Permission.read(Role.user(callerId)),
-                        Permission.read(Role.label("admin")),
+                        Permission.read(Role.team("admin")),
                     ]
                 }
             );
             log(`[requestMembership] Created new membership record (ID: ${newMembership.$id}) ✅`)
+            if (type === 'privat') {
+                const tableID = "zahlungen";
+                const newPayment = await tablesDB.createRow({
+                    databaseID,
+                    tableId: tableID,
+                    data: {
+                        mitgliedschaft: newMembership.$id,
+                        betrag_eur: 100.0,
+                        status: "offen",
+                        typ: "mitgliedschaft",
+                        kunde_typ: type,
+
+                    },
+                    permissions: [
+                        Permission.read(Role.user(callerId)),
+                        Permission.read(Role.team("admin")),
+                    ],
+                });
+                // Build reference like "MB2025-007"
+                const seqStr = String(newPayment.$sequence ?? '').padStart(3, '0');
+                const ref = `MB${new Date().getFullYear()}-${seqStr}`;
+
+                const updatedMembership = await tablesDB.updateRow({
+                    databaseId: databaseID,
+                    tableId: "mitgliedschaft",
+                    rowId: newMembership.$id,
+                    data: {
+                        ref,
+                    },
+                });
+                log(`[requestMembership] Created associated payment record for privat membership (ID: ${newPayment.$id}) ✅`);
+            }
             return ok(res, { success: true, membership: newMembership });
         } catch (e: any) {
             log(`[requestMembership] Error creating membership record: ${e.message} 🚨`)
