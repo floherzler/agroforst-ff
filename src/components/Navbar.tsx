@@ -4,102 +4,81 @@ import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
-  NavigationMenuList
+  NavigationMenuList,
 } from "@/components/ui/navigation-menu";
 
 import Image from "next/image";
 import Link from "next/link";
 
-import { useAuthStore } from '@/store/Auth';
+import { useAuthStore } from "@/store/Auth";
 
 export default function Navbar() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   return (
-    <header className="bg-gradient-to-r from-permdal-700 to-permdal-800 shadow-lg sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3">
-        <NavigationMenu className="flex items-center justify-between">
-          <NavigationMenuList className="flex items-center space-x-2 sm:space-x-4 lg:space-x-6">
-            {/* Startseite - Clickable Logo */}
+    <header className="sticky top-0 z-50 border-b border-permdal-200/60 bg-[#f9f5ee]/90 backdrop-blur">
+      <div className="mx-auto max-w-5xl px-4">
+        <NavigationMenu className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center py-3">
+          <NavigationMenuList className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 md:gap-4">
             <NavigationMenuItem>
-              <Link href="/" className="block">
-                <div className="bg-white rounded-full p-1 sm:p-2 flex items-center justify-center hover:shadow-lg transition-all duration-200 hover:scale-105">
+              <Link
+                href="/"
+                className="flex items-center gap-2 rounded-full border border-permdal-200/70 bg-white/90 px-3 py-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:px-4 sm:py-1.5"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-permdal-100/80">
                   <Image
                     src="/img/agroforst_ff_blume.png"
-                    height={80}
-                    width={80}
-                    className="h-12 w-12 sm:h-16 sm:w-16 lg:h-[80px] lg:w-[80px] object-cover"
+                    height={40}
+                    width={40}
+                    className="h-7 w-7 object-contain"
                     alt="Permdal Logo"
                   />
-                </div>
+                </span>
+                <span className="text-sm font-semibold text-earth-500 sm:text-base">
+                  Agroforst
+                </span>
               </Link>
             </NavigationMenuItem>
 
-            {/* Marktplatz */}
             <NavigationMenuItem>
               <NavigationMenuLink
                 href="/marktplatz"
-                className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-permdal-600/20 rounded-lg hover:bg-permdal-600/40 transition-all duration-200 border border-permdal-500/30"
+                className="rounded-full border border-permdal-200 bg-white/90 px-3 py-1 text-xs font-medium text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-50/80 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm"
               >
                 Marktplatz
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* Blog */}
             <NavigationMenuItem>
               <NavigationMenuLink
                 href="/blog"
-                className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-permdal-600/20 rounded-lg hover:bg-permdal-600/40 transition-all duration-200 border border-permdal-500/30"
+                className="rounded-full border border-permdal-200 bg-white/90 px-3 py-1 text-xs font-medium text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-50/80 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm"
               >
                 Blog
               </NavigationMenuLink>
             </NavigationMenuItem>
 
-            {/* "Bestellungen" if user has "admin" label else "Upgrade" */}
-            {/* {user && (
-              <NavigationMenuItem>
-                {user.labels?.includes("admin") ? (
-                  <NavigationMenuLink
-                    href="/bestellungen"
-                    className="px-4 py-2 text-sm font-medium text-gray-800 bg-permdal-50 rounded-lg hover:bg-gray-300 transition-all"
-                  >
-                    Bestellungen
-                  </NavigationMenuLink>
-                ) : (
-                  <NavigationMenuLink
-                    href="/mitglied-werden"
-                    className="px-4 py-2 text-sm font-medium text-gray-800 bg-permdal-50 rounded-lg hover:bg-gray-300 transition-all"
-                  >
-                    Upgrade
-                  </NavigationMenuLink>
-                )}
-              </NavigationMenuItem>
-            )} */}
-
-            {/* Anmelden */}
             {user ? (
               <NavigationMenuItem>
                 <NavigationMenuLink
                   href="/konto"
-                  className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-permdal-600/20 rounded-lg hover:bg-permdal-600/40 transition-all duration-200 border border-permdal-500/30 truncate max-w-[120px] sm:max-w-none"
-                  title={user.name}
+                  className="max-w-[160px] truncate rounded-full border border-permdal-300 bg-permdal-600/10 px-3 py-1 text-xs font-semibold text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-600/15 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm"
                 >
-                  {user.name}
+                  Mein Konto
                 </NavigationMenuLink>
               </NavigationMenuItem>
             ) : (
               <NavigationMenuItem>
                 <NavigationMenuLink
                   href="/login"
-                  className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-permdal-600/20 rounded-lg hover:bg-permdal-600/40 transition-all duration-200 border border-permdal-500/30"
+                  className="rounded-full border border-permdal-300 bg-permdal-600/10 px-3 py-1 text-xs font-semibold text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-600/15 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm"
                 >
                   Anmelden
                 </NavigationMenuLink>
               </NavigationMenuItem>
             )}
-
           </NavigationMenuList>
         </NavigationMenu>
       </div>
     </header>
-  )
+  );
 }

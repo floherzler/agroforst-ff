@@ -642,720 +642,710 @@ export default function AccountPage() {
   const isEmailVerified = Boolean(user.emailVerification);
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Mein Konto</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Verwalten Sie Ihre Kontoeinstellungen und Bestellungen</p>
-        </div>
+    <main className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-4 sm:py-8">
+        <div className="mx-auto max-w-4xl">
+          {/* Header */}
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Mein Konto</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Verwalten Sie Ihre Kontoeinstellungen und Bestellungen</p>
+          </div>
 
 
-        {/* Tabs */}
-        <Tabs defaultValue="settings" className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">Kontoeinstellungen</TabsTrigger>
-            <TabsTrigger value="orders" className="text-xs sm:text-sm">Bestellungen</TabsTrigger>
-          </TabsList>
+          {/* Tabs */}
+          <Tabs defaultValue="settings" className="space-y-4 sm:space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="settings" className="text-xs sm:text-sm">Kontoeinstellungen</TabsTrigger>
+              <TabsTrigger value="orders" className="text-xs sm:text-sm">Bestellungen</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="settings" className="space-y-4 sm:space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Mitgliedschaft</CardTitle>
-                <CardDescription>
-                  Verfolgen Sie den Status Ihrer Mitgliedschaft oder starten Sie einen neuen Antrag.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Card className="border border-surface-outline bg-surface-card">
+                <CardHeader>
+                  <CardTitle>Mitgliedschaft</CardTitle>
+                  <CardDescription>
+                    Verfolgen Sie den Status Ihrer Mitgliedschaft oder starten Sie einen neuen Antrag.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={refreshMemberships}
+                        disabled={loadingMemberships}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        {loadingMemberships ? "Aktualisiere…" : "Status aktualisieren"}
+                      </Button>
+                      <span className="hidden sm:inline">
+                        {loadingMemberships
+                          ? "Daten werden geladen…"
+                          : memberships.length > 0
+                            ? "Aktuelle Übersicht Ihrer Mitgliedschaften."
+                            : "Noch keine Mitgliedschaft."}
+                      </span>
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={refreshMemberships}
-                      disabled={loadingMemberships}
+                      onClick={() => {
+                        setShowApplicationForm(true);
+                        setMembershipStatus({ state: "idle" });
+                      }}
+                      disabled={!canAddMoreMemberships || membershipStatus.state === "loading"}
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      {loadingMemberships ? "Aktualisiere…" : "Status aktualisieren"}
+                      <Plus className="mr-2 h-4 w-4" />
+                      Neue Mitgliedschaft
                     </Button>
-                    <span className="hidden sm:inline">
-                      {loadingMemberships
-                        ? "Daten werden geladen…"
-                        : memberships.length > 0
-                          ? "Aktuelle Übersicht Ihrer Mitgliedschaften."
-                          : "Noch keine Mitgliedschaft."}
-                    </span>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowApplicationForm(true);
-                      setMembershipStatus({ state: "idle" });
-                    }}
-                    disabled={!canAddMoreMemberships || membershipStatus.state === "loading"}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Neue Mitgliedschaft
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-                  {memberships.map((membership) => {
-                    const statusStyle = getMembershipStatusStyle(membership.status);
-                    const typeLabel = formatMembershipTypeLabel(membership.typ);
-                    const appliedAt = membership.beantragungs_datum ?? membership.$createdAt;
-                    const typeLower = (membership.typ ?? "").toLowerCase();
-                    const isPrivat = typeLower === "privat";
-                    const appliedAtDate = appliedAt ? new Date(appliedAt) : null;
-                    let expiresAtIso: string | undefined;
-                    if (appliedAtDate) {
-                      const durationYears = typeof membership.dauer_jahre === "number" && membership.dauer_jahre > 0
-                        ? membership.dauer_jahre
-                        : 1;
-                      const expiryDate = new Date(appliedAtDate);
-                      expiryDate.setFullYear(expiryDate.getFullYear() + durationYears);
-                      expiresAtIso = expiryDate.toISOString();
-                    }
-                    const validUntilFormatted = formatDateShort(expiresAtIso);
-                    const startBalance =
-                      typeof membership.kontingent_start === "number" && membership.kontingent_start > 0
-                        ? membership.kontingent_start
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                    {memberships.map((membership) => {
+                      const statusStyle = getMembershipStatusStyle(membership.status);
+                      const typeLabel = formatMembershipTypeLabel(membership.typ);
+                      const appliedAt = membership.beantragungs_datum ?? membership.$createdAt;
+                      const typeLower = (membership.typ ?? "").toLowerCase();
+                      const isPrivat = typeLower === "privat";
+                      const appliedAtDate = appliedAt ? new Date(appliedAt) : null;
+                      let expiresAtIso: string | undefined;
+                      if (appliedAtDate) {
+                        const durationYears = typeof membership.dauer_jahre === "number" && membership.dauer_jahre > 0
+                          ? membership.dauer_jahre
+                          : 1;
+                        const expiryDate = new Date(appliedAtDate);
+                        expiryDate.setFullYear(expiryDate.getFullYear() + durationYears);
+                        expiresAtIso = expiryDate.toISOString();
+                      }
+                      const validUntilFormatted = formatDateShort(expiresAtIso);
+                      const startBalance =
+                        typeof membership.kontingent_start === "number" && membership.kontingent_start > 0
+                          ? membership.kontingent_start
+                          : null;
+                      const currentBalance =
+                        typeof membership.kontingent_aktuell === "number" && membership.kontingent_aktuell >= 0
+                          ? membership.kontingent_aktuell
+                          : null;
+                      const addressDisplay =
+                        membership.adresse ?? "Muster GmbH\nMusterstraße 1\n12345 Musterstadt";
+                      const paymentsForMembership = membership.payments ?? [];
+                      const primaryPayment = paymentsForMembership[0];
+                      const openPayment = paymentsForMembership.find((payment) => (payment.status ?? "").toLowerCase() === "offen");
+                      const openPaymentRef = openPayment?.ref;
+                      const openPaymentsCount = paymentsForMembership.filter((payment) => (payment.status ?? "").toLowerCase() === "offen").length;
+                      const totalPaidAmount = paymentsForMembership
+                        .filter((payment) => (payment.status ?? "").toLowerCase() === "bezahlt")
+                        .map((payment) => extractPaymentAmount(payment))
+                        .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+                        .reduce((acc, value) => acc + value, 0);
+                      const totalPaidDisplay = totalPaidAmount > 0 ? formatPrice(totalPaidAmount) : formatPrice(0);
+                      const paymentStatusLabel = formatPaymentStatusLabel(primaryPayment?.status ?? membership.bezahl_status);
+                      const relevantPayment = openPayment ?? primaryPayment;
+                      const outstandingAmount = extractPaymentAmount(relevantPayment);
+                      const outstandingDisplay =
+                        typeof outstandingAmount === "number" && Number.isFinite(outstandingAmount)
+                          ? formatPrice(outstandingAmount)
+                          : null;
+                      const hasActiveBalance = membership.status === "aktiv" && startBalance !== null && startBalance > 0 && currentBalance !== null;
+                      const balancePercent = hasActiveBalance
+                        ? Math.min(100, Math.max(0, (currentBalance / startBalance) * 100))
                         : null;
-                    const currentBalance =
-                      typeof membership.kontingent_aktuell === "number" && membership.kontingent_aktuell >= 0
-                        ? membership.kontingent_aktuell
-                        : null;
-                    const addressDisplay =
-                      membership.adresse ?? "Muster GmbH\nMusterstraße 1\n12345 Musterstadt";
-                    const paymentsForMembership = membership.payments ?? [];
-                    const primaryPayment = paymentsForMembership[0];
-                    const openPayment = paymentsForMembership.find((payment) => (payment.status ?? "").toLowerCase() === "offen");
-                    const openPaymentRef = openPayment?.ref;
-                    const openPaymentsCount = paymentsForMembership.filter((payment) => (payment.status ?? "").toLowerCase() === "offen").length;
-                    const totalPaidAmount = paymentsForMembership
-                      .filter((payment) => (payment.status ?? "").toLowerCase() === "bezahlt")
-                      .map((payment) => extractPaymentAmount(payment))
-                      .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
-                      .reduce((acc, value) => acc + value, 0);
-                    const totalPaidDisplay = totalPaidAmount > 0 ? formatPrice(totalPaidAmount) : formatPrice(0);
-                    const paymentStatusLabel = formatPaymentStatusLabel(primaryPayment?.status ?? membership.bezahl_status);
-                    const relevantPayment = openPayment ?? primaryPayment;
-                    const outstandingAmount = extractPaymentAmount(relevantPayment);
-                    const outstandingDisplay =
-                      typeof outstandingAmount === "number" && Number.isFinite(outstandingAmount)
-                        ? formatPrice(outstandingAmount)
-                        : null;
-                    const hasActiveBalance = membership.status === "aktiv" && startBalance !== null && startBalance > 0 && currentBalance !== null;
-                    const balancePercent = hasActiveBalance
-                      ? Math.min(100, Math.max(0, (currentBalance / startBalance) * 100))
-                      : null;
-                    const membershipSince = formatDateShort(membership.beantragungs_datum ?? membership.$createdAt);
-                    const headerMeta = isPrivat ? (validUntilFormatted !== "—" ? `gültig bis ${validUntilFormatted}` : null) : (membershipSince !== "—" ? `seit ${membershipSince}` : null);
-                    return (
-                      <Card
-                        key={membership.$id}
-                        className={`relative overflow-hidden border border-white/10 text-white shadow-[0_12px_30px_-12px_rgba(23,16,80,0.4)] transition duration-200 hover:scale-[1.01] hover:border-white/30 hover:shadow-[0_20px_50px_-20px_rgba(23,16,80,0.7)] ${isPrivat
-                          ? "bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800"
-                          : "bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-900"
-                          }`}
-                      >
-                        <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
-                        <CardContent className="relative flex h-full flex-col gap-6 p-6">
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      const membershipSince = formatDateShort(membership.beantragungs_datum ?? membership.$createdAt);
+                      const headerMeta = isPrivat ? (validUntilFormatted !== "—" ? `gültig bis ${validUntilFormatted}` : null) : (membershipSince !== "—" ? `seit ${membershipSince}` : null);
+                      return (
+                        <Card
+                          key={membership.$id}
+                          className={`relative overflow-hidden border border-white/10 text-white shadow-[0_12px_30px_-12px_rgba(23,16,80,0.4)] transition duration-200 hover:scale-[1.01] hover:border-white/30 hover:shadow-[0_20px_50px_-20px_rgba(23,16,80,0.7)] ${isPrivat
+                            ? "bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800"
+                            : "bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-900"
+                            }`}
+                        >
+                          <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
+                          <CardContent className="relative flex h-full flex-col gap-6 p-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/15">
+                                  <Image
+                                    src="/img/agroforst_ff_icon_bg.png"
+                                    alt="Permdal Mitgliedschaft"
+                                    fill
+                                    sizes="36px"
+                                    className="object-cover"
+                                    priority
+                                  />
+                                </div>
+                                <div>
+                                  <h3 className="text-xl font-semibold">{typeLabel}</h3>
+                                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">Permdal</p>
+                                </div>
+                              </div>
+                              <Badge
+                                variant="secondary"
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle.className}`}
+                              >
+                                {statusStyle.label}
+                              </Badge>
+                            </div>
+                            <div className="space-y-5">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-white/50">Mitglied</p>
+                                  <p className="text-lg font-medium">{user.name ?? "Ihr Name"}</p>
+                                </div>
+                                {headerMeta && (
+                                  <span className="text-xs text-white/70">{headerMeta}</span>
+                                )}
+                              </div>
+                              {isPrivat ? (
+                                <div className="space-y-4">
+                                  {hasActiveBalance && balancePercent !== null ? (
+                                    <div>
+                                      <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wide text-white/50">
+                                        <span>Guthaben</span>
+                                        <span>
+                                          {formatPrice(currentBalance)} / {formatPrice(startBalance)}
+                                        </span>
+                                      </div>
+                                      <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
+                                        <div
+                                          className="h-full rounded-full bg-gradient-to-r from-white via-white/90 to-white/60"
+                                          style={{ width: `${balancePercent}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <Accordion type="single" collapsible className="w-full">
+                                      <AccordionItem value="payment" className="border-none">
+                                        <AccordionTrigger className="w-full flex-col items-start gap-2 rounded-lg bg-amber-50/80 px-4 py-3 text-left text-xs text-amber-900 shadow-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:shadow-inner sm:flex-row sm:items-center sm:gap-4 sm:text-sm">
+                                          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="space-y-1">
+                                              <p className="font-semibold uppercase tracking-wide text-amber-900/70">Offener Betrag</p>
+                                              <p className="text-lg font-semibold">{outstandingDisplay ?? "wird berechnet…"}</p>
+                                            </div>
+                                            <span className="text-xs text-amber-900/70 sm:ml-auto">Details</span>
+                                          </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="space-y-4 rounded-b-lg bg-white px-4 text-sm text-slate-900 shadow-inner sm:text-base">
+                                          <div className="pt-3 text-xs text-slate-700 sm:text-sm">
+                                            Bitte überweisen Sie den offenen Betrag. Nach Eingang aktivieren wir Ihre Mitgliedschaft und
+                                            laden Ihr Guthaben auf.
+                                          </div>
+                                          <div className="space-y-2">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">IBAN</p>
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                              <span className="font-mono text-sm text-slate-900">{ibanPlaceholder}</span>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
+                                                onClick={() => handleCopyPaymentRef(`${membership.$id}-iban`, ibanPlaceholder)}
+                                              >
+                                                <Copy className="mr-1 h-3.5 w-3.5" />
+                                                {copiedPaymentRef === `${membership.$id}-iban` ? "Kopiert!" : "Kopieren"}
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          {openPaymentRef && (
+                                            <div className="space-y-2">
+                                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verwendungszweck</p>
+                                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                <span className="font-mono text-sm text-slate-900">{openPaymentRef}</span>
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
+                                                  onClick={() => handleCopyPaymentRef(`${membership.$id}-ref`, openPaymentRef)}
+                                                >
+                                                  <Copy className="mr-1 h-3.5 w-3.5" />
+                                                  {copiedPaymentRef === `${membership.$id}-ref` ? "Kopiert!" : "Kopieren"}
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          )}
+                                          <p className="text-xs text-slate-600">
+                                            Verwenden Sie bitte exakt den angegebenen Verwendungszweck, damit wir Ihre Zahlung automatisch
+                                            zuordnen können.
+                                          </p>
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    </Accordion>
+                                  )}
+                                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/80">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold uppercase tracking-wide text-white/60">Zahlungsstatus:</span>
+                                      <Badge
+                                        variant={paymentStatusLabel === "Bezahlt" ? "secondary" : "outline"}
+                                        className={paymentStatusLabel === "Offen" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-white/30 text-white"}
+                                      >
+                                        {paymentStatusLabel}
+                                      </Badge>
+                                    </div>
+                                    {hasActiveBalance && balancePercent !== null && balancePercent <= 10 && (
+                                      <span className="font-semibold text-amber-200">Nur noch wenig Guthaben</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-5 text-sm text-white/90">
+                                  <Accordion type="single" collapsible className="w-full">
+                                    <AccordionItem value="address" className="border-none">
+                                      <AccordionTrigger className="w-full rounded-lg bg-white/10 px-4 py-3 text-left text-xs uppercase tracking-wide hover:no-underline data-[state=open]:rounded-b-none">
+                                        Rechnungsadresse
+                                      </AccordionTrigger>
+                                      <AccordionContent className="rounded-b-lg bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-inner">
+                                        <p className="whitespace-pre-line">{addressDisplay ?? "Noch keine Adresse hinterlegt."}</p>
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                  <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                                    <div className="rounded-lg bg-white/10 px-4 py-3">
+                                      <p className="uppercase tracking-wide text-white/60">Offene Rechnungen</p>
+                                      <p className="mt-1 text-2xl font-semibold text-white">{openPaymentsCount}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-white/10 px-4 py-3">
+                                      <p className="uppercase tracking-wide text-white/60">Summe bezahlt</p>
+                                      <p className="mt-1 text-2xl font-semibold text-white">{totalPaidDisplay}</p>
+                                    </div>
+                                  </div>
+                                  {/* Additional details ... */}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    {canAddMoreMemberships && showApplicationForm && (
+                      <Card className="relative flex min-h-[220px] flex-col justify-between border border-dashed border-gray-300 bg-gray-50/80 text-gray-600 shadow-inner transition duration-200 hover:scale-[1.01] hover:border-gray-400 hover:shadow-lg">
+                        <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
+                          <div className="space-y-3">
                             <div className="flex items-center gap-3">
-                              <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/15">
+                              <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/60">
                                 <Image
                                   src="/img/agroforst_ff_icon_bg.png"
                                   alt="Permdal Mitgliedschaft"
                                   fill
                                   sizes="36px"
                                   className="object-cover"
-                                  priority
                                 />
                               </div>
                               <div>
-                                <h3 className="text-xl font-semibold">{typeLabel}</h3>
-                                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Permdal</p>
+                                <p className="text-sm font-semibold text-gray-700">Mitgliedschaft hinzufügen</p>
+                                <p className="text-xs text-gray-500">Wählen Sie den passenden Typ und stellen Sie Ihren Antrag.</p>
                               </div>
                             </div>
-                            <Badge
-                              variant="secondary"
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle.className}`}
-                            >
-                              {statusStyle.label}
-                            </Badge>
-                          </div>
-                          <div className="space-y-5">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div>
-                                <p className="text-xs uppercase tracking-wide text-white/50">Mitglied</p>
-                                <p className="text-lg font-medium">{user.name ?? "Ihr Name"}</p>
-                              </div>
-                              {headerMeta && (
-                                <span className="text-xs text-white/70">{headerMeta}</span>
-                              )}
-                            </div>
-                            {isPrivat ? (
-                              <div className="space-y-4">
-                                {hasActiveBalance && balancePercent !== null ? (
-                                  <div>
-                                    <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wide text-white/50">
-                                      <span>Guthaben</span>
-                                      <span>
-                                        {formatPrice(currentBalance)} / {formatPrice(startBalance)}
-                                      </span>
-                                    </div>
-                                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
-                                      <div
-                                        className="h-full rounded-full bg-gradient-to-r from-white via-white/90 to-white/60"
-                                        style={{ width: `${balancePercent}%` }}
-                                      />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <Accordion type="single" collapsible className="w-full">
-                                    <AccordionItem value="payment" className="border-none">
-                                      <AccordionTrigger className="w-full flex-col items-start gap-2 rounded-lg bg-amber-50/80 px-4 py-3 text-left text-xs text-amber-900 shadow-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:shadow-inner sm:flex-row sm:items-center sm:gap-4 sm:text-sm">
-                                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                          <div className="space-y-1">
-                                            <p className="font-semibold uppercase tracking-wide text-amber-900/70">Offener Betrag</p>
-                                            <p className="text-lg font-semibold">{outstandingDisplay ?? "wird berechnet…"}</p>
-                                          </div>
-                                          <span className="text-xs text-amber-900/70 sm:ml-auto">Details</span>
-                                        </div>
-                                      </AccordionTrigger>
-                                      <AccordionContent className="space-y-4 rounded-b-lg bg-white px-4 text-sm text-slate-900 shadow-inner sm:text-base">
-                                        <div className="pt-3 text-xs text-slate-700 sm:text-sm">
-                                          Bitte überweisen Sie den offenen Betrag. Nach Eingang aktivieren wir Ihre Mitgliedschaft und
-                                          laden Ihr Guthaben auf.
-                                        </div>
-                                        <div className="space-y-2">
-                                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">IBAN</p>
-                                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                            <span className="font-mono text-sm text-slate-900">{ibanPlaceholder}</span>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
-                                              onClick={() => handleCopyPaymentRef(`${membership.$id}-iban`, ibanPlaceholder)}
-                                            >
-                                              <Copy className="mr-1 h-3.5 w-3.5" />
-                                              {copiedPaymentRef === `${membership.$id}-iban` ? "Kopiert!" : "Kopieren"}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        {openPaymentRef && (
-                                          <div className="space-y-2">
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verwendungszweck</p>
-                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                              <span className="font-mono text-sm text-slate-900">{openPaymentRef}</span>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
-                                                onClick={() => handleCopyPaymentRef(`${membership.$id}-ref`, openPaymentRef)}
-                                              >
-                                                <Copy className="mr-1 h-3.5 w-3.5" />
-                                                {copiedPaymentRef === `${membership.$id}-ref` ? "Kopiert!" : "Kopieren"}
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        )}
-                                        <p className="text-xs text-slate-600">
-                                          Verwenden Sie bitte exakt den angegebenen Verwendungszweck, damit wir Ihre Zahlung automatisch
-                                          zuordnen können.
-                                        </p>
-                                      </AccordionContent>
-                                    </AccordionItem>
-                                  </Accordion>
-                                )}
-                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/80">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold uppercase tracking-wide text-white/60">Zahlungsstatus:</span>
-                                    <Badge
-                                      variant={paymentStatusLabel === "Bezahlt" ? "secondary" : "outline"}
-                                      className={paymentStatusLabel === "Offen" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-white/30 text-white"}
-                                    >
-                                      {paymentStatusLabel}
-                                    </Badge>
-                                  </div>
-                                  {hasActiveBalance && balancePercent !== null && balancePercent <= 10 && (
-                                    <span className="font-semibold text-amber-200">Nur noch wenig Guthaben</span>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-5 text-sm text-white/90">
-                                <Accordion type="single" collapsible className="w-full">
-                                  <AccordionItem value="address" className="border-none">
-                                    <AccordionTrigger className="w-full rounded-lg bg-white/10 px-4 py-3 text-left text-xs uppercase tracking-wide hover:no-underline data-[state=open]:rounded-b-none">
-                                      Rechnungsadresse
-                                    </AccordionTrigger>
-                                    <AccordionContent className="rounded-b-lg bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-inner">
-                                      <p className="whitespace-pre-line">{addressDisplay ?? "Noch keine Adresse hinterlegt."}</p>
-                                    </AccordionContent>
-                                  </AccordionItem>
-                                </Accordion>
-                                <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
-                                  <div className="rounded-lg bg-white/10 px-4 py-3">
-                                    <p className="uppercase tracking-wide text-white/60">Offene Rechnungen</p>
-                                    <p className="mt-1 text-2xl font-semibold text-white">{openPaymentsCount}</p>
-                                  </div>
-                                  <div className="rounded-lg bg-white/10 px-4 py-3">
-                                    <p className="uppercase tracking-wide text-white/60">Summe bezahlt</p>
-                                    <p className="mt-1 text-2xl font-semibold text-white">{totalPaidDisplay}</p>
-                                  </div>
-                                </div>
-                                {/* <div className="flex flex-col gap-2 text-xs text-white/70">
-                                    <div className="flex flex-col gap-1">
-                                      <span className="font-semibold uppercase tracking-wide text-white/60">Nächste Verlängerung</span>
-                                      <span>{validUntilFormatted}</span>
-                                    </div>
-                                    {openPaymentRef && (
-                                      <div className="flex flex-col gap-1">
-                                        <span className="font-semibold uppercase tracking-wide text-white/60">Aktueller Verwendungszweck</span>
-                                        <span className="font-mono text-sm text-white">{openPaymentRef}</span>
-                                      </div>
-                                    )}
-                                  </div> */}
-                              </div>
+                            {membershipLoadError && (
+                              <p className="text-xs text-destructive">{membershipLoadError}</p>
                             )}
+                            {!user.emailVerification && (
+                              <p className="text-xs text-amber-600">
+                                Bitte verifizieren Sie Ihre Email-Adresse, bevor Sie eine Mitgliedschaft beantragen.
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={membershipType === "privat" ? "default" : "outline"}
+                                onClick={() => selectMembershipType("privat")}
+                                disabled={membershipStatus.state === "loading" || hasPrivatMembership}
+                              >
+                                Privat
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={membershipType === "business" ? "default" : "outline"}
+                                onClick={() => selectMembershipType("business")}
+                                disabled={membershipStatus.state === "loading" || hasBusinessMembership}
+                              >
+                                Business
+                              </Button>
+                            </div>
+                            <Button
+                              className="w-full"
+                              onClick={requestMembership}
+                              disabled={
+                                !user.emailVerification ||
+                                membershipStatus.state === "loading" ||
+                                (membershipType === "privat" && hasPrivatMembership) ||
+                                (membershipType === "business" && hasBusinessMembership)
+                              }
+                            >
+                              {membershipStatus.state === "loading" ? "Sende…" : "Mitgliedschaft beantragen"}
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
-                    );
-                  })}
-                  {canAddMoreMemberships && showApplicationForm && (
-                    <Card className="relative flex min-h-[220px] flex-col justify-between border border-dashed border-gray-300 bg-gray-50/80 text-gray-600 shadow-inner transition duration-200 hover:scale-[1.01] hover:border-gray-400 hover:shadow-lg">
-                      <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/60">
-                              <Image
-                                src="/img/agroforst_ff_icon_bg.png"
-                                alt="Permdal Mitgliedschaft"
-                                fill
-                                sizes="36px"
-                                className="object-cover"
-                              />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-700">Mitgliedschaft hinzufügen</p>
-                              <p className="text-xs text-gray-500">Wählen Sie den passenden Typ und stellen Sie Ihren Antrag.</p>
-                            </div>
-                          </div>
-                          {membershipLoadError && (
-                            <p className="text-xs text-destructive">{membershipLoadError}</p>
-                          )}
-                          {!user.emailVerification && (
-                            <p className="text-xs text-amber-600">
-                              Bitte verifizieren Sie Ihre Email-Adresse, bevor Sie eine Mitgliedschaft beantragen.
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={membershipType === "privat" ? "default" : "outline"}
-                              onClick={() => selectMembershipType("privat")}
-                              disabled={membershipStatus.state === "loading" || hasPrivatMembership}
-                            >
-                              Privat
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={membershipType === "business" ? "default" : "outline"}
-                              onClick={() => selectMembershipType("business")}
-                              disabled={membershipStatus.state === "loading" || hasBusinessMembership}
-                            >
-                              Business
-                            </Button>
-                          </div>
-                          <Button
-                            className="w-full"
-                            onClick={requestMembership}
-                            disabled={
-                              !user.emailVerification ||
-                              membershipStatus.state === "loading" ||
-                              (membershipType === "privat" && hasPrivatMembership) ||
-                              (membershipType === "business" && hasBusinessMembership)
-                            }
-                          >
-                            {membershipStatus.state === "loading" ? "Sende…" : "Mitgliedschaft beantragen"}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-                {membershipStatus.message && (
-                  <p
-                    className={
-                      membershipStatus.state === "success"
-                        ? "text-sm text-green-600"
-                        : "text-sm text-destructive"
-                    }
-                  >
-                    {membershipStatus.message}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Kontoinformationen</CardTitle>
-                <CardDescription>Profil, Sicherheit und persönliche Einstellungen</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-                      <AvatarImage src="" alt={user.name} />
-                      <AvatarFallback className="bg-permdal-100 text-lg text-permdal-800 sm:text-xl">
-                        {user.name?.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Mitglied</p>
-                        <p className="text-xl font-semibold text-foreground break-words">{user.name}</p>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
-                        <span className="break-all sm:break-normal">{user.email}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleCopyEmail}
-                          className="h-8 w-8"
-                        >
-                          {copiedEmail ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          <span className="sr-only">E-Mail kopieren</span>
-                        </Button>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                  <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto md:justify-end">
-                    <Badge
-                      variant={isEmailVerified ? "default" : "secondary"}
+                  {membershipStatus.message && (
+                    <p
                       className={
-                        isEmailVerified ? undefined : "border border-amber-500/40 bg-amber-100 text-amber-900"
+                        membershipStatus.state === "success"
+                          ? "text-sm text-green-600"
+                          : "text-sm text-destructive"
                       }
                     >
-                      {isEmailVerified ? "E-Mail verifiziert" : "E-Mail nicht verifiziert"}
-                    </Badge>
-                    {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${membershipStatusStyle.className}`}
-                      >
-                        {membershipTypeLabel} • {membershipStatusStyle.label}
-                      </span>
-                    )}
-                    {roleLabels.map((label) => (
-                      <Badge key={label} variant="destructive" className="text-xs capitalize">
-                        {label}
-                      </Badge>
-                    ))}
-                    <Button variant="outline" size="sm" onClick={logout} className="w-full sm:w-auto">
-                      Abmelden
-                    </Button>
-                  </div>
-                </div>
-                <Separator />
-                <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="grid w-full max-w-md grid-cols-3">
-                    <TabsTrigger value="overview">Profil</TabsTrigger>
-                    <TabsTrigger value="security">Sicherheit</TabsTrigger>
-                    <TabsTrigger value="preferences">Präferenzen</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="overview" className="space-y-4 pt-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-lg border bg-muted/20 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
-                        <p className="mt-2 font-medium text-foreground break-words">{user.name}</p>
-                      </div>
-                      <div className="rounded-lg border bg-muted/20 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</p>
-                        <p className="mt-2 font-medium text-foreground break-words">{user.email}</p>
-                      </div>
-                      {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
-                        <div className="rounded-lg border bg-muted/20 p-4 sm:col-span-2">
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Aktive Mitgliedschaft</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-foreground">{membershipTypeLabel}</span>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${membershipStatusStyle.className}`}
-                            >
-                              {membershipStatusStyle.label}
-                            </span>
-                          </div>
-                          {primaryMembership.$createdAt && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              Erstellt am {formatDateShort(primaryMembership.$createdAt)}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="security" className="space-y-4 pt-4">
-                    <div className="rounded-lg border bg-muted/20 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">E-Mail-Bestätigung</p>
-                          <p className="text-sm text-muted-foreground">
-                            {isEmailVerified
-                              ? "Ihre E-Mail-Adresse ist bestätigt."
-                              : "Bitte bestätigen Sie Ihre E-Mail-Adresse, um alle Funktionen nutzen zu können."}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={isEmailVerified ? "default" : "secondary"}
-                          className={
-                            isEmailVerified
-                              ? undefined
-                              : "border border-amber-500/40 bg-amber-100 text-amber-900"
-                          }
-                        >
-                          {isEmailVerified ? "Aktiv" : "Offen"}
-                        </Badge>
-                      </div>
-                      {!isEmailVerified && (
-                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={sendVerificationEmail}
-                            disabled={verificationStatus.state === "loading"}
-                          >
-                            {verificationStatus.state === "loading" ? "Sende…" : "E-Mail verifizieren"}
-                          </Button>
-                          {verificationStatus.message && (
-                            <span
-                              className={`text-xs ${
-                                verificationStatus.state === "error" ? "text-destructive" : "text-muted-foreground"
-                              }`}
-                            >
-                              {verificationStatus.message}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {isEmailVerified && verificationStatus.message && (
-                        <p className="mt-3 text-xs text-muted-foreground">{verificationStatus.message}</p>
-                      )}
-                    </div>
-                    <div className="rounded-lg border bg-muted/20 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">Sitzung</p>
-                          <p className="text-sm text-muted-foreground">
-                            Melden Sie sich ab, um diese Sitzung zu beenden.
-                          </p>
-                        </div>
-                        <Button size="sm" variant="outline" onClick={logout}>
-                          Abmelden
-                        </Button>
-                      </div>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Weitere Sicherheitsoptionen werden bald direkt hier verfügbar sein.
-                      </p>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="preferences" className="space-y-4 pt-4">
-                    <div className="rounded-lg border bg-muted/20 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">Designmodus</p>
-                          <p className="text-sm text-muted-foreground">
-                            {themePreference === "dark"
-                              ? "Bevorzugt dunkles Erscheinungsbild."
-                              : themePreference === "system"
-                                ? "Folgt den Systemeinstellungen."
-                                : "Bevorzugt helles Erscheinungsbild."}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="uppercase">
-                            {themeLabel}
-                          </Badge>
-                          <Switch checked={themePreference === "dark"} disabled aria-readonly />
-                        </div>
-                      </div>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Die Anpassung des Erscheinungsbildes direkt im Konto folgt in Kürze.
-                      </p>
-                    </div>
-                    <div className="rounded-lg border bg-muted/20 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">Community-Updates</p>
-                          <p className="text-sm text-muted-foreground">
-                            Steuern Sie, ob Sie über neue Permdal-Inhalte informiert werden möchten.
-                          </p>
-                        </div>
-                        <Switch checked={newsletterOptIn} disabled aria-readonly />
-                      </div>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Diese Einstellung wird zurzeit durch das Permdal-Team verwaltet.
-                      </p>
-                    </div>
-                    {contextualLabels.length > 0 && (
-                      <div className="rounded-lg border bg-muted/20 p-4">
-                        <p className="text-sm font-medium text-foreground">Weitere Labels</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {contextualLabels.map((label) => (
-                            <Badge key={label} variant="secondary" className="capitalize">
-                              {label.replace(/_/g, " ")}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
-                      Selbstverwaltung für weitere Präferenzen ist in Vorbereitung. Bei Änderungen wenden Sie sich bitte an das Permdal-Team.
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Benachrichtigungen</CardTitle>
-                <CardDescription>
-                  Verwalten Sie Ihre Einstellungen für E-Mail-Benachrichtigungen
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Bestellbestätigungen</p>
-                    <p className="text-sm text-gray-600">Erhalten Sie E-Mails bei neuen Bestellungen</p>
-                  </div>
-                  <Badge variant="secondary">Aktiviert</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Marktplatz-Updates</p>
-                    <p className="text-sm text-gray-600">Benachrichtigungen über neue Angebote</p>
-                  </div>
-                  <Badge variant="secondary">Aktiviert</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Newsletter</p>
-                    <p className="text-sm text-gray-600">Regelmäßige Updates über Permdal</p>
-                  </div>
-                  <Badge variant="outline">Deaktiviert</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="orders" className="space-y-6">
-            <Card>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <CardTitle>Meine Bestellungen</CardTitle>
-                    <CardDescription>
-                      Übersicht Ihrer aktuellen und vergangenen Bestellungen
-                    </CardDescription>
-                  </div>
-                  {!loadingOrders && orders && (
-                    <Badge variant="outline" className="shrink-0">
-                      {orders.length} {orders.length === 1 ? "Eintrag" : "Einträge"}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingOrders ? (
-                  <div className="text-center py-12">Lädt…</div>
-                ) : orders && orders.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {orders.map((o) => {
-                      const mengeNum = Number((o as any).menge);
-                      const unitRaw = (o.einheit || '').toString().toLowerCase();
-                      const isGram = unitRaw === 'gramm' || unitRaw === 'g';
-                      const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
-                      return (
-                        <Card key={o.$id} className="border bg-white/70">
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <CardTitle className="text-base">
-                                  {o.produkt_name || `Bestellung ${o.$id.slice(0, 6)}`}
-                                </CardTitle>
-                                <CardDescription>
-                                  erstellt am {formatDate(o.$createdAt)}
-                                </CardDescription>
-                              </div>
-                              {statusBadge(o.status)}
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="flex flex-col gap-2 text-sm">
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Menge</span>
-                                <span className="font-medium">
-                                  {displayAsKg ? '1' : (Number.isFinite(mengeNum) ? mengeNum : (o as any).menge)} {displayAsKg ? 'kg' : o.einheit}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Preis pro Einheit</span>
-                                <span className="font-medium">
-                                  {formatPrice(o.preis_einheit)} / {displayAsKg ? 'kg' : o.einheit}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Gesamt</span>
-                                <span className="font-semibold">{formatPrice(o.preis_gesamt)}</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Abholung</span>
-                                <span className="font-medium">{(o as any).abholung ? "Selbstabholung" : "Lieferung/Absprache"}</span>
-                              </div>
-                              <Separator />
-                              <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Angebot</span>
-                                <Button asChild variant="outline" size="sm">
-                                  <Link href={`/angebote/${o.angebotID}`}>Details</Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                      <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Noch keine Bestellungen</h3>
-                    <p className="text-gray-600 mb-4">
-                      Besuchen Sie unseren Marktplatz, um Produkte zu bestellen.
+                      {membershipStatus.message}
                     </p>
-                    <Button asChild>
-                      <a href="/marktplatz">Zum Marktplatz</a>
-                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            <Card className="border border-surface-outline bg-surface-card">
+                <CardHeader>
+                  <CardTitle>Kontoinformationen</CardTitle>
+                  {/* <CardDescription>Profil, Sicherheit und persönliche Einstellungen</CardDescription> */}
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                      <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                        <AvatarImage src="" alt={user.name} />
+                        <AvatarFallback className="bg-permdal-100 text-lg text-permdal-800 sm:text-xl">
+                          {user.name?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Mitglied</p>
+                          <p className="text-xl font-semibold text-foreground break-words">{user.name}</p>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
+                          <span className="break-all sm:break-normal">{user.email}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleCopyEmail}
+                            className="h-8 w-8"
+                          >
+                            {copiedEmail ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            <span className="sr-only">E-Mail kopieren</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto md:justify-end">
+                      <Badge
+                        variant={isEmailVerified ? "default" : "secondary"}
+                        className={
+                          isEmailVerified ? undefined : "border border-amber-500/40 bg-amber-100 text-amber-900"
+                        }
+                      >
+                        {isEmailVerified ? "E-Mail verifiziert" : "E-Mail nicht verifiziert"}
+                      </Badge>
+                      {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${membershipStatusStyle.className}`}
+                        >
+                          {membershipTypeLabel} • {membershipStatusStyle.label}
+                        </span>
+                      )}
+                      {roleLabels.map((label) => (
+                        <Badge key={label} variant="destructive" className="text-xs capitalize">
+                          {label}
+                        </Badge>
+                      ))}
+                      <Button variant="outline" size="sm" onClick={logout} className="w-full sm:w-auto">
+                        Abmelden
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  <Separator />
+                  <Tabs defaultValue="security" className="w-full">
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                      {/* <TabsTrigger value="overview">Profil</TabsTrigger> */}
+                      <TabsTrigger value="security">Sicherheit</TabsTrigger>
+                      <TabsTrigger value="preferences">Präferenzen</TabsTrigger>
+                    </TabsList>
+                    {/* <TabsContent value="overview" className="space-y-4 pt-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-lg border bg-muted/20 p-4">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
+                          <p className="mt-2 font-medium text-foreground break-words">{user.name}</p>
+                        </div>
+                        <div className="rounded-lg border bg-muted/20 p-4">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</p>
+                          <p className="mt-2 font-medium text-foreground break-words">{user.email}</p>
+                        </div>
+                        {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
+                          <div className="rounded-lg border bg-muted/20 p-4 sm:col-span-2">
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">Aktive Mitgliedschaft</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-foreground">{membershipTypeLabel}</span>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${membershipStatusStyle.className}`}
+                              >
+                                {membershipStatusStyle.label}
+                              </span>
+                            </div>
+                            {primaryMembership.$createdAt && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                Erstellt am {formatDateShort(primaryMembership.$createdAt)}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent> */}
+                    <TabsContent value="security" className="space-y-4 pt-4">
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">E-Mail-Bestätigung</p>
+                            <p className="text-sm text-muted-foreground">
+                              {isEmailVerified
+                                ? "Ihre E-Mail-Adresse ist bestätigt."
+                                : "Bitte bestätigen Sie Ihre E-Mail-Adresse, um alle Funktionen nutzen zu können."}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={isEmailVerified ? "default" : "secondary"}
+                            className={
+                              isEmailVerified
+                                ? undefined
+                                : "border border-amber-500/40 bg-amber-100 text-amber-900"
+                            }
+                          >
+                            {isEmailVerified ? "Aktiv" : "Offen"}
+                          </Badge>
+                        </div>
+                        {!isEmailVerified && (
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={sendVerificationEmail}
+                              disabled={verificationStatus.state === "loading"}
+                            >
+                              {verificationStatus.state === "loading" ? "Sende…" : "E-Mail verifizieren"}
+                            </Button>
+                            {verificationStatus.message && (
+                              <span
+                                className={`text-xs ${verificationStatus.state === "error" ? "text-destructive" : "text-muted-foreground"
+                                  }`}
+                              >
+                                {verificationStatus.message}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {isEmailVerified && verificationStatus.message && (
+                          <p className="mt-3 text-xs text-muted-foreground">{verificationStatus.message}</p>
+                        )}
+                      </div>
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">Sitzung</p>
+                            <p className="text-sm text-muted-foreground">
+                              Melden Sie sich ab, um diese Sitzung zu beenden.
+                            </p>
+                          </div>
+                          <Button size="sm" variant="outline" onClick={logout}>
+                            Abmelden
+                          </Button>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Weitere Sicherheitsoptionen werden bald direkt hier verfügbar sein.
+                        </p>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="preferences" className="space-y-4 pt-4">
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">Designmodus</p>
+                            <p className="text-sm text-muted-foreground">
+                              {themePreference === "dark"
+                                ? "Bevorzugt dunkles Erscheinungsbild."
+                                : themePreference === "system"
+                                  ? "Folgt den Systemeinstellungen."
+                                  : "Bevorzugt helles Erscheinungsbild."}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="uppercase">
+                              {themeLabel}
+                            </Badge>
+                            <Switch checked={themePreference === "dark"} disabled aria-readonly />
+                          </div>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Die Anpassung des Erscheinungsbildes direkt im Konto folgt in Kürze.
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">Community-Updates</p>
+                            <p className="text-sm text-muted-foreground">
+                              Steuern Sie, ob Sie über neue Permdal-Inhalte informiert werden möchten.
+                            </p>
+                          </div>
+                          <Switch checked={newsletterOptIn} disabled aria-readonly />
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Diese Einstellung wird zurzeit durch das Permdal-Team verwaltet.
+                        </p>
+                      </div>
+                      {contextualLabels.length > 0 && (
+                        <div className="rounded-lg border bg-muted/20 p-4">
+                          <p className="text-sm font-medium text-foreground">Weitere Labels</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {contextualLabels.map((label) => (
+                              <Badge key={label} variant="secondary" className="capitalize">
+                                {label.replace(/_/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
+                        Selbstverwaltung für weitere Präferenzen ist in Vorbereitung. Bei Änderungen wenden Sie sich bitte an das Permdal-Team.
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+            <Card className="border border-surface-outline bg-surface-card">
+                <CardHeader>
+                  <CardTitle>Benachrichtigungen</CardTitle>
+                  <CardDescription>
+                    Verwalten Sie Ihre Einstellungen für E-Mail-Benachrichtigungen
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Bestellbestätigungen</p>
+                      <p className="text-sm text-gray-600">Erhalten Sie E-Mails bei neuen Bestellungen</p>
+                    </div>
+                    <Badge variant="secondary">Aktiviert</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Marktplatz-Updates</p>
+                      <p className="text-sm text-gray-600">Benachrichtigungen über neue Angebote</p>
+                    </div>
+                    <Badge variant="secondary">Aktiviert</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Newsletter</p>
+                      <p className="text-sm text-gray-600">Regelmäßige Updates über Permdal</p>
+                    </div>
+                    <Badge variant="outline">Deaktiviert</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="orders" className="space-y-6">
+              <Card>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <CardTitle>Meine Bestellungen</CardTitle>
+                      <CardDescription>
+                        Übersicht Ihrer aktuellen und vergangenen Bestellungen
+                      </CardDescription>
+                    </div>
+                    {!loadingOrders && orders && (
+                      <Badge variant="outline" className="shrink-0">
+                        {orders.length} {orders.length === 1 ? "Eintrag" : "Einträge"}
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingOrders ? (
+                    <div className="text-center py-12">Lädt…</div>
+                  ) : orders && orders.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {orders.map((o) => {
+                        const mengeNum = Number((o as any).menge);
+                        const unitRaw = (o.einheit || '').toString().toLowerCase();
+                        const isGram = unitRaw === 'gramm' || unitRaw === 'g';
+                        const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
+                        return (
+                          <Card key={o.$id} className="border bg-white/70">
+                            <CardHeader className="pb-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <CardTitle className="text-base">
+                                    {o.produkt_name || `Bestellung ${o.$id.slice(0, 6)}`}
+                                  </CardTitle>
+                                  <CardDescription>
+                                    erstellt am {formatDate(o.$createdAt)}
+                                  </CardDescription>
+                                </div>
+                                {statusBadge(o.status)}
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="flex flex-col gap-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Menge</span>
+                                  <span className="font-medium">
+                                    {displayAsKg ? '1' : (Number.isFinite(mengeNum) ? mengeNum : (o as any).menge)} {displayAsKg ? 'kg' : o.einheit}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Preis pro Einheit</span>
+                                  <span className="font-medium">
+                                    {formatPrice(o.preis_einheit)} / {displayAsKg ? 'kg' : o.einheit}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Gesamt</span>
+                                  <span className="font-semibold">{formatPrice(o.preis_gesamt)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Abholung</span>
+                                  <span className="font-medium">{(o as any).abholung ? "Selbstabholung" : "Lieferung/Absprache"}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Angebot</span>
+                                  <Button asChild variant="outline" size="sm">
+                                    <Link href={`/angebote/${o.angebotID}`}>Details</Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 mb-4">
+                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Noch keine Bestellungen</h3>
+                      <p className="text-gray-600 mb-4">
+                        Besuchen Sie unseren Marktplatz, um Produkte zu bestellen.
+                      </p>
+                      <Button asChild>
+                        <a href="/marktplatz">Zum Marktplatz</a>
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

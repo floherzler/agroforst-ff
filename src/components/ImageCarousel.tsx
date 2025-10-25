@@ -8,20 +8,19 @@ export default function ImageCarousel() {
       opts={{
         align: "start",
       }}
-      className="relative w-3/4 max-w-3xl pt-4"
+      className="relative w-full max-w-4xl pt-4"
     >
       <CarouselContent>
         <CarouselItem key={1} className="md:basis-1/2 lg:basis-1/2">
           <div className="p-1">
-            <Card className="flex aspect-video">
+            <Card className="flex aspect-video overflow-hidden border-none shadow-lg">
               <CardContent className="flex items-center justify-center p-1">
                 <Image
                   src="/img/kartoffel-hänger.jpeg"
-                  alt="Kartoffeln"
+                  alt="Kartoffelernte"
                   width={800}
                   height={450}
-                  className="w-full h-auto rounded-lg shadow-md"
-                  style={{ objectFit: "cover" }}
+                  className="h-full w-full rounded-lg object-cover shadow-md"
                 />
               </CardContent>
             </Card>
@@ -29,15 +28,14 @@ export default function ImageCarousel() {
         </CarouselItem>
         <CarouselItem key={2} className="md:basis-1/2 lg:basis-1/2">
           <div className="p-1">
-            <Card className="flex aspect-video">
+            <Card className="flex aspect-video overflow-hidden border-none shadow-lg">
               <CardContent className="flex items-center justify-center p-1">
                 <Image
                   src="/img/erdbeer-körbe.jpeg"
-                  alt="Kartoffeln"
+                  alt="Erdbeeren"
                   width={800}
                   height={450}
-                  className="w-full h-auto rounded-lg shadow-md"
-                  style={{ objectFit: "cover" }}
+                  className="h-full w-full rounded-lg object-cover shadow-md"
                 />
               </CardContent>
             </Card>
@@ -45,15 +43,14 @@ export default function ImageCarousel() {
         </CarouselItem>
         <CarouselItem key={3} className="md:basis-1/2 lg:basis-1/2">
           <div className="p-1">
-            <Card className="flex aspect-video">
+            <Card className="flex aspect-video overflow-hidden border-none shadow-lg">
               <CardContent className="flex items-center justify-center p-1">
                 <Image
                   src="/img/herbst.jpeg"
                   alt="Herbstliche Blätter"
                   width={800}
                   height={450}
-                  className="w-full h-auto rounded-lg shadow-md"
-                  style={{ objectFit: "cover" }}
+                  className="h-full w-full rounded-lg object-cover shadow-md"
                 />
               </CardContent>
             </Card>
@@ -61,14 +58,14 @@ export default function ImageCarousel() {
         </CarouselItem>
         <CarouselItem key={4} className="md:basis-1/2 lg:basis-1/2">
           <div className="p-1">
-            <Card className="flex aspect-video">
+            <Card className="flex aspect-video overflow-hidden border-none shadow-lg">
               <CardContent className="flex items-center justify-center p-1">
                 <Image
                   src="/img/garten-nebel.jpeg"
                   alt="Nebliger Garten"
                   width={800}
                   height={450}
-                  className="w-full h-auto rounded-lg shadow-md"
+                  className="h-full w-full rounded-lg object-cover shadow-md"
                 />
               </CardContent>
             </Card>
@@ -76,14 +73,14 @@ export default function ImageCarousel() {
         </CarouselItem>
         <CarouselItem key={5} className="md:basis-1/2 lg:basis-1/2">
           <div className="p-1">
-            <Card className="flex aspect-video">
+            <Card className="flex aspect-video overflow-hidden border-none shadow-lg">
               <CardContent className="flex items-center justify-center p-1">
                 <Image
                   src="/img/schnee-feld.jpeg"
                   alt="Feld im Schnee"
                   width={800}
                   height={450}
-                  className="w-full h-auto rounded-lg shadow-md"
+                  className="h-full w-full rounded-lg object-cover shadow-md"
                 />
               </CardContent>
             </Card>

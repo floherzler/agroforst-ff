@@ -226,7 +226,8 @@ export default function MarktplatzPage() {
     };
 
     return (
-        <main className="min-h-screen container mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <main className="min-h-screen bg-background">
+            <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
             {/* Header */}
             <div className="text-center space-y-2">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-permdal-900">Marktplatz</h1>
@@ -290,7 +291,7 @@ export default function MarktplatzPage() {
                             <Filter className="h-4 w-4 mr-2" />
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-surface-card">
                             <SelectItem value="all">Alle Angebote</SelectItem>
                             <SelectItem value="available">Verfügbar</SelectItem>
                             <SelectItem value="low-stock">Nur noch wenige</SelectItem>
@@ -301,7 +302,7 @@ export default function MarktplatzPage() {
                         <SelectTrigger className="w-full sm:w-[140px] text-xs sm:text-sm">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-surface-card">
                             <SelectItem value="date">Nach Datum</SelectItem>
                             <SelectItem value="price">Nach Preis</SelectItem>
                             <SelectItem value="name">Nach Name</SelectItem>
@@ -336,7 +337,7 @@ export default function MarktplatzPage() {
             {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <Card key={i} className="animate-pulse">
+                        <Card key={i} className="animate-pulse border border-surface-outline bg-surface-card">
                             <CardHeader>
                                 <div className="h-4 bg-muted rounded w-3/4"></div>
                                 <div className="h-3 bg-muted rounded w-1/2"></div>
@@ -353,7 +354,10 @@ export default function MarktplatzPage() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {filteredAndSortedAngebote.map((angebot) => (
-                        <Card key={angebot.$id} className="hover:shadow-md transition-shadow">
+                        <Card
+                            key={angebot.$id}
+                            className="border border-surface-outline bg-surface-card shadow-brand-soft transition-shadow hover:shadow-brand-strong"
+                        >
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-2 sm:gap-3">
@@ -422,7 +426,7 @@ export default function MarktplatzPage() {
 
                                 <div className="pt-2">
                                     <Link href={`/angebote/${angebot.$id}`} passHref>
-                                        <Button className="w-full bg-permdal-600 hover:bg-permdal-700">
+                                        <Button className="w-full bg-permdal-600 hover:bg-permdal-700 shadow-brand-soft">
                                             Details anzeigen
                                         </Button>
                                     </Link>
@@ -443,6 +447,7 @@ export default function MarktplatzPage() {
                     </p>
                 </div>
             )}
+            </div>
         </main>
     );
 }

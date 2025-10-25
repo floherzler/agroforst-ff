@@ -1,89 +1,124 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/Auth";
-import Link from "next/link";
+import { Loader2, LockKeyhole } from "lucide-react";
 
 const LabelInputContainer = ({
-    children,
-    className,
+  children,
+  className,
 }: {
-    children: React.ReactNode;
-    className?: string;
+  children: React.ReactNode;
+  className?: string;
 }) => {
-    return <div className={cn("flex w-full flex-col space-y-2", className)}>{children}</div>;
+  return <div className={cn("flex w-full flex-col space-y-2", className)}>{children}</div>;
 };
 
 export default function Login() {
-    const { login } = useAuthStore();
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [error, setError] = React.useState("");
+  const { login } = useAuthStore();
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-        const formData = new FormData(e.currentTarget);
-        const email = formData.get("email");
-        const password = formData.get("password");
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email");
+    const password = formData.get("password");
 
-        if (!email || !password) {
-            setError(() => "Bitte fülle alle Felder aus");
-            return;
-        }
+    if (!email || !password) {
+      setError("Bitte fülle alle Felder aus.");
+      return;
+    }
 
-        setIsLoading(() => true);
-        setError(() => "");
+    setIsLoading(true);
+    setError("");
 
-        const loginResponse = await login(email.toString(), password.toString());
-        if (loginResponse.error) {
-            setError(() => loginResponse.error!.message);
-        }
+    const loginResponse = await login(email.toString(), password.toString());
+    if (loginResponse.error) {
+      setError(loginResponse.error.message ?? "Der Login ist fehlgeschlagen.");
+    }
 
-        setIsLoading(() => false);
-    };
+    setIsLoading(false);
+  };
 
-    return (
-        <div className="mx-auto w-full max-w-md rounded-none border border-solid border-white/30 bg-white p-4 shadow-input dark:bg-black md:rounded-2xl md:p-8">
-            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">
-                Login für Permdal
-            </h2>
-            <p className="mt-2 max-w-sm text-sm text-neutral-600 dark:text-neutral-300">
-                <br /> Hast du noch kein Profil? Zur{" "}
-                <Link href="/signup" className="text-orange-500 hover:underline">
-                    Registrierung
-                </Link>{" "}
-            </p>
-
-            {error && (
-                <p className="mt-8 text-center text-sm text-red-500 dark:text-red-400">{error}</p>
-            )}
-            <form className="my-8" onSubmit={handleSubmit}>
-                <LabelInputContainer className="mb-4">
-                    <Label htmlFor="email">Email-Adresse</Label>
-                    <Input
-                    className="text-black"
-                        id="email"
-                        name="email"
-                        placeholder="email@beispiel.de"
-                        type="email"
-                    />
-                </LabelInputContainer>
-                <LabelInputContainer className="mb-4">
-                    <Label htmlFor="password">Passwort</Label>
-                    <Input className="text-black" id="password" name="password" placeholder="••••••••" type="password" />
-                </LabelInputContainer>
-
-                <button
-                    className="group/btn relative block h-10 w-full rounded-md bg-linear-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_var(--zinc-800)_inset,0px_-1px_0px_0px_var(--zinc-800)_inset]"
-                    type="submit"
-                    disabled={isLoading}
-                >
-                    Login &rarr;
-                </button>
-            </form>
+  return (
+    <Card className="w-full border border-surface-outline bg-surface-card-strong shadow-brand-strong backdrop-blur">
+      <CardHeader className="space-y-4 text-center">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-lilac-200 text-lilac-700 shadow-accent-lilac">
+          <LockKeyhole className="size-6" />
         </div>
-    );
+        <CardTitle className="text-2xl">Login für Permdal</CardTitle>
+        <CardDescription className="text-base text-muted-foreground">
+          Melde dich an, um dein Guthaben, Bestellungen und Feedback im /konto Bereich zu verwalten.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {error ? (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/15 px-4 py-3 text-sm font-medium text-destructive">
+            {error}
+          </div>
+        ) : null}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <LabelInputContainer>
+            <Label htmlFor="email">Email-Adresse</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="email@beispiel.de"
+              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
+            />
+          </LabelInputContainer>
+          <LabelInputContainer>
+            <Label htmlFor="password">Passwort</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
+            />
+          </LabelInputContainer>
+
+          <Button type="submit" disabled={isLoading} className="w-full shadow-brand-strong">
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                Wird eingeloggt…
+              </span>
+            ) : (
+              "Anmelden"
+            )}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="flex flex-col items-center gap-3 text-sm text-[#1f2021]">
+        <p>
+          Noch kein Profil?{" "}
+          <Link href="/signup" className="font-semibold text-primary hover:text-lilac-600">
+            Jetzt registrieren
+          </Link>
+        </p>
+        <p className="max-w-sm text-xs text-muted-foreground">
+          Wir schützen deine Daten und nutzen sie nur, um dir saisonale Updates zu schicken, wenn du zustimmst.
+        </p>
+      </CardFooter>
+    </Card>
+  );
 }

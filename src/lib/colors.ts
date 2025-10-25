@@ -88,30 +88,30 @@ export const withOpacity = (color: string, opacity: number) => {
 export const colorCombinations = {
   // Navbar
   navbar: {
-    background: 'bg-gradient-to-r from-emerald-800 to-emerald-700',
-    text: 'text-white',
-    button: 'bg-emerald-600/20 hover:bg-emerald-600/40 border-emerald-500/30',
+    background: 'bg-[#272615]',
+    text: 'text-white/90',
+    button: 'bg-permdal-500/15 hover:bg-permdal-500/25 border-permdal-400/40 text-earth-500',
   },
 
   // Cards
   card: {
-    background: 'bg-white',
-    border: 'border-emerald-100',
+    background: 'bg-white/85',
+    border: 'border-permdal-100',
     hover: 'hover:shadow-md',
   },
 
   // Buttons
   button: {
-    primary: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-    secondary: 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800',
-    outline: 'border-emerald-200 hover:bg-emerald-50 text-emerald-700',
+    primary: 'bg-permdal-500 hover:bg-permdal-600 text-white',
+    secondary: 'bg-lilac-100 hover:bg-lilac-200 text-lilac-800',
+    outline: 'border-permdal-200 hover:bg-permdal-50 text-earth-500',
   },
 
   // Badges
   badge: {
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
+    success: 'bg-permdal-100 text-permdal-700',
+    warning: 'bg-lilac-100 text-lilac-700',
     error: 'bg-red-100 text-red-800',
-    info: 'bg-emerald-100 text-emerald-800',
+    info: 'bg-permdal-50 text-earth-500',
   },
 } as const;

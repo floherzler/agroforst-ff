@@ -3,31 +3,64 @@
 
 /* Brand colors as theme tokens */
 @theme {
-  --color-permdal-50: hsl(158 64% 96%);
-  --color-permdal-100: hsl(158 64% 88%);
-  --color-permdal-200: hsl(158 64% 76%);
-  --color-permdal-300: hsl(158 64% 64%);
-  --color-permdal-400: hsl(158 64% 52%);
-  --color-permdal-500: hsl(158 64% 40%);
-  --color-permdal-600: hsl(158 64% 32%);
-  --color-permdal-700: hsl(158 64% 24%);
-  --color-permdal-800: hsl(158 64% 16%);
-  --color-permdal-900: hsl(158 64% 8%);
+  /* Core brand green: #76ae78 */
+  --color-permdal-50: #f5faf5;
+  --color-permdal-100: #e3f1e3;
+  --color-permdal-200: #c1debff5;
+  --color-permdal-300: #9dc79ef0;
+  --color-permdal-400: #81b987;
+  --color-permdal-500: #6aa872;
+  --color-permdal-600: #51895b;
+  --color-permdal-700: #3f6c48;
+  --color-permdal-800: #2e5033;
+  --color-permdal-900: #213926;
 
-  /* Map semantic colors for shadcn/ui */
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(20 14.3% 4.1%);
+  /* Earthy brown: #272615 */
+  --color-earth-50: #f3efe2;
+  --color-earth-100: #dfd6bc;
+  --color-earth-200: #c9ba95;
+  --color-earth-300: #b19d72;
+  --color-earth-400: #8f7c51;
+  --color-earth-500: #272615;
+  --color-earth-600: #1f1d12;
+  --color-earth-700: #17150d;
+  --color-earth-800: #0e0c08;
+  --color-earth-900: #060504;
+
+  /* Lilac accent: #a699d3 */
+  --color-lilac-50: #f6f3fb;
+  --color-lilac-100: #e9e4f6;
+  --color-lilac-200: #d0c7ec;
+  --color-lilac-300: #b7aee0;
+  --color-lilac-400: #9c92d0;
+  --color-lilac-500: #8075be;
+  --color-lilac-600: #675daa;
+  --color-lilac-700: #54458a;
+  --color-lilac-800: #3a2d6f;
+  --color-lilac-900: #251c53;
+
+  /* Semantic colors for shadcn/ui */
+  --surface-base: #f3eadc;
+  --surface-card: rgba(255, 255, 255, 0.96);
+  --surface-card-strong: rgba(255, 255, 255, 0.98);
+  --surface-soft: rgba(106, 168, 114, 0.14);
+  --surface-outline: rgba(39, 38, 21, 0.08);
+  --shadow-soft: 0 22px 48px -28px rgba(39, 38, 21, 0.35);
+  --shadow-strong: 0 24px 60px -26px rgba(106, 168, 114, 0.48);
+
+  --color-background: var(--surface-base);
+  --color-foreground: #1f2021;
   --color-primary: var(--color-permdal-600);
-  --color-primary-foreground: hsl(0 0% 100%);
-  --color-secondary: var(--color-permdal-50);
-  --color-secondary-foreground: var(--color-permdal-800);
-  --color-muted: var(--color-permdal-50);
-  --color-muted-foreground: hsl(25 5.3% 44.7%);
-  --color-accent: var(--color-permdal-100);
-  --color-accent-foreground: var(--color-permdal-800);
-  --color-border: var(--color-permdal-100);
-  --color-input: var(--color-permdal-100);
-  --color-ring: var(--color-permdal-600);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: color-mix(in srgb, var(--color-lilac-200) 65%, #ffffff 35%);
+  --color-secondary-foreground: var(--color-lilac-700);
+  --color-muted: color-mix(in srgb, var(--color-permdal-100) 55%, #ffffff 45%);
+  --color-muted-foreground: color-mix(in srgb, #3d3d3f 85%, #000 5%);
+  --color-accent: color-mix(in srgb, var(--color-permdal-300) 70%, #ffffff 30%);
+  --color-accent-foreground: #132611;
+  --color-border: color-mix(in srgb, var(--color-earth-100) 70%, #ffffff 30%);
+  --color-input: color-mix(in srgb, var(--color-permdal-50) 60%, #ffffff 40%);
+  --color-ring: var(--color-lilac-500);
 }
 
 /* Base styles */
@@ -46,6 +79,44 @@
   }
 
   a:hover {
-    @apply text-permdal-700;
+    color: var(--color-lilac-600);
+  }
+}
+
+@layer utilities {
+  .bg-surface-card {
+    background-color: var(--surface-card);
+  }
+
+  .bg-surface-card-strong {
+    background-color: var(--surface-card-strong);
+  }
+
+  .bg-surface-soft {
+    background-color: var(--surface-soft);
+  }
+
+  .bg-surface-lilac {
+    background-color: color-mix(in srgb, var(--color-lilac-200) 60%, #ffffff 40%);
+  }
+
+  .shadow-brand-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-brand-strong {
+    box-shadow: var(--shadow-strong);
+  }
+
+  .shadow-accent-lilac {
+    box-shadow: 0 24px 52px -28px rgba(128, 117, 190, 0.48);
+  }
+
+  .border-surface-outline {
+    border-color: var(--surface-outline);
+  }
+
+  .border-lilac-soft {
+    border-color: color-mix(in srgb, var(--color-lilac-300) 70%, #ffffff 30%);
   }
 }
