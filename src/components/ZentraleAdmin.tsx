@@ -3,7 +3,7 @@
 import env from "@/app/env";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { client, functions } from '@/models/client/config';
+import { client, databases, functions } from '@/models/client/config';
 import { FormEvent, useEffect, useState } from 'react';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
+import { Query } from "appwrite";
 
 const hauptkategorieValues = ["Obst", "Gemüse", "Kräuter", "Blumen", "Maschine", "Dienstleistung", "Sonstiges"] as const;
 const unterkategorieValues = [
@@ -229,6 +230,8 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
         note: "",
     });
     const [paymentResult, setPaymentResult] = useState<FunctionStatus>({ state: "idle" });
+    const [refSearchValue, setRefSearchValue] = useState("");
+    const [refSearchStatus, setRefSearchStatus] = useState<FunctionStatus>({ state: "idle" });
     const [angebotForm, setAngebotForm] = useState<AngebotFormState>({
         produktID: "",
         menge: "",
@@ -244,6 +247,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
     const db = env.appwrite.db;
     const staffelCollection = env.appwrite.angebote_collection_id;
     const produktCollection = env.appwrite.produce_collection_id;
+    const paymentCollection = env.appwrite.payment_collection_id;
     const staffelChannel = `databases.${db}.collections.${staffelCollection}.documents`;
     const produktChannel = `databases.${db}.collections.${produktCollection}.documents`;
     const executeAdminFunction = async (functionId: string, payload: Record<string, unknown>) => {
@@ -333,6 +337,38 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                 state: "error",
                 message,
             });
+        }
+    };
+
+    const handleFindPaymentByRef = async () => {
+        const ref = refSearchValue.trim();
+        if (!ref) {
+            setRefSearchStatus({ state: "error", message: "Bitte eine Ref eingeben." });
+            return;
+        }
+        if (!paymentCollection) {
+            setRefSearchStatus({ state: "error", message: "Zahlungssammlung nicht konfiguriert." });
+            return;
+        }
+        setRefSearchStatus({ state: "loading" });
+        try {
+            const response = await databases.listDocuments(db, paymentCollection, [
+                Query.equal("ref", ref),
+                Query.limit(1),
+            ]);
+            if (response.documents.length === 0) {
+                setRefSearchStatus({ state: "error", message: "Keine Zahlung mit dieser Ref gefunden." });
+                return;
+            }
+            const payment = response.documents[0];
+            setPaymentForm((prev) => ({ ...prev, paymentId: payment.$id }));
+            setRefSearchStatus({ state: "success", message: `ID gesetzt: ${payment.$id}` });
+        } catch (rawError: unknown) {
+            const message =
+                rawError instanceof Error
+                    ? rawError.message
+                    : String(rawError ?? "Die Ref konnte nicht geladen werden.");
+            setRefSearchStatus({ state: "error", message });
         }
     };
 
@@ -517,6 +553,39 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                             </div>
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Rechnungsreferenz
+                                </label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={refSearchValue}
+                                        onChange={(event) => setRefSearchValue(event.target.value)}
+                                        placeholder="Ref eingeben"
+                                        autoComplete="off"
+                                    />
+                                    <Button
+                                        type="button"
+                                        className="w-32"
+                                        onClick={handleFindPaymentByRef}
+                                        disabled={refSearchStatus.state === "loading"}
+                                    >
+                                        {refSearchStatus.state === "loading" ? "Suchen…" : "ID holen"}
+                                    </Button>
+                                </div>
+                                {refSearchStatus.message && (
+                                    <p
+                                        className={`text-xs ${refSearchStatus.state === "success"
+                                                ? "text-emerald-600"
+                                                : refSearchStatus.state === "error"
+                                                    ? "text-rose-600"
+                                                    : "text-muted-foreground"
+                                            }`}
+                                    >
+                                        {refSearchStatus.message}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     Mitgliedschaft (optional)
                                 </label>
                                 <Input
@@ -577,10 +646,10 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                         {paymentResult.message && (
                             <p
                                 className={`mt-4 text-sm ${paymentResult.state === "success"
-                                        ? "text-emerald-600"
-                                        : paymentResult.state === "error"
-                                            ? "text-rose-600"
-                                            : "text-muted-foreground"
+                                    ? "text-emerald-600"
+                                    : paymentResult.state === "error"
+                                        ? "text-rose-600"
+                                        : "text-muted-foreground"
                                     }`}
                             >
                                 {paymentResult.message}
@@ -675,10 +744,10 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                         {angebotResult.message && (
                             <p
                                 className={`mt-4 text-sm ${angebotResult.state === "success"
-                                        ? "text-emerald-600"
-                                        : angebotResult.state === "error"
-                                            ? "text-rose-600"
-                                            : "text-muted-foreground"
+                                    ? "text-emerald-600"
+                                    : angebotResult.state === "error"
+                                        ? "text-rose-600"
+                                        : "text-muted-foreground"
                                     }`}
                             >
                                 {angebotResult.message}

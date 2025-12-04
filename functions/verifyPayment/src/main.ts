@@ -1,4 +1,5 @@
-import { Client, Databases, Users } from "https://deno.land/x/appwrite@7.0.0/mod.ts";
+import * as sdk from "npm:node-appwrite";
+const { Client, Databases, Users } = sdk;
 
 type Body = {
     paymentId?: string;
@@ -94,8 +95,6 @@ export default async ({ req, res, log, error }: any) => {
             (body.membershipId as string) ?? (body.membership_id as string) ?? ""
         ).trim() || undefined;
         const note = (body.note as string) ?? undefined;
-        const amountRaw = body.amount ?? body.betrag ?? body.value;
-        const amount = typeof amountRaw === "number" ? amountRaw : Number(amountRaw);
         const force = Boolean(body.force);
         const status = normalizeStatus(body.status);
 
@@ -136,15 +135,8 @@ export default async ({ req, res, log, error }: any) => {
         const updatePayload: Record<string, unknown> = {
             status,
             verifiedAt: nowIso,
-            verifiedBy: {
-                userId: caller.$id,
-                email: caller.email ?? null,
-            },
             ...(note ? { note } : {}),
         };
-        if (Number.isFinite(amount)) {
-            updatePayload.amount = amount;
-        }
 
         let updatedPayment: any;
         try {
@@ -167,9 +159,6 @@ export default async ({ req, res, log, error }: any) => {
                     letzte_zahlung_id: paymentId,
                     letzte_zahlung_zeit: nowIso,
                 };
-                if (Number.isFinite(amount)) {
-                    membershipPayload.lastPaymentAmount = amount;
-                }
                 await databases.updateDocument(
                     dbId,
                     membershipCollection,
