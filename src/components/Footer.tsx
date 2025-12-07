@@ -66,8 +66,8 @@ export default function Footer() {
                 <p className="font-semibold text-[#1f2021]">Kontakt</p>
                 <p>Agroforst Frank Fege</p>
                 <p>Prignitz · Brandenburg</p>
-                <Link href="mailto:hallo@permdal.de" className="inline-flex items-center gap-1 text-primary hover:text-primary/80">
-                  hallo@permdal.de
+                <Link href="mailto:team@agroforst-ff.de" className="inline-flex items-center gap-1 text-primary hover:text-primary/80">
+                  team@agroforst-ff.de
                   <ArrowUpRight className="size-3.5" />
                 </Link>
               </div>

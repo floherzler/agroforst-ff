@@ -16,6 +16,7 @@ const env = {
         add_angebot_function_id: String(process.env.NEXT_PUBLIC_ADD_ANGEBOT_FUNCTION_ID),
         membership_collection_id: String(process.env.NEXT_PUBLIC_MEMBERSHIP_COLLECTION_ID),
         payment_collection_id: String(process.env.NEXT_PUBLIC_PAYMENT_COLLECTION_ID),
+        nachrichten_collection_id: "nachrichten",
     }
 }
 

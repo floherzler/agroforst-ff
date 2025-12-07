@@ -616,11 +616,23 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Bitte anmelden</h1>
-          <p className="text-gray-600">Sie müssen angemeldet sein, um Ihr Konto zu verwalten.</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-[#f7f1e8] to-[#ede5d9] flex items-center justify-center px-4">
+        <Card className="max-w-md w-full border-2 border-permdal-200 bg-white/80 backdrop-blur shadow-xl">
+          <CardHeader className="text-center space-y-3">
+            <CardTitle className="text-2xl text-[#2c3e2d]">Anmeldung erforderlich</CardTitle>
+            <CardDescription className="text-base text-[#5a5a5a]">
+              Bitte melde dich an, um dein Konto zu verwalten
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button asChild className="w-full rounded-full bg-[#2c3e2d] hover:bg-[#3a523b]">
+              <Link href="/login?redirect=/konto">Zum Login</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full rounded-full border-permdal-300">
+              <Link href="/signup?redirect=/konto">Konto erstellen</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -630,77 +642,99 @@ export default function AccountPage() {
     const value = label.toLowerCase();
     return value === "admin" || value === "dev";
   });
-  const contextualLabels = memberLabels.filter((label) => {
-    const value = label.toLowerCase();
-    return value !== "admin" && value !== "dev" && value !== "newsletter";
-  });
-  const newsletterOptIn = memberLabels.some((label) => label.toLowerCase() === "newsletter");
-  const themePreference = (user.prefs?.theme ?? "light").toString().toLowerCase();
-  const themeLabel = themePreference === "dark" ? "Dunkel" : themePreference === "system" ? "System" : "Hell";
-  const membershipStatusStyle = primaryMembership ? getMembershipStatusStyle(primaryMembership.status) : null;
-  const membershipTypeLabel = primaryMembership ? formatMembershipTypeLabel(primaryMembership.typ) : null;
   const isEmailVerified = Boolean(user.emailVerification);
 
+  // Theme and preferences
+  const themePreference = "system"; // Default to system theme
+  const themeLabel = themePreference === "dark" ? "Dunkel" : themePreference === "system" ? "System" : "Hell";
+  const newsletterOptIn = false; // Default newsletter opt-in
+  const contextualLabels = memberLabels.filter((label) => {
+    const value = label.toLowerCase();
+    return value !== "admin" && value !== "dev";
+  });
+
+  // Primary membership info
+  const membershipStatusStyle = primaryMembership
+    ? getMembershipStatusStyle(primaryMembership.status)
+    : null;
+  const membershipTypeLabel = primaryMembership
+    ? formatMembershipTypeLabel(primaryMembership.typ)
+    : null;
+
   return (
-    <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-4 sm:py-8">
-        <div className="mx-auto max-w-4xl">
+    <main className="min-h-screen bg-gradient-to-b from-[#f7f1e8] to-[#ede5d9]">
+      {/* Floating logout button */}
+      <div className="fixed bottom-6 right-6 z-50 sm:bottom-8 sm:right-8">
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={logout}
+          className="flex items-center gap-2 shadow-lg rounded-full"
+          title="Abmelden"
+          aria-label="Abmelden"
+        >
+          Abmelden
+        </Button>
+      </div>
+      <div className="container mx-auto px-4 py-8 sm:py-12">
+        <div className="mx-auto max-w-5xl">
           {/* Header */}
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Mein Konto</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Verwalten Sie Ihre Kontoeinstellungen und Bestellungen</p>
+          <div className="mb-8 sm:mb-12 text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#2c3e2d] mb-3">Dein Konto</h1>
+            <p className="text-[#5a5a5a] text-base sm:text-lg max-w-2xl mx-auto">Verwalte deine Mitgliedschaft, Bestellungen und Kontoeinstellungen</p>
           </div>
 
 
           {/* Tabs */}
-          <Tabs defaultValue="settings" className="space-y-4 sm:space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="settings" className="text-xs sm:text-sm">Kontoeinstellungen</TabsTrigger>
-              <TabsTrigger value="orders" className="text-xs sm:text-sm">Bestellungen</TabsTrigger>
+          <Tabs defaultValue="settings" className="space-y-6 sm:space-y-8">
+            <TabsList className="grid w-full grid-cols-2 bg-white/60 backdrop-blur-sm border border-permdal-200 p-1 rounded-full">
+              <TabsTrigger value="settings" className="text-sm sm:text-base rounded-full data-[state=active]:bg-[#2c3e2d] data-[state=active]:text-white">Mitgliedschaft</TabsTrigger>
+              <TabsTrigger value="orders" className="text-sm sm:text-base rounded-full data-[state=active]:bg-[#2c3e2d] data-[state=active]:text-white">Bestellungen</TabsTrigger>
             </TabsList>
 
-          <TabsContent value="settings" className="space-y-4 sm:space-y-6">
-            <Card className="border border-surface-outline bg-surface-card">
+            <TabsContent value="settings" className="space-y-6 sm:space-y-8">
+              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
                 <CardHeader>
-                  <CardTitle>Mitgliedschaft</CardTitle>
-                  <CardDescription>
-                    Verfolgen Sie den Status Ihrer Mitgliedschaft oder starten Sie einen neuen Antrag.
+                  <CardTitle className="text-2xl text-[#2c3e2d]">Deine Mitgliedschaften</CardTitle>
+                  <CardDescription className="text-base text-[#5a5a5a]">
+                    Übersicht und Verwaltung deiner aktiven und ausstehenden Mitgliedschaften.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={refreshMemberships}
-                        disabled={loadingMemberships}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        {loadingMemberships ? "Aktualisiere…" : "Status aktualisieren"}
-                      </Button>
-                      <span className="hidden sm:inline">
-                        {loadingMemberships
-                          ? "Daten werden geladen…"
-                          : memberships.length > 0
-                            ? "Aktuelle Übersicht Ihrer Mitgliedschaften."
-                            : "Noch keine Mitgliedschaft."}
-                      </span>
-                    </div>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setShowApplicationForm(true);
-                        setMembershipStatus({ state: "idle" });
-                      }}
-                      disabled={!canAddMoreMemberships || membershipStatus.state === "loading"}
+                      onClick={refreshMemberships}
+                      disabled={loadingMemberships}
+                      className="rounded-full border-permdal-300 hover:bg-permdal-50"
                     >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Neue Mitgliedschaft
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {loadingMemberships ? "Aktualisiere…" : "Aktualisieren"}
                     </Button>
+                    <span className="text-sm text-[#5a5a5a]">
+                      {loadingMemberships
+                        ? "Lade Mitgliedschaften…"
+                        : memberships.length > 0
+                          ? `${memberships.length} Mitgliedschaft${memberships.length > 1 ? "en" : ""} gefunden`
+                          : "Noch keine Mitgliedschaft."}
+                    </span>
+                    {canAddMoreMemberships && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setShowApplicationForm(true);
+                          setMembershipStatus({ state: "idle" });
+                        }}
+                        disabled={membershipStatus.state === "loading"}
+                        className="rounded-full bg-permdal-500 hover:bg-permdal-400 text-white shadow-md"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Neue Mitgliedschaft
+                      </Button>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
                     {memberships.map((membership) => {
@@ -757,9 +791,9 @@ export default function AccountPage() {
                       return (
                         <Card
                           key={membership.$id}
-                          className={`relative overflow-hidden border border-white/10 text-white shadow-[0_12px_30px_-12px_rgba(23,16,80,0.4)] transition duration-200 hover:scale-[1.01] hover:border-white/30 hover:shadow-[0_20px_50px_-20px_rgba(23,16,80,0.7)] ${isPrivat
-                            ? "bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800"
-                            : "bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-900"
+                          className={`relative overflow-hidden border-2 text-white shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${isPrivat
+                            ? "bg-gradient-to-br from-[#2c3e2d] via-[#3a523b] to-[#4a6b4f] border-permdal-300"
+                            : "bg-gradient-to-br from-[#4a3a5c] via-[#6b4a7a] to-[#8b5a9a] border-lilac-300"
                             }`}
                         >
                           <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10" />
@@ -925,7 +959,7 @@ export default function AccountPage() {
                               <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/60">
                                 <Image
                                   src="/img/agroforst_ff_icon_bg.png"
-                                  alt="Permdal Mitgliedschaft"
+                                  alt="AFF Mitgliedschaft"
                                   fill
                                   sizes="36px"
                                   className="object-cover"
@@ -996,35 +1030,37 @@ export default function AccountPage() {
                   )}
                 </CardContent>
               </Card>
-            <Card className="border border-surface-outline bg-surface-card">
+              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
                 <CardHeader>
-                  <CardTitle>Kontoinformationen</CardTitle>
-                  {/* <CardDescription>Profil, Sicherheit und persönliche Einstellungen</CardDescription> */}
+                  <CardTitle className="text-2xl text-[#2c3e2d]">Dein Profil</CardTitle>
+                  <CardDescription className="text-base text-[#5a5a5a]">
+                    Persönliche Informationen und Kontoeinstellungen
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                      <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                  <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                      <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-permdal-200 shadow-md">
                         <AvatarImage src="" alt={user.name} />
-                        <AvatarFallback className="bg-permdal-100 text-lg text-permdal-800 sm:text-xl">
+                        <AvatarFallback className="bg-gradient-to-br from-permdal-400 to-permdal-600 text-2xl text-white font-bold">
                           {user.name?.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="space-y-2">
+                      <div className="space-y-3 text-center sm:text-left">
                         <div className="space-y-1">
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Mitglied</p>
-                          <p className="text-xl font-semibold text-foreground break-words">{user.name}</p>
+                          <p className="text-xs uppercase tracking-wide text-[#5a5a5a] font-semibold">Mitglied</p>
+                          <p className="text-2xl font-bold text-[#2c3e2d] break-words">{user.name}</p>
                         </div>
-                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
+                        <div className="flex items-center justify-center gap-2 text-sm text-[#5a5a5a] sm:justify-start">
                           <span className="break-all sm:break-normal">{user.email}</span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={handleCopyEmail}
-                            className="h-8 w-8"
+                            className="h-8 w-8 hover:bg-permdal-100"
                           >
-                            {copiedEmail ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            {copiedEmail ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                             <span className="sr-only">E-Mail kopieren</span>
                           </Button>
                         </div>
@@ -1034,34 +1070,32 @@ export default function AccountPage() {
                       <Badge
                         variant={isEmailVerified ? "default" : "secondary"}
                         className={
-                          isEmailVerified ? undefined : "border border-amber-500/40 bg-amber-100 text-amber-900"
+                          isEmailVerified
+                            ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
+                            : "border border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200"
                         }
                       >
-                        {isEmailVerified ? "E-Mail verifiziert" : "E-Mail nicht verifiziert"}
+                        {isEmailVerified ? "✓ Verifiziert" : "E-Mail bestätigen"}
                       </Badge>
                       {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${membershipStatusStyle.className}`}
+                        <Badge
+                          className={`${membershipStatusStyle.className} font-semibold`}
                         >
                           {membershipTypeLabel} • {membershipStatusStyle.label}
-                        </span>
+                        </Badge>
                       )}
                       {roleLabels.map((label) => (
-                        <Badge key={label} variant="destructive" className="text-xs capitalize">
+                        <Badge key={label} className="bg-permdal-600 text-white text-xs capitalize border-permdal-700">
                           {label}
                         </Badge>
                       ))}
-                      <Button variant="outline" size="sm" onClick={logout} className="w-full sm:w-auto">
-                        Abmelden
-                      </Button>
                     </div>
                   </div>
-                  <Separator />
+                  <Separator className="bg-permdal-200" />
                   <Tabs defaultValue="security" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2">
-                      {/* <TabsTrigger value="overview">Profil</TabsTrigger> */}
-                      <TabsTrigger value="security">Sicherheit</TabsTrigger>
-                      <TabsTrigger value="preferences">Präferenzen</TabsTrigger>
+                    <TabsList className="grid w-full max-w-md grid-cols-2 bg-permdal-50 border border-permdal-200 rounded-full p-1">
+                      <TabsTrigger value="security" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Sicherheit</TabsTrigger>
+                      <TabsTrigger value="preferences" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Präferenzen</TabsTrigger>
                     </TabsList>
                     {/* <TabsContent value="overview" className="space-y-4 pt-4">
                       <div className="grid gap-4 sm:grid-cols-2">
@@ -1207,83 +1241,89 @@ export default function AccountPage() {
                         </div>
                       )}
                       <div className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
-                        Selbstverwaltung für weitere Präferenzen ist in Vorbereitung. Bei Änderungen wenden Sie sich bitte an das Permdal-Team.
+                        Selbstverwaltung für weitere Präferenzen ist in Vorbereitung. Bei Änderungen wenden Sie sich bitte an das AFF-Team.
                       </div>
                     </TabsContent>
                   </Tabs>
                 </CardContent>
               </Card>
 
-            <Card className="border border-surface-outline bg-surface-card">
+              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
                 <CardHeader>
-                  <CardTitle>Benachrichtigungen</CardTitle>
-                  <CardDescription>
-                    Verwalten Sie Ihre Einstellungen für E-Mail-Benachrichtigungen
+                  <CardTitle className="text-2xl text-[#2c3e2d]">Benachrichtigungen</CardTitle>
+                  <CardDescription className="text-base text-[#5a5a5a]">
+                    Verwalte deine Einstellungen für E-Mail-Benachrichtigungen
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Bestellbestätigungen</p>
-                      <p className="text-sm text-gray-600">Erhalten Sie E-Mails bei neuen Bestellungen</p>
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">Bestellbestätigungen</p>
+                        <p className="text-sm text-muted-foreground">Erhalte E-Mails bei neuen Bestellungen</p>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 border-green-300">Aktiviert</Badge>
                     </div>
-                    <Badge variant="secondary">Aktiviert</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Marktplatz-Updates</p>
-                      <p className="text-sm text-gray-600">Benachrichtigungen über neue Angebote</p>
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">Marktplatz-Updates</p>
+                        <p className="text-sm text-muted-foreground">Benachrichtigungen über neue Angebote</p>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 border-green-300">Aktiviert</Badge>
                     </div>
-                    <Badge variant="secondary">Aktiviert</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Newsletter</p>
-                      <p className="text-sm text-gray-600">Regelmäßige Updates über Permdal</p>
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">Newsletter</p>
+                        <p className="text-sm text-muted-foreground">Regelmäßige Updates über Permdal</p>
+                      </div>
+                      <Badge variant="outline" className="border-gray-300 text-gray-600">Deaktiviert</Badge>
                     </div>
-                    <Badge variant="outline">Deaktiviert</Badge>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6">
-              <Card>
+              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <CardTitle>Meine Bestellungen</CardTitle>
-                      <CardDescription>
-                        Übersicht Ihrer aktuellen und vergangenen Bestellungen
+                      <CardTitle className="text-2xl text-[#2c3e2d]">Deine Bestellungen</CardTitle>
+                      <CardDescription className="text-base text-[#5a5a5a]">
+                        Übersicht deiner aktuellen und vergangenen Bestellungen
                       </CardDescription>
                     </div>
                     {!loadingOrders && orders && (
-                      <Badge variant="outline" className="shrink-0">
-                        {orders.length} {orders.length === 1 ? "Eintrag" : "Einträge"}
+                      <Badge className="shrink-0 bg-permdal-100 text-permdal-800 border-permdal-300">
+                        {orders.length} {orders.length === 1 ? "Bestellung" : "Bestellungen"}
                       </Badge>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   {loadingOrders ? (
-                    <div className="text-center py-12">Lädt…</div>
+                    <div className="text-center py-12 text-[#5a5a5a]">Lädt Bestellungen…</div>
                   ) : orders && orders.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {orders.map((o) => {
                         const mengeNum = Number((o as any).menge);
                         const unitRaw = (o.einheit || '').toString().toLowerCase();
                         const isGram = unitRaw === 'gramm' || unitRaw === 'g';
                         const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
                         return (
-                          <Card key={o.$id} className="border bg-white/70">
-                            <CardHeader className="pb-2">
+                          <Card key={o.$id} className="border-2 border-permdal-200 bg-white hover:shadow-md transition-shadow">
+                            <CardHeader className="pb-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <CardTitle className="text-base">
+                                  <CardTitle className="text-base font-semibold text-[#2c3e2d]">
                                     {o.produkt_name || `Bestellung ${o.$id.slice(0, 6)}`}
                                   </CardTitle>
-                                  <CardDescription>
-                                    erstellt am {formatDate(o.$createdAt)}
+                                  <CardDescription className="text-sm text-[#5a5a5a]">
+                                    {formatDate(o.$createdAt)}
                                   </CardDescription>
                                 </div>
                                 {statusBadge(o.status)}

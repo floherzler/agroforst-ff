@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,11 @@ const LabelInputContainer = ({
 
 export default function Login() {
   const { login } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const redirectTo = searchParams.get("redirect") || "/konto";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,9 +54,11 @@ export default function Login() {
     const loginResponse = await login(email.toString(), password.toString());
     if (loginResponse.error) {
       setError(loginResponse.error.message ?? "Der Login ist fehlgeschlagen.");
+      setIsLoading(false);
+    } else {
+      // Successful login - redirect
+      router.push(redirectTo);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -61,9 +67,9 @@ export default function Login() {
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-lilac-200 text-lilac-700 shadow-accent-lilac">
           <LockKeyhole className="size-6" />
         </div>
-        <CardTitle className="text-2xl">Login für Permdal</CardTitle>
+        <CardTitle className="text-2xl">Willkommen zurück</CardTitle>
         <CardDescription className="text-base text-muted-foreground">
-          Melde dich an, um dein Guthaben, Bestellungen und Feedback im /konto Bereich zu verwalten.
+          Melde dich an, um Feedback zu geben, deine Bestellungen zu verwalten und deinen Mitgliederbereich zu nutzen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
