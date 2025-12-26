@@ -1,4 +1,4 @@
-import { Client, Databases, ID } from "https://deno.land/x/appwrite@7.0.0/mod.ts";
+import { Client, TablesDB, ID } from "npm:node-appwrite";
 
 type Body = {
     id?: string;
@@ -97,6 +97,8 @@ const allowedFields = [
     "bodenansprueche",
     "begleitpflanzen",
     "meta",
+    "saisonalitaet",
+    "imageID",
 ];
 
 const cleanPayload = (body: Body): Record<string, unknown> => {
@@ -127,6 +129,9 @@ export default async ({ req, res, log, error }: any) => {
         if (!payload.name) {
             return fail(res, "Field \"name\" is required", 400);
         }
+        if (!payload.hauptkategorie || typeof payload.hauptkategorie !== "string") {
+            return fail(res, "Field \"hauptkategorie\" is required", 400);
+        }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
         const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
@@ -148,22 +153,34 @@ export default async ({ req, res, log, error }: any) => {
             .setEndpoint(endpoint)
             .setProject(projectId)
             .setKey(apiKey);
-        const databases = new Databases(client);
+        const tables = new TablesDB(client);
 
         const targetId = docId || ID.unique();
+        log(`[addProdukt] Using targetId=${targetId} project=${projectId} db=${dbId} collection=${collectionId}`);
+        log(`[addProdukt] Payload keys: ${Object.keys(payload).join(", ")}`);
         let result;
         try {
-            result = await databases.createDocument(dbId, collectionId, targetId, {
-                ...payload,
-                createdBy: callerId,
+            result = await tables.createRow({
+                databaseId: dbId,
+                tableId: collectionId,
+                rowId: targetId,
+                data: {
+                    ...payload,
+                    createdBy: callerId,
+                },
             });
             log(`[addProdukt] Created new product ${result.$id}`);
         } catch (e: any) {
             if (e?.code === 409) {
-                result = await databases.updateDocument(dbId, collectionId, targetId, {
-                    ...payload,
-                    updatedBy: callerId,
-                    updatedAt: new Date().toISOString(),
+                result = await tables.updateRow({
+                    databaseId: dbId,
+                    tableId: collectionId,
+                    rowId: targetId,
+                    data: {
+                        ...payload,
+                        updatedBy: callerId,
+                        updatedAt: new Date().toISOString(),
+                    },
                 });
                 log(`[addProdukt] Upserted existing product ${result.$id}`);
             } else {
