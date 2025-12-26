@@ -730,7 +730,7 @@ export default function AccountPage() {
   const isEmailVerified = Boolean(user.emailVerification);
 
   // Theme and preferences
-  let themePreference: string = "system"; // Default to system theme
+  const themePreference: string = "system"; // Default to system theme
   let themeLabel: string;
   switch (themePreference) {
     case "dark":
@@ -792,7 +792,7 @@ export default function AccountPage() {
                 <CardHeader>
                   <CardTitle className="text-2xl text-[#2c3e2d]">Deine Mitgliedschaften</CardTitle>
                   <CardDescription className="text-base text-[#5a5a5a]">
-                    ├£bersicht und Verwaltung deiner aktiven und ausstehenden Mitgliedschaften.
+                    Übersicht und Verwaltung deiner aktiven und ausstehenden Mitgliedschaften.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
