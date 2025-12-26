@@ -138,6 +138,8 @@ export default async ({ req, res, log, error }: any) => {
             "";
         const apiKey = getApiKey(req, log);
 
+        log(`[addProdukt] Configuration: endpoint=${endpoint ? "set" : "missing"} projectId=${projectId ? "set" : "missing"} dbId=${dbId ? "set" : "missing"} collectionId=${collectionId ? "set" : "missing"} apiKey=${apiKey ? "set" : "missing"}`);
+
         if (!endpoint || !projectId) {
             return fail(res, "Function endpoint or project ID is not configured", 500);
         }
@@ -152,7 +154,9 @@ export default async ({ req, res, log, error }: any) => {
             .setEndpoint(endpoint)
             .setProject(projectId)
             .setKey(apiKey);
+        log(`[addProdukt] Appwrite client configured ✅`);
         const tables = new TablesDB(client);
+        log(`[addProdukt] TablesDB instance created ✅`);
 
         const targetId = docId || ID.unique();
         log(`[addProdukt] Using targetId=${targetId} project=${projectId} db=${dbId} collection=${collectionId}`);
