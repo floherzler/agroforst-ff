@@ -1,4 +1,4 @@
-import { Client, Databases, Users, ID } from "https://deno.land/x/appwrite@7.0.0/mod.ts";
+import { Client, Databases, ID } from "https://deno.land/x/appwrite@7.0.0/mod.ts";
 
 type Body = {
     id?: string;
@@ -86,16 +86,6 @@ async function extractBody(req: any): Promise<Record<string, unknown>> {
     return {};
 }
 
-async function ensureAdmin(users: Users, callerId: string) {
-    const caller = await users.get(callerId);
-    const labels = Array.isArray(caller.labels) ? (caller.labels as string[]) : [];
-    const isAdmin = labels.some((label) => label.toLowerCase() === "admin");
-    if (!isAdmin) {
-        throw new Error("Caller must be an admin");
-    }
-    return caller;
-}
-
 const allowedFields = [
     "name",
     "sorte",
@@ -144,6 +134,9 @@ export default async ({ req, res, log, error }: any) => {
         const collectionId = readEnv("APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID");
         const apiKey = getApiKey(req, log);
 
+        if (!endpoint || !projectId) {
+            return fail(res, "Function endpoint or project ID is not configured", 500);
+        }
         if (!dbId || !collectionId) {
             return fail(res, "Database or produce collection is not configured", 500);
         }
@@ -155,10 +148,7 @@ export default async ({ req, res, log, error }: any) => {
             .setEndpoint(endpoint)
             .setProject(projectId)
             .setKey(apiKey);
-        const users = new Users(client);
         const databases = new Databases(client);
-
-        await ensureAdmin(users, callerId);
 
         const targetId = docId || ID.unique();
         let result;
