@@ -36,6 +36,25 @@ const readEnv = (key: string): string => {
     return "";
 };
 
+const getApiKey = (req: any, log: (msg: string) => void): string => {
+    const envKey =
+        readEnv("APPWRITE_FUNCTION_KEY") ||
+        readEnv("APPWRITE_FUNCTION_API_KEY") ||
+        readEnv("APPWRITE_API_KEY") ||
+        "";
+
+    if (envKey) return envKey;
+
+    const headerKey = req.headers["x-appwrite-key"] ?? req.headers["X-Appwrite-Key"] ?? "";
+    if (headerKey) {
+        log("[addProdukt] Falling back to x-appwrite-key header (env key missing)");
+        return headerKey;
+    }
+
+    log("[addProdukt] Warning: no API key found in env or headers");
+    return "";
+};
+
 async function extractBody(req: any): Promise<Record<string, unknown>> {
     const tryParse = async (source: any) => {
         if (typeof source === "string" && source.length > 0) {
@@ -104,6 +123,8 @@ const cleanPayload = (body: Body): Record<string, unknown> => {
 };
 
 export default async ({ req, res, log, error }: any) => {
+    const debugFlag = readEnv("APPWRITE_FUNCTION_DEBUG") || readEnv("APP_DEBUG");
+    const debugOn = String(debugFlag ?? "").trim() === "1";
     try {
         const callerId: string | undefined =
             req.headers["x-appwrite-user-id"] ?? req.headers["X-Appwrite-User-Id"];
@@ -121,15 +142,19 @@ export default async ({ req, res, log, error }: any) => {
         const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
         const dbId = readEnv("APPWRITE_FUNCTION_DATABASE_ID");
         const collectionId = readEnv("APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID");
+        const apiKey = getApiKey(req, log);
 
         if (!dbId || !collectionId) {
             return fail(res, "Database or produce collection is not configured", 500);
+        }
+        if (!apiKey) {
+            return fail(res, "Missing Appwrite API key for function", 500);
         }
 
         const client = new Client()
             .setEndpoint(endpoint)
             .setProject(projectId)
-            .setKey(req.headers["x-appwrite-key"] ?? "");
+            .setKey(apiKey);
         const users = new Users(client);
         const databases = new Databases(client);
 
@@ -161,6 +186,9 @@ export default async ({ req, res, log, error }: any) => {
     } catch (e: any) {
         const msg = String(e?.message ?? e ?? "Unknown error");
         error(`[addProdukt] Uncaught error: ${msg}`);
-        return fail(res, "Internal error", 500, { details: msg });
+        if (debugOn) {
+            return fail(res, "Internal error", 500, { details: msg });
+        }
+        return fail(res, "Internal error", 500);
     }
 };
