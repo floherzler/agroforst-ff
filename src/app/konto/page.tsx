@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { useAuthStore } from "@/store/Auth";
@@ -132,7 +132,7 @@ function normalizePayment(raw: GenericDoc): Payment {
           : typeof raw.invoice_amount === "number"
             ? raw.invoice_amount
             : undefined,
-    faellig_am: raw.faellig_am ?? raw.fällig_am ?? raw.due_at ?? undefined,
+    faellig_am: raw.faellig_am ?? raw.faellig_am ?? raw.due_at ?? undefined,
     $createdAt: raw.$createdAt ?? raw.createdAt ?? undefined,
   };
 }
@@ -176,7 +176,7 @@ function getMembershipStatusStyle(
         "border border-red-300/60 bg-red-950/30 text-red-200 hover:bg-red-900/30",
     };
   }
-  if (value === "beendet" || value === "gekündigt") {
+  if (value === "beendet" || value === "gek├╝ndigt") {
     return {
       label: "Beendet",
       className:
@@ -201,7 +201,7 @@ function formatMembershipTypeLabel(type?: string): string {
   const value = (type ?? "").toString().toLowerCase();
   if (value === "business" || value === "unternehmen") return "Business";
   if (value === "privat" || value === "private") return "Privat";
-  return type ?? "—";
+  return type ?? "ÔÇö";
 }
 
 function formatPaymentStatusLabel(status?: string | null): string {
@@ -228,7 +228,7 @@ function translateMembershipError(message: string): string {
     return "Sie haben bereits eine aktive oder ausstehende Mitgliedschaft.";
   }
   if (lowered.includes("missing required field") || lowered.includes("missing required field: type")) {
-    return "Bitte wählen Sie zuerst einen Mitgliedschaftstyp.";
+    return "Bitte w├ñhlen Sie zuerst einen Mitgliedschaftstyp.";
   }
   if (lowered.includes("unauthenticated")) {
     return "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.";
@@ -240,10 +240,10 @@ function translateMembershipError(message: string): string {
     return "Mitgliedschaften sind derzeit nicht konfiguriert.";
   }
   if (lowered.includes("failed to create membership")) {
-    return "Die Mitgliedschaft konnte nicht erstellt werden. Bitte versuchen Sie es später erneut.";
+    return "Die Mitgliedschaft konnte nicht erstellt werden. Bitte versuchen Sie es sp├ñter erneut.";
   }
   if (text.trim().length === 0) {
-    return "Unbekannter Fehler. Bitte versuchen Sie es später erneut.";
+    return "Unbekannter Fehler. Bitte versuchen Sie es sp├ñter erneut.";
   }
   return text;
 }
@@ -394,7 +394,7 @@ export default function AccountPage() {
           "zahlungen.amount",
           "zahlungen.rechnung.betrag_eur",
           "zahlungen.faellig_am",
-          "zahlungen.fällig_am",
+          "zahlungen.f├ñllig_am",
           "zahlungen.due_at",
           "zahlungen.$createdAt",
         ]),
@@ -469,7 +469,7 @@ export default function AccountPage() {
       return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(num as number);
     } catch {
       const n = num as number;
-      return `${Number.isFinite(n) ? n.toFixed(2) : n} €`;
+      return `${Number.isFinite(n) ? n.toFixed(2) : n} Ôé¼`;
     }
   }
 
@@ -490,7 +490,7 @@ export default function AccountPage() {
   }
 
   function formatDateShort(iso?: string | null) {
-    if (!iso) return "—";
+    if (!iso) return "ÔÇö";
     try {
       const d = new Date(iso);
       return new Intl.DateTimeFormat("de-DE", {
@@ -499,7 +499,7 @@ export default function AccountPage() {
         day: "2-digit",
       }).format(d);
     } catch {
-      return "—";
+      return "ÔÇö";
     }
   }
 
@@ -510,7 +510,7 @@ export default function AccountPage() {
     if (value === "offen") return "Offen";
     if (value === "erinnert" || value === "reminded") return "Zahlungserinnerung gesendet";
     if (value === "rueckerstattet" || value === "erstattet" || value === "refunded") return "Erstattet";
-    return status ?? "—";
+    return status ?? "ÔÇö";
   }
 
   function statusBadge(status?: string) {
@@ -519,8 +519,8 @@ export default function AccountPage() {
     let label = status ?? "Unbekannt";
     if (["angefragt", "offen", "pending", "neu"].includes(s)) {
       variant = "secondary"; label = "Angefragt";
-    } else if (["bestaetigt", "bestätigt", "confirmed", "in_bearbeitung", "processing"].includes(s)) {
-      variant = "default"; label = s.includes("bearbeitung") ? "In Bearbeitung" : "Bestätigt";
+    } else if (["bestaetigt", "best├ñtigt", "confirmed", "in_bearbeitung", "processing"].includes(s)) {
+      variant = "default"; label = s.includes("bearbeitung") ? "In Bearbeitung" : "Best├ñtigt";
     } else if (["abgeschlossen", "fertig", "completed"].includes(s)) {
       variant = "available"; label = "Abgeschlossen";
     } else if (["storniert", "abgelehnt", "canceled", "rejected"].includes(s)) {
@@ -581,7 +581,7 @@ export default function AccountPage() {
         try {
           payload = JSON.parse(rawResponse);
         } catch {
-          // ignore parse errors and fall back to generic handling
+          payload = null; // ignore parse errors and fall back to generic handling
         }
       }
       const executionStatus = String((execution as ExecutionShape)?.status ?? "").toLowerCase();
@@ -719,7 +719,7 @@ export default function AccountPage() {
                 <CardHeader>
                   <CardTitle className="text-2xl text-[#2c3e2d]">Deine Mitgliedschaften</CardTitle>
                   <CardDescription className="text-base text-[#5a5a5a]">
-                    Übersicht und Verwaltung deiner aktiven und ausstehenden Mitgliedschaften.
+                    ├£bersicht und Verwaltung deiner aktiven und ausstehenden Mitgliedschaften.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -733,11 +733,11 @@ export default function AccountPage() {
                       className="rounded-full border-permdal-300 hover:bg-permdal-50"
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      {loadingMemberships ? "Aktualisiere…" : "Aktualisieren"}
+                      {loadingMemberships ? "AktualisiereÔÇª" : "Aktualisieren"}
                     </Button>
                     <span className="text-sm text-[#5a5a5a]">
                       {loadingMemberships
-                        ? "Lade Mitgliedschaften…"
+                        ? "Lade MitgliedschaftenÔÇª"
                         : memberships.length > 0
                           ? `${memberships.length} Mitgliedschaft${memberships.length > 1 ? "en" : ""} gefunden`
                           : "Noch keine Mitgliedschaft."}
@@ -785,7 +785,7 @@ export default function AccountPage() {
                           ? membership.kontingent_aktuell
                           : null;
                       const addressDisplay =
-                        membership.adresse ?? "Muster GmbH\nMusterstraße 1\n12345 Musterstadt";
+                        membership.adresse ?? "Muster GmbH\nMusterstra├ƒe 1\n12345 Musterstadt";
                       const paymentsForMembership = membership.payments ?? [];
                       const primaryPayment = paymentsForMembership[0];
                       const openPayment = paymentsForMembership.find((payment) => (payment.status ?? "").toLowerCase() === "offen");
@@ -809,7 +809,7 @@ export default function AccountPage() {
                         ? Math.min(100, Math.max(0, (currentBalance / startBalance) * 100))
                         : null;
                       const membershipSince = formatDateShort(membership.beantragungs_datum ?? membership.$createdAt);
-                      const headerMeta = isPrivat ? (validUntilFormatted !== "—" ? `gültig bis ${validUntilFormatted}` : null) : (membershipSince !== "—" ? `seit ${membershipSince}` : null);
+                      const headerMeta = isPrivat ? (validUntilFormatted !== "ÔÇö" ? `g├╝ltig bis ${validUntilFormatted}` : null) : (membershipSince !== "ÔÇö" ? `seit ${membershipSince}` : null);
                       return (
                         <Card
                           key={membership.$id}
@@ -878,14 +878,14 @@ export default function AccountPage() {
                                           <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="space-y-1">
                                               <p className="font-semibold uppercase tracking-wide text-amber-900/70">Offener Betrag</p>
-                                              <p className="text-lg font-semibold">{outstandingDisplay ?? "wird berechnet…"}</p>
+                                              <p className="text-lg font-semibold">{outstandingDisplay ?? "wird berechnetÔÇª"}</p>
                                             </div>
                                             <span className="text-xs text-amber-900/70 sm:ml-auto">Details</span>
                                           </div>
                                         </AccordionTrigger>
                                         <AccordionContent className="space-y-4 rounded-b-lg bg-white px-4 text-sm text-slate-900 shadow-inner sm:text-base">
                                           <div className="pt-3 text-xs text-slate-700 sm:text-sm">
-                                            Bitte überweisen Sie den offenen Betrag. Nach Eingang aktivieren wir Ihre Mitgliedschaft und
+                                            Bitte ├╝berweisen Sie den offenen Betrag. Nach Eingang aktivieren wir Ihre Mitgliedschaft und
                                             laden Ihr Guthaben auf.
                                           </div>
                                           <div className="space-y-2">
@@ -922,7 +922,7 @@ export default function AccountPage() {
                                           )}
                                           <p className="text-xs text-slate-600">
                                             Verwenden Sie bitte exakt den angegebenen Verwendungszweck, damit wir Ihre Zahlung automatisch
-                                            zuordnen können.
+                                            zuordnen k├Ânnen.
                                           </p>
                                         </AccordionContent>
                                       </AccordionItem>
@@ -988,8 +988,8 @@ export default function AccountPage() {
                                 />
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-gray-700">Mitgliedschaft hinzufügen</p>
-                                <p className="text-xs text-gray-500">Wählen Sie den passenden Typ und stellen Sie Ihren Antrag.</p>
+                                <p className="text-sm font-semibold text-gray-700">Mitgliedschaft hinzuf├╝gen</p>
+                                <p className="text-xs text-gray-500">W├ñhlen Sie den passenden Typ und stellen Sie Ihren Antrag.</p>
                               </div>
                             </div>
                             {membershipLoadError && (
@@ -1032,7 +1032,7 @@ export default function AccountPage() {
                                 (membershipType === "business" && hasBusinessMembership)
                               }
                             >
-                              {membershipStatus.state === "loading" ? "Sende…" : "Mitgliedschaft beantragen"}
+                              {membershipStatus.state === "loading" ? "SendeÔÇª" : "Mitgliedschaft beantragen"}
                             </Button>
                           </div>
                         </CardContent>
@@ -1056,7 +1056,7 @@ export default function AccountPage() {
                 <CardHeader>
                   <CardTitle className="text-2xl text-[#2c3e2d]">Dein Profil</CardTitle>
                   <CardDescription className="text-base text-[#5a5a5a]">
-                    Persönliche Informationen und Kontoeinstellungen
+                    Pers├Ânliche Informationen und Kontoeinstellungen
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
@@ -1097,13 +1097,13 @@ export default function AccountPage() {
                             : "border border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200"
                         }
                       >
-                        {isEmailVerified ? "✓ Verifiziert" : "E-Mail bestätigen"}
+                        {isEmailVerified ? "Ô£ô Verifiziert" : "E-Mail best├ñtigen"}
                       </Badge>
                       {primaryMembership && membershipStatusStyle && membershipTypeLabel && (
                         <Badge
                           className={`${membershipStatusStyle.className} font-semibold`}
                         >
-                          {membershipTypeLabel} • {membershipStatusStyle.label}
+                          {membershipTypeLabel} ÔÇó {membershipStatusStyle.label}
                         </Badge>
                       )}
                       {roleLabels.map((label) => (
@@ -1117,7 +1117,7 @@ export default function AccountPage() {
                   <Tabs defaultValue="security" className="w-full">
                     <TabsList className="grid w-full max-w-md grid-cols-2 bg-permdal-50 border border-permdal-200 rounded-full p-1">
                       <TabsTrigger value="security" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Sicherheit</TabsTrigger>
-                      <TabsTrigger value="preferences" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Präferenzen</TabsTrigger>
+                      <TabsTrigger value="preferences" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Pr├ñferenzen</TabsTrigger>
                     </TabsList>
                     {/* <TabsContent value="overview" className="space-y-4 pt-4">
                       <div className="grid gap-4 sm:grid-cols-2">
@@ -1153,11 +1153,11 @@ export default function AccountPage() {
                       <div className="rounded-lg border bg-muted/20 p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div className="space-y-1">
-                            <p className="text-sm font-medium text-foreground">E-Mail-Bestätigung</p>
+                            <p className="text-sm font-medium text-foreground">E-Mail-Best├ñtigung</p>
                             <p className="text-sm text-muted-foreground">
                               {isEmailVerified
-                                ? "Ihre E-Mail-Adresse ist bestätigt."
-                                : "Bitte bestätigen Sie Ihre E-Mail-Adresse, um alle Funktionen nutzen zu können."}
+                                ? "Ihre E-Mail-Adresse ist best├ñtigt."
+                                : "Bitte best├ñtigen Sie Ihre E-Mail-Adresse, um alle Funktionen nutzen zu k├Ânnen."}
                             </p>
                           </div>
                           <Badge
@@ -1179,7 +1179,7 @@ export default function AccountPage() {
                               onClick={sendVerificationEmail}
                               disabled={verificationStatus.state === "loading"}
                             >
-                              {verificationStatus.state === "loading" ? "Sende…" : "E-Mail verifizieren"}
+                              {verificationStatus.state === "loading" ? "SendeÔÇª" : "E-Mail verifizieren"}
                             </Button>
                             {verificationStatus.message && (
                               <span
@@ -1208,7 +1208,7 @@ export default function AccountPage() {
                           </Button>
                         </div>
                         <p className="mt-3 text-xs text-muted-foreground">
-                          Weitere Sicherheitsoptionen werden bald direkt hier verfügbar sein.
+                          Weitere Sicherheitsoptionen werden bald direkt hier verf├╝gbar sein.
                         </p>
                       </div>
                     </TabsContent>
@@ -1233,7 +1233,7 @@ export default function AccountPage() {
                           </div>
                         </div>
                         <p className="mt-3 text-xs text-muted-foreground">
-                          Die Anpassung des Erscheinungsbildes direkt im Konto folgt in Kürze.
+                          Die Anpassung des Erscheinungsbildes direkt im Konto folgt in K├╝rze.
                         </p>
                       </div>
                       <div className="rounded-lg border bg-muted/20 p-4">
@@ -1241,7 +1241,7 @@ export default function AccountPage() {
                           <div className="space-y-1">
                             <p className="text-sm font-medium text-foreground">Community-Updates</p>
                             <p className="text-sm text-muted-foreground">
-                              Steuern Sie, ob Sie über neue Permdal-Inhalte informiert werden möchten.
+                              Steuern Sie, ob Sie ├╝ber neue Permdal-Inhalte informiert werden m├Âchten.
                             </p>
                           </div>
                           <Switch checked={newsletterOptIn} disabled aria-readonly />
@@ -1263,7 +1263,7 @@ export default function AccountPage() {
                         </div>
                       )}
                       <div className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
-                        Selbstverwaltung für weitere Präferenzen ist in Vorbereitung. Bei Änderungen wenden Sie sich bitte an das AFF-Team.
+                        Selbstverwaltung f├╝r weitere Pr├ñferenzen ist in Vorbereitung. Bei ├änderungen wenden Sie sich bitte an das AFF-Team.
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -1274,14 +1274,14 @@ export default function AccountPage() {
                 <CardHeader>
                   <CardTitle className="text-2xl text-[#2c3e2d]">Benachrichtigungen</CardTitle>
                   <CardDescription className="text-base text-[#5a5a5a]">
-                    Verwalte deine Einstellungen für E-Mail-Benachrichtigungen
+                    Verwalte deine Einstellungen f├╝r E-Mail-Benachrichtigungen
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="rounded-lg border bg-muted/20 p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-foreground">Bestellbestätigungen</p>
+                        <p className="font-medium text-foreground">Bestellbest├ñtigungen</p>
                         <p className="text-sm text-muted-foreground">Erhalte E-Mails bei neuen Bestellungen</p>
                       </div>
                       <Badge className="bg-green-100 text-green-800 border-green-300">Aktiviert</Badge>
@@ -1291,7 +1291,7 @@ export default function AccountPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-foreground">Marktplatz-Updates</p>
-                        <p className="text-sm text-muted-foreground">Benachrichtigungen über neue Angebote</p>
+                        <p className="text-sm text-muted-foreground">Benachrichtigungen ├╝ber neue Angebote</p>
                       </div>
                       <Badge className="bg-green-100 text-green-800 border-green-300">Aktiviert</Badge>
                     </div>
@@ -1300,7 +1300,7 @@ export default function AccountPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-foreground">Newsletter</p>
-                        <p className="text-sm text-muted-foreground">Regelmäßige Updates über Permdal</p>
+                        <p className="text-sm text-muted-foreground">Regelm├ñ├ƒige Updates ├╝ber Permdal</p>
                       </div>
                       <Badge variant="outline" className="border-gray-300 text-gray-600">Deaktiviert</Badge>
                     </div>
@@ -1316,7 +1316,7 @@ export default function AccountPage() {
                     <div>
                       <CardTitle className="text-2xl text-[#2c3e2d]">Deine Bestellungen</CardTitle>
                       <CardDescription className="text-base text-[#5a5a5a]">
-                        Übersicht deiner aktuellen und vergangenen Bestellungen
+                        ├£bersicht deiner aktuellen und vergangenen Bestellungen
                       </CardDescription>
                     </div>
                     {!loadingOrders && orders && (
@@ -1328,7 +1328,7 @@ export default function AccountPage() {
                 </CardHeader>
                 <CardContent>
                   {loadingOrders ? (
-                    <div className="text-center py-12 text-[#5a5a5a]">Lädt Bestellungen…</div>
+                    <div className="text-center py-12 text-[#5a5a5a]">L├ñdt BestellungenÔÇª</div>
                   ) : orders && orders.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {orders.map((o) => {
@@ -1411,3 +1411,4 @@ export default function AccountPage() {
     </main>
   );
 }
+
