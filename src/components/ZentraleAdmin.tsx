@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import env from "@/app/env";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { client, functions, databases } from '@/models/client/config';
 import { FormEvent, useEffect, useState } from 'react';
@@ -244,17 +244,6 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             setIsCreateOpen(false);
         } catch (rawError: unknown) {
             console.error("Error creating document:", rawError);
-        }
-    }
-
-    async function updateProdukt(id: string, values: z.infer<typeof formSchema>) {
-        try {
-            await executeAdminFunction(addProduktFunctionId, {
-                ...values,
-                id,
-            });
-        } catch (rawError: unknown) {
-            console.error("Error updating document:", rawError);
         }
     }
 
@@ -740,4 +729,3 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
         </div>
     );
 };
-

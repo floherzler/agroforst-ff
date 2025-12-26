@@ -1,6 +1,5 @@
 import { databases } from "@/models/client/config";
 import env from "@/app/env";
-import { notFound } from "next/navigation";
 
 // app/angebote/[id]/page.tsx
 import AngebotLive from "@/components/AngebotLive";

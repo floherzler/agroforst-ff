@@ -92,7 +92,7 @@ export default function MarktplatzPage() {
 
                 // Create a map of produkte by ID
                 const produkteMap = new Map<string, Produkt>();
-                produkteRes.documents.forEach((doc: any) => {
+                produkteRes.documents.forEach((doc: Models.Document) => {
                     produkteMap.set(doc.$id, {
                         $id: doc.$id,
                         name: doc.name,
@@ -105,7 +105,7 @@ export default function MarktplatzPage() {
 
                 // Combine angebote with their produkte
                 const combined = angeboteRes.documents
-                    .map((doc: any) => {
+                    .map((doc: Models.Document): AngebotWithProdukt | null => {
                         const produkt = produkteMap.get(doc.produktID);
                         if (!produkt) return null; // Skip if no matching produkt found
 
@@ -121,7 +121,7 @@ export default function MarktplatzPage() {
                             ernteProjektion: doc.ernteProjektion,
                             mengeAbgeholt: doc.mengeAbgeholt,
                             produkt: produkt,
-                        } as AngebotWithProdukt;
+                        };
                     })
                     .filter((item): item is AngebotWithProdukt => item !== null);
 
@@ -245,7 +245,7 @@ export default function MarktplatzPage() {
 
             {/* Category tabs */}
             <div className="flex justify-center">
-                <Tabs value={selectedKat} onValueChange={(v) => setSelectedKat(v as any)}>
+                <Tabs value={selectedKat} onValueChange={(v) => setSelectedKat(v as (typeof KATS)[number])}>
                     <TabsList
                         className="
           flex flex-wrap gap-1 rounded-xl

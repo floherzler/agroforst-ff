@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { account, databases, functions } from "@/models/client/config";
 import env from "@/app/env";
-import { Query } from "appwrite";
+import { Query, Models } from "appwrite";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, RefreshCw, Copy, Check } from "lucide-react";
@@ -41,7 +41,24 @@ type Payment = {
   $createdAt?: string | null;
 };
 
-function normalizeMembership(raw: any): Membership {
+type Bestellung = {
+  $id: string;
+  $createdAt: string;
+  userID?: string;
+  angebotID?: string;
+  menge?: number;
+  abholung?: boolean;
+  preis_einheit?: number;
+  preis_gesamt?: number;
+  einheit?: string;
+  mitgliedschaftID?: string;
+  produkt_name?: string;
+  status?: string;
+};
+
+type GenericDoc = Record<string, unknown>;
+
+function normalizeMembership(raw: GenericDoc): Membership {
   if (!raw) {
     return {
       $id: "",
@@ -91,7 +108,7 @@ function normalizeMembership(raw: any): Membership {
   };
 }
 
-function normalizePayment(raw: any): Payment {
+function normalizePayment(raw: GenericDoc): Payment {
   if (!raw) {
     return { $id: "" };
   }
@@ -308,7 +325,7 @@ export default function AccountPage() {
     } catch {
       setCopiedEmail(false);
     }
-  }, [user?.email]);
+  }, [user, user?.email]);
 
   React.useEffect(() => {
     if (!user) return;
@@ -322,24 +339,28 @@ export default function AccountPage() {
           [Query.equal("userID", user!.$id), Query.orderDesc("$createdAt"), Query.limit(100)]
         );
         if (!cancelled) {
-          setOrders(
-            resp.documents.map((doc: any) => ({
-              $id: doc.$id,
-              $createdAt: doc.$createdAt,
-              userID: doc.userID,
-              angebotID: doc.angebotID,
-              menge: doc.menge,
-              abholung: doc.abholung,
-              preis_einheit: doc.preis_einheit,
-              preis_gesamt: doc.preis_gesamt,
-              einheit: doc.einheit,
-              mitgliedschaftID: doc.mitgliedschaftID,
-              produkt_name: doc.produkt_name,
-              status: doc.status,
-            }))
-          );
+        const toOrder = (doc: Models.Document): Bestellung => {
+          const record = doc as unknown as Record<string, unknown>;
+          const num = (value: unknown) => (typeof value === "number" ? value : Number(value));
+          const str = (value: unknown) => (typeof value === "string" ? value : undefined);
+          return {
+            $id: doc.$id,
+            $createdAt: doc.$createdAt,
+            userID: str(record.userID),
+            angebotID: str(record.angebotID),
+            menge: num(record.menge),
+            abholung: record.abholung as boolean | undefined,
+            preis_einheit: num(record.preis_einheit),
+            preis_gesamt: num(record.preis_gesamt),
+            einheit: str(record.einheit),
+            mitgliedschaftID: str(record.mitgliedschaftID),
+            produkt_name: str(record.produkt_name),
+            status: str(record.status),
+          };
+        };
+        setOrders(resp.documents.map(toOrder));
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) setOrders([]);
       } finally {
         if (!cancelled) setLoadingOrders(false);
@@ -349,7 +370,7 @@ export default function AccountPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.$id]);
+  }, [user, user?.$id]);
 
   const fetchMemberships = React.useCallback(async (): Promise<Membership[]> => {
     if (!user) return [];
@@ -379,8 +400,8 @@ export default function AccountPage() {
         ]),
       ]
     );
-    return response.documents.map((doc: any) => normalizeMembership(doc));
-  }, [membershipCollectionId, user?.$id]);
+    return response.documents.map((doc) => normalizeMembership(doc as unknown as GenericDoc));
+  }, [membershipCollectionId, user, user?.$id]);
 
   React.useEffect(() => {
     if (!user) {
@@ -417,7 +438,7 @@ export default function AccountPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.$id, fetchMemberships]);
+  }, [user, user?.$id, fetchMemberships]);
 
   React.useEffect(() => {
     setShowApplicationForm(memberships.length === 0);
@@ -439,7 +460,7 @@ export default function AccountPage() {
     } finally {
       setLoadingMemberships(false);
     }
-  }, [fetchMemberships, user?.$id]);
+  }, [fetchMemberships, user, user?.$id]);
 
   function formatPrice(v: number | string) {
     const num = typeof v === "string" ? Number(v) : v;
@@ -553,22 +574,23 @@ export default function AccountPage() {
         membershipFunctionId,
         JSON.stringify({ type: membershipType })
       );
-      let payload: any = null;
-      const rawResponse = (execution as any)?.response;
+      type ExecutionShape = { status?: string; response?: unknown; stderr?: unknown };
+      let payload: Record<string, unknown> | null = null;
+      const rawResponse = (execution as ExecutionShape)?.response;
       if (typeof rawResponse === "string" && rawResponse.trim().length > 0) {
         try {
           payload = JSON.parse(rawResponse);
-        } catch (_parseErr) {
+        } catch {
           // ignore parse errors and fall back to generic handling
         }
       }
-      const executionStatus = String((execution as any)?.status ?? "").toLowerCase();
+      const executionStatus = String((execution as ExecutionShape)?.status ?? "").toLowerCase();
       const succeeded = executionStatus === "completed" && payload?.success !== false;
       if (!succeeded) {
         const errorMessage =
           payload?.error ??
-          (execution as any)?.stderr ??
-          (execution as any)?.response ??
+          (execution as ExecutionShape)?.stderr ??
+          rawResponse ??
           "Die Anfrage konnte nicht gesendet werden.";
         throw new Error(errorMessage);
       }
@@ -645,7 +667,7 @@ export default function AccountPage() {
   const isEmailVerified = Boolean(user.emailVerification);
 
   // Theme and preferences
-  const themePreference = "system"; // Default to system theme
+  const themePreference: "dark" | "light" | "system" = "system"; // Default to system theme
   const themeLabel = themePreference === "dark" ? "Dunkel" : themePreference === "system" ? "System" : "Hell";
   const newsletterOptIn = false; // Default newsletter opt-in
   const contextualLabels = memberLabels.filter((label) => {
@@ -1310,7 +1332,7 @@ export default function AccountPage() {
                   ) : orders && orders.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {orders.map((o) => {
-                        const mengeNum = Number((o as any).menge);
+                        const mengeNum = Number(o.menge);
                         const unitRaw = (o.einheit || '').toString().toLowerCase();
                         const isGram = unitRaw === 'gramm' || unitRaw === 'g';
                         const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
@@ -1334,7 +1356,7 @@ export default function AccountPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Menge</span>
                                   <span className="font-medium">
-                                    {displayAsKg ? '1' : (Number.isFinite(mengeNum) ? mengeNum : (o as any).menge)} {displayAsKg ? 'kg' : o.einheit}
+                                    {displayAsKg ? '1' : (Number.isFinite(mengeNum) ? mengeNum : o.menge)} {displayAsKg ? 'kg' : o.einheit}
                                   </span>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -1349,7 +1371,7 @@ export default function AccountPage() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Abholung</span>
-                                  <span className="font-medium">{(o as any).abholung ? "Selbstabholung" : "Lieferung/Absprache"}</span>
+                                  <span className="font-medium">{o.abholung ? "Selbstabholung" : "Lieferung/Absprache"}</span>
                                 </div>
                                 <Separator />
                                 <div className="flex items-center justify-between">

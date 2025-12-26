@@ -235,7 +235,6 @@ function CardsView({
     return (
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {produkte.map((p) => {
-                const count = angeboteCount[p.$id] ?? 0;
                 return (
                     <article
                         key={p.$id}
