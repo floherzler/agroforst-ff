@@ -17,7 +17,6 @@ import { ID } from "appwrite";
 
 export default function Home() {
   const { user } = useAuthStore();
-  const firstName = user?.name?.split(" ")[0] || "du";
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");

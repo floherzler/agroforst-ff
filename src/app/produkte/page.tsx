@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { databases } from "@/models/client/config";
 import env from "@/app/env";
 import { Query, Models } from "appwrite";
-import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Search as SearchIcon } from "lucide-react";
@@ -120,7 +119,7 @@ export default function ProdukteKatalogPage() {
                     </div>
 
                     {/* Category tabs */}
-                    <Tabs value={selectedKat} onValueChange={(v) => setSelectedKat(v as any)}>
+                    <Tabs value={selectedKat} onValueChange={(v) => setSelectedKat(v as (typeof KATS)[number])}>
                         <TabsList
                             className="
           flex flex-wrap gap-1 rounded-xl
@@ -237,7 +236,6 @@ function CardsView({
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {produkte.map((p) => {
                 const count = angeboteCount[p.$id] ?? 0;
-                const hasAngebote = count > 0;
                 return (
                     <article
                         key={p.$id}
@@ -351,14 +349,26 @@ function TableView({
 
 /* ---------- Helpers ---------- */
 
-function mapProdukt(doc: any): Produkt {
+type ProduktDoc = Models.Document & {
+    hauptkategorie?: string;
+    unterkategorie?: string;
+    lebensdauer?: string;
+    fruchtfolge_vor?: string[];
+    fruchtfolge_nach?: string[];
+    bodenansprueche?: string[];
+    begleitpflanzen?: string[];
+    saisonalitaet?: (number | string)[];
+    imageID?: string;
+};
+
+function mapProdukt(doc: ProduktDoc): Produkt {
     const raw = Array.isArray(doc.saisonalitaet) ? doc.saisonalitaet : [];
     const saisonalitaet: number[] = [
         ...new Set<number>(
-            raw.map((m: any) => (typeof m === "string" ? parseInt(m, 10) : m))
+            raw.map((m) => (typeof m === "string" ? parseInt(m, 10) : m))
         )
     ]
-        .filter((n: any) => Number.isFinite(n) && n >= 1 && n <= 12)
+        .filter((n): n is number => Number.isFinite(n) && n >= 1 && n <= 12)
         .sort((a, b) => a - b);
 
     return {
@@ -374,13 +384,13 @@ function mapProdukt(doc: any): Produkt {
         bodenansprueche: doc.bodenansprueche,
         begleitpflanzen: doc.begleitpflanzen,
         saisonalitaet,
-        imageID: doc.imageID, // Add this line
+        imageID: doc.imageID,
     };
 }
 
-function dedupeById(docs: any[]) {
+function dedupeById<T extends { $id: string }>(docs: T[]) {
     const seen = new Set<string>();
-    const out: any[] = [];
+    const out: T[] = [];
     for (const d of docs) {
         if (!seen.has(d.$id)) { seen.add(d.$id); out.push(d); }
     }

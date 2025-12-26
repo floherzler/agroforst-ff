@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { client, databases } from "@/models/client/config";
+import { client } from "@/models/client/config";
 import env from "@/app/env";
 
 type Angebot = {

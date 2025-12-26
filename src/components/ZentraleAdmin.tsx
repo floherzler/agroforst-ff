@@ -1,17 +1,19 @@
-'use client'
+﻿'use client'
 
 import env from "@/app/env";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { client, databases, functions } from '@/models/client/config';
+import { client, functions, databases } from '@/models/client/config';
 import { FormEvent, useEffect, useState } from 'react';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-// import { Badge } from './ui/badge';
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Query } from "appwrite";
 
 const hauptkategorieValues = ["Obst", "Gemüse", "Kräuter", "Blumen", "Maschine", "Dienstleistung", "Sonstiges"] as const;
@@ -72,61 +74,14 @@ const formSchema = z.object({
     begleitpflanzen: z.array(z.string()).optional(),
 })
 
-// function ArrayInput({ field, label }: { field: any, label: string }) {
-//     const [inputValue, setInputValue] = useState('');
-
-//     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//         setInputValue(e.target.value);
-//     };
-
-//     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-//         if (e.key === 'Enter') {
-//             e.preventDefault();
-//             if (inputValue.trim() !== '') {
-//                 field.onChange([...(field.value || []), inputValue.trim()]);
-//                 setInputValue('');
-//             }
-//         }
-//     };
-
-//     const removeItem = (index: number) => {
-//         const newValue = [...(field.value || [])];
-//         newValue.splice(index, 1);
-//         field.onChange(newValue);
-//     };
-
-//     return (
-//         <FormItem>
-//             <FormLabel>{label}</FormLabel>
-//             <FormControl>
-//                 <Input
-//                     value={inputValue}
-//                     onChange={handleInputChange}
-//                     onKeyDown={handleInputKeyDown}
-//                 />
-//             </FormControl>
-//             <div className="flex flex-wrap gap-2 mt-2">
-//                 {(field.value || []).map((item: string, index: number) => (
-//                     <Badge key={index} variant="secondary">
-//                         {item}
-//                         <button type="button" onClick={() => removeItem(index)} className="ml-2 text-red-500">x</button>
-//                     </Badge>
-//                 ))}
-//             </div>
-//             <FormMessage />
-//         </FormItem>
-//     );
-// }
-
-function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (values: z.infer<typeof formSchema>) => void }) {
+function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (values: z.infer<typeof formSchema>) => Promise<void> }) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const form = useForm<z.infer<typeof formSchema>>({
         defaultValues: produkt
             ? {
-                // **Text/ID fields** always controlled with ""
                 id: produkt.$id ?? "",
                 name: produkt.name ?? "",
                 sorte: produkt.sorte ?? "",
-                // **Selects** must be either one of the allowed strings or undefined
                 hauptkategorie: hauptkategorieValues.includes(
                     produkt.hauptkategorie as typeof hauptkategorieValues[number],
                 )
@@ -142,7 +97,6 @@ function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (valu
                 )
                     ? (produkt.lebensdauer as typeof lebensdauerValues[number])
                     : undefined,
-                // **Arrays** stay as `[]` if missing
                 fruchtfolge_vor: produkt.fruchtfolge_vor ?? [],
                 fruchtfolge_nach: produkt.fruchtfolge_nach ?? [],
                 bodenansprueche: Array.isArray(produkt.bodenansprueche)
@@ -151,7 +105,6 @@ function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (valu
                 begleitpflanzen: produkt.begleitpflanzen ?? [],
             }
             : {
-                // **New** → text/ID = ""; selects = undefined; arrays = []
                 id: "",
                 name: "",
                 sorte: "",
@@ -165,60 +118,62 @@ function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (valu
             },
     });
 
+    const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+        const trimmed = {
+            ...values,
+            name: values.name?.trim() ?? "",
+            sorte: values.sorte?.trim() ?? "",
+        };
 
+        if (!trimmed.name) {
+            form.setError("name", { message: "Name ist erforderlich" });
+            return;
+        }
+        if (!trimmed.hauptkategorie) {
+            form.setError("hauptkategorie", { message: "Hauptkategorie ist erforderlich" });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await onSubmit(trimmed);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="bg-white space-y-8">
-                <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="sorte" render={({ field }) => (<FormItem><FormLabel>Sorte</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="sorte" render={({ field }) => (<FormItem><FormLabel>Sorte</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                </div>
                 <FormField control={form.control} name="id" render={({ field }) => (<FormItem><FormLabel>ID (name-sorte)</FormLabel><FormControl><Input {...field} placeholder="zB. name-sorte" /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="hauptkategorie" render={({ field }) => (<FormItem><FormLabel>Hauptkategorie</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="text-black">
-                    <SelectValue placeholder="Wähle eine Kategorie" /></SelectTrigger></FormControl>
-                    <SelectContent className="max-h-60 overflow-y-auto bg-white">
-                        <SelectItem value="Obst">Obst</SelectItem>
-                        <SelectItem value="Gemüse">Gemüse</SelectItem>
-                        <SelectItem value="Kräuter">Kräuter</SelectItem>
-                        <SelectItem value="Blumen">Blumen</SelectItem>
-                        <SelectItem value="Maschine">Maschine</SelectItem>
-                        <SelectItem value="Dienstleistung">Dienstleistung</SelectItem>
-                        <SelectItem value="Sonstiges">Sonstiges</SelectItem>
-                    </SelectContent></Select><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="unterkategorie" render={({ field }) => (<FormItem><FormLabel>Unterkategorie</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger className="text-black"><SelectValue placeholder="Wähle eine Unterkategorie" /></SelectTrigger></FormControl>
-                    <SelectContent className="max-h-60 overflow-y-auto bg-white">
-                        <SelectItem value="Hülsenfrüchte">Hülsenfrüchte</SelectItem>
-                        <SelectItem value="Kohlgemüse">Kohlgemüse</SelectItem>
-                        <SelectItem value="Wurzel-/Knollengemüse">Wurzel-/Knollengemüse</SelectItem>
-                        <SelectItem value="Blattgemüse/Salat">Blattgemüse/Salat</SelectItem>
-                        <SelectItem value="Fruchtgemüse">Fruchtgemüse</SelectItem>
-                        <SelectItem value="Zwiebelgemüse">Zwiebelgemüse</SelectItem>
-                        <SelectItem value="Kernobst">Kernobst</SelectItem>
-                        <SelectItem value="Steinobst">Steinobst</SelectItem>
-                        <SelectItem value="Beeren">Beeren</SelectItem>
-                        <SelectItem value="Zitrusfrüchte">Zitrusfrüchte</SelectItem>
-                        <SelectItem value="Schalenfrüchte">Schalenfrüchte</SelectItem>
-                    </SelectContent></Select><FormMessage /></FormItem>)} />
-                {/* <FormField control={form.control} name="lebensdauer" render={({ field }) => (<FormItem><FormLabel>Lebensdauer</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="text-black"><SelectValue placeholder="Wähle Dauer" /></SelectTrigger></FormControl><SelectContent>
-                    <SelectItem value="einjährig">einjährig</SelectItem>
-                    <SelectItem value="zweijährig">zweijährig</SelectItem>
-                    <SelectItem value="mehrjährig">mehrjährig</SelectItem></SelectContent></Select><FormMessage />
-                </FormItem>)} />
-                <FormField control={form.control} name="fruchtfolge_vor" render={({ field }) => <ArrayInput field={field} label="Fruchtfolge Vor" />} />
-                <FormField control={form.control} name="fruchtfolge_nach" render={({ field }) => <ArrayInput field={field} label="Fruchtfolge Nach" />} />
-                <FormField control={form.control} name="bodenansprueche" render={({ field }) => <ArrayInput field={field} label="Bodenansprüche" />} />
-                <FormField control={form.control} name="begleitpflanzen" render={({ field }) => <ArrayInput field={field} label="Begleitpflanzen" />} /> */}
-                <DialogClose asChild>
-                    <Button type="submit" className="bg-permdal-800 text-white">Abschicken</Button>
-                </DialogClose>
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="hauptkategorie" render={({ field }) => (<FormItem><FormLabel>Hauptkategorie</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="text-black">
+                        <SelectValue placeholder="WÃ¤hle eine Kategorie" /></SelectTrigger></FormControl>
+                        <SelectContent className="max-h-60 overflow-y-auto bg-white">
+                            {hauptkategorieValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="unterkategorie" render={({ field }) => (<FormItem><FormLabel>Unterkategorie</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger className="text-black"><SelectValue placeholder="Wähle eine Unterkategorie" /></SelectTrigger></FormControl>
+                        <SelectContent className="max-h-60 overflow-y-auto bg-white">
+                            {unterkategorieValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent></Select><FormMessage /></FormItem>)} />
+                </div>
+                <Button type="submit" className="w-full bg-permdal-800 text-white hover:bg-permdal-700" disabled={isSubmitting}>
+                    {isSubmitting ? "Wird gesendet..." : "Abschicken"}
+                </Button>
             </form>
         </Form>
     )
 }
 
 export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { initialStaffeln: Staffel[], initialProdukte: Produkt[] }) {
-    const [, setStaffeln] = useState<Staffel[]>(initialStaffeln);
+    const [staffeln, setStaffeln] = useState<Staffel[]>(initialStaffeln);
     const [produkte, setProdukte] = useState<Produkt[]>(initialProdukte);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const paymentVerifyFunctionId = env.appwrite.payment_verify_function_id;
     const addProduktFunctionId = env.appwrite.add_produkt_function_id;
     const addAngebotFunctionId = env.appwrite.add_angebot_function_id;
@@ -250,6 +205,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
     const paymentCollection = env.appwrite.payment_collection_id;
     const staffelChannel = `databases.${db}.collections.${staffelCollection}.documents`;
     const produktChannel = `databases.${db}.collections.${produktCollection}.documents`;
+
     const executeAdminFunction = async (functionId: string, payload: Record<string, unknown>) => {
         if (!functionId || functionId === "undefined") {
             throw new Error("Die Cloud Function ist nicht konfiguriert");
@@ -273,7 +229,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             const errMsg =
                 parsedPayload?.error ??
                 execution.stderr ??
-                "Die Funktion konnte nicht ausgeführt werden";
+                "Die Funktion konnte nicht ausgefÃ¼hrt werden";
             throw new Error(errMsg);
         }
         return parsedPayload ?? execution;
@@ -285,6 +241,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                 ...values,
                 id: values.id || undefined,
             });
+            setIsCreateOpen(false);
         } catch (rawError: unknown) {
             console.error("Error creating document:", rawError);
         }
@@ -332,7 +289,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             const message =
                 rawError instanceof Error
                     ? rawError.message
-                    : String(rawError ?? "Die Funktion konnte nicht ausgeführt werden.");
+                    : String(rawError ?? "Die Funktion konnte nicht ausgefÃ¼hrt werden.");
             setPaymentResult({
                 state: "error",
                 message,
@@ -378,7 +335,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
         try {
             const mengeValue = Number(angebotForm.menge);
             if (!Number.isFinite(mengeValue) || mengeValue <= 0) {
-                throw new Error("Die Menge muss größer als 0 sein.");
+                throw new Error("Die Menge muss grÃ¶ÃŸer als 0 sein.");
             }
             const availableCandidate = Number(angebotForm.mengeVerfuegbar);
             const euroPreisCandidate = Number(angebotForm.euroPreis);
@@ -422,7 +379,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             const message =
                 rawError instanceof Error
                     ? rawError.message
-                    : String(rawError ?? "Die Funktion konnte nicht ausgeführt werden.");
+                    : String(rawError ?? "Die Funktion konnte nicht ausgefÃ¼hrt werden.");
             setAngebotResult({
                 state: "error",
                 message,
@@ -464,331 +421,323 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
     }, [staffelChannel, produktChannel])
 
     return (
-        <div className="flex gap-8 justify-center pt-8">
-            <div>
-                <h2 className="text-2xl font-bold text-center mb-4">Produkte</h2>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button className="bg-permdal-800 text-white hover:bg-permdal-700">
-                            Produkt zum Katalog hinzufügen
-                        </Button>
-                    </DialogTrigger>
+        <div className="w-full p-4">
+            <Tabs defaultValue="produkte" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/50 backdrop-blur-sm border border-gray-200/50">
+                    <TabsTrigger value="produkte">Produkte</TabsTrigger>
+                    <TabsTrigger value="angebote">Angebote & Staffeln</TabsTrigger>
+                    <TabsTrigger value="finanzen">Finanzen & Zahlungen</TabsTrigger>
+                </TabsList>
 
-                    <DialogContent
-                        className="
-                        bg-white            /* make the panel white */
-                        p-6                 /* add some padding */
-                        rounded-lg          /* soften the corners */
-                        shadow-lg           /* lift it off the page */
-                        max-h-[90vh]
-                        overflow-y-auto
-                        "
-                    >
-                        <DialogHeader>
-                            <DialogTitle>Neues Produkt erstellen</DialogTitle>
-                        </DialogHeader>
-                        <ProduktForm onSubmit={createProdukt} />
-                    </DialogContent>
-                </Dialog>
-
-                <Table className="w-full table-fixed">
-                    <TableHeader className="bg-gray-200">
-                        <TableRow>
-                            <TableCell className="font-bold">ProduktID</TableCell>
-                            <TableCell className="font-bold">Name</TableCell>
-                            <TableCell className="font-bold">Sorte</TableCell>
-                            <TableCell className="font-bold">Hauptkategorie</TableCell>
-                            <TableCell className="font-bold">Unterkategorie</TableCell>
-                            <TableCell className="font-bold">Aktionen</TableCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {produkte.map((produkt) => (
-                            <TableRow key={produkt.$id} className="hover:bg-gray-100 cursor-pointer">
-                                <TableCell>{produkt.$id}</TableCell>
-                                <TableCell>{produkt.name}</TableCell>
-                                <TableCell>{produkt.sorte}</TableCell>
-                                <TableCell>{produkt.hauptkategorie}</TableCell>
-                                <TableCell>{produkt.unterkategorie}</TableCell>
-                                <TableCell>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button>Bearbeiten</Button>
-                                        </DialogTrigger>
-                                        <DialogContent
-                                            className="
-                                            bg-white            /* make the panel white */
-                                            p-6                 /* add some padding */
-                                            rounded-lg          /* soften the corners */
-                                            shadow-lg           /* lift it off the page */
-                                            max-h-[90vh]
-                                            overflow-y-auto
-                                            "
-                                        >
-                                            <DialogHeader>
-                                                <DialogTitle>Produkt Bearbeiten</DialogTitle>
-                                            </DialogHeader>
-                                            <ProduktForm produkt={produkt} onSubmit={(values) => updateProdukt(produkt.$id, values)} />
-                                        </DialogContent>
-                                    </Dialog>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                <div className="mt-10 grid gap-6 lg:grid-cols-2">
-                    <section className="rounded-2xl border border-permdal-100 bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold">Zahlung verifizieren</h3>
-                        <form className="mt-4 space-y-4" onSubmit={handleVerifyPayment}>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Payment ID
-                                </label>
-                                <Input
-                                    value={paymentForm.paymentId}
-                                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentId: event.target.value }))}
-                                    placeholder="z.B. 670bacff12345"
-                                    required
-                                />
+                <TabsContent value="produkte">
+                    <Card className="bg-white shadow-md border-gray-200">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Produktkatalog</CardTitle>
+                                <CardDescription>Verwalte alle verfügbaren Produkte.</CardDescription>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Rechnungsreferenz
-                                </label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        value={refSearchValue}
-                                        onChange={(event) => setRefSearchValue(event.target.value)}
-                                        placeholder="Ref eingeben"
-                                        autoComplete="off"
-                                    />
-                                    <Button
-                                        type="button"
-                                        className="w-32"
-                                        onClick={handleFindPaymentByRef}
-                                        disabled={refSearchStatus.state === "loading"}
-                                    >
-                                        {refSearchStatus.state === "loading" ? "Suchen…" : "ID holen"}
+                            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                                <DialogTrigger asChild>
+                                    <Button className="bg-permdal-800 text-white hover:bg-permdal-700">
+                                        + Neues Produkt
                                     </Button>
-                                </div>
-                                {refSearchStatus.message && (
-                                    <p
-                                        className={`text-xs ${refSearchStatus.state === "success"
-                                                ? "text-emerald-600"
-                                                : refSearchStatus.state === "error"
-                                                    ? "text-rose-600"
-                                                    : "text-muted-foreground"
-                                            }`}
-                                    >
-                                        {refSearchStatus.message}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Mitgliedschaft (optional)
-                                </label>
-                                <Input
-                                    value={paymentForm.membershipId}
-                                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, membershipId: event.target.value }))}
-                                    placeholder="Mitgliedschaft ID"
-                                />
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div>
-                                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                        Status
-                                    </label>
-                                    <Select
-                                        value={paymentForm.status}
-                                        onValueChange={(value) => setPaymentForm((prev) => ({ ...prev, status: value }))}
-                                    >
-                                        <SelectTrigger className="text-sm">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {["offen", "teilbezahlt", "bezahlt", "fehler"].map((status) => (
-                                                <SelectItem key={status} value={status}>
-                                                    {status}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                        Betrag (€)
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={paymentForm.amount}
-                                        onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: event.target.value }))}
-                                        placeholder="z.B. 59.90"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Notiz
-                                </label>
-                                <Input
-                                    value={paymentForm.note}
-                                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, note: event.target.value }))}
-                                    placeholder="Optionaler Kommentar"
-                                />
-                            </div>
-                            <Button type="submit" className="w-full" disabled={paymentResult.state === "loading"}>
-                                {paymentResult.state === "loading" ? "Wird geprüft…" : "Prüfung starten"}
-                            </Button>
-                        </form>
-                        {paymentResult.message && (
-                            <p
-                                className={`mt-4 text-sm ${paymentResult.state === "success"
-                                    ? "text-emerald-600"
-                                    : paymentResult.state === "error"
-                                        ? "text-rose-600"
-                                        : "text-muted-foreground"
-                                    }`}
-                            >
-                                {paymentResult.message}
-                            </p>
-                        )}
-                    </section>
-                    <section className="rounded-2xl border border-permdal-100 bg-white p-6 shadow-sm">
-                        <h3 className="text-lg font-semibold">Neues Angebot anlegen</h3>
-                        <form className="mt-4 space-y-4" onSubmit={handleAddAngebot}>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Produkt ID
-                                </label>
-                                <Input
-                                    value={angebotForm.produktID}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, produktID: event.target.value }))}
-                                    placeholder="z.B. tomate-san-marzano"
-                                    required
-                                />
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    value={angebotForm.menge}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, menge: event.target.value }))}
-                                    placeholder="Menge"
-                                />
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    value={angebotForm.mengeVerfuegbar}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, mengeVerfuegbar: event.target.value }))}
-                                    placeholder="Verfügbar"
-                                />
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <Input
-                                    value={angebotForm.einheit}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, einheit: event.target.value }))}
-                                    placeholder="Einheit (z.B. Stück)"
-                                />
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={angebotForm.euroPreis}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, euroPreis: event.target.value }))}
-                                    placeholder="Preis (€)"
-                                />
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <Input
-                                    type="date"
-                                    value={angebotForm.saatPflanzDatum}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, saatPflanzDatum: event.target.value }))}
-                                />
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    value={angebotForm.mengeAbgeholt}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, mengeAbgeholt: event.target.value }))}
-                                    placeholder="Bereits abgeholt"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Ernteprognose (neue Zeile / Komma getrennt)
-                                </label>
-                                <textarea
-                                    className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-permdal-500"
-                                    rows={3}
-                                    value={angebotForm.ernteProjektion}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, ernteProjektion: event.target.value }))}
-                                    placeholder="2025-05-10, 2025-05-25"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Beschreibung
-                                </label>
-                                <Input
-                                    value={angebotForm.beschreibung}
-                                    onChange={(event) => setAngebotForm((prev) => ({ ...prev, beschreibung: event.target.value }))}
-                                    placeholder="Kurze Erläuterung"
-                                />
-                            </div>
-                            <Button type="submit" className="w-full" disabled={angebotResult.state === "loading"}>
-                                {angebotResult.state === "loading" ? "Speichern…" : "Angebot anlegen"}
-                            </Button>
-                        </form>
-                        {angebotResult.message && (
-                            <p
-                                className={`mt-4 text-sm ${angebotResult.state === "success"
-                                    ? "text-emerald-600"
-                                    : angebotResult.state === "error"
-                                        ? "text-rose-600"
-                                        : "text-muted-foreground"
-                                    }`}
-                            >
-                                {angebotResult.message}
-                            </p>
-                        )}
-                    </section>
-                </div>
-            </div>
-            {/* <div>
-                <h2 className="text-2xl font-bold text-center mb-4">Staffeln</h2>
-                <Table className="w-full max-w-4xl">
-                    <TableHeader className="bg-gray-200">
-                        <TableRow>
-                            <TableCell className="font-bold">Staffel ID</TableCell>
-                            <TableCell className="font-bold">Produkt ID</TableCell>
-                            <TableCell className="font-bold">Saat Datum</TableCell>
-                            <TableCell className="font-bold">Ernte Projektion</TableCell>
-                            <TableCell className="font-bold">Menge</TableCell>
-                            <TableCell className="font-bold">Einheit</TableCell>
-                            <TableCell className="font-bold">Preis (Euro)</TableCell>
-                            <TableCell className="font-bold">Menge Verfügbar</TableCell>
-                            <TableCell className="font-bold">Menge Abgeholt</TableCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {staffeln.map((staffel) => (
-                            <TableRow key={staffel.$id}>
-                                <TableCell>{staffel.$id}</TableCell>
-                                <TableCell>{staffel.produktID}</TableCell>
-                                <TableCell>{new Date(staffel.saatPflanzDatum).toDateString()}</TableCell>
-                                <TableCell>{new Date(staffel.ernteProjektion[0]).toDateString()} - {new Date(staffel.ernteProjektion[staffel.ernteProjektion.length - 1]).toDateString()}</TableCell>
-                                <TableCell>{staffel.menge}</TableCell>
-                                <TableCell>{staffel.einheit}</TableCell>
-                                <TableCell>{staffel.euroPreis}€</TableCell>
-                                <TableCell>{staffel.mengeVerfuegbar}</TableCell>
-                                <TableCell>{staffel.mengeAbgeholt}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div> */}
+                                </DialogTrigger>
+                                <DialogContent className="bg-white sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>Neues Produkt erstellen</DialogTitle>
+                                    </DialogHeader>
+                                    <ProduktForm onSubmit={createProdukt} />
+                                </DialogContent>
+                            </Dialog>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>ID</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Sorte</TableHead>
+                                        <TableHead>Kategorie</TableHead>
+                                        <TableHead>Unterkategorie</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {produkte.map((produkt) => (
+                                        <TableRow key={produkt.$id}>
+                                            <TableCell className="font-mono text-xs">{produkt.$id}</TableCell>
+                                            <TableCell className="font-medium">{produkt.name}</TableCell>
+                                            <TableCell>{produkt.sorte}</TableCell>
+                                            <TableCell><Badge variant="outline">{produkt.hauptkategorie}</Badge></TableCell>
+                                            <TableCell className="text-muted-foreground">{produkt.unterkategorie}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="angebote" className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <Card className="bg-white shadow-md border-gray-200">
+                            <CardHeader>
+                                <CardTitle>Neues Angebot anlegen</CardTitle>
+                                <CardDescription>Erstelle ein neues Angebot fÃ¼r ein existierendes Produkt.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form className="space-y-4" onSubmit={handleAddAngebot}>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Produkt ID</label>
+                                        <Select
+                                            value={angebotForm.produktID}
+                                            onValueChange={(value) => setAngebotForm((prev) => ({ ...prev, produktID: value }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Produkt wÃ¤hlen" />
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-60 bg-white">
+                                                {produkte.map(p => (
+                                                    <SelectItem key={p.$id} value={p.$id}>{p.name} - {p.sorte}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Menge</label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={angebotForm.menge}
+                                                onChange={(event) => setAngebotForm((prev) => ({ ...prev, menge: event.target.value }))}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">VerfÃ¼gbar</label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={angebotForm.mengeVerfuegbar}
+                                                onChange={(event) => setAngebotForm((prev) => ({ ...prev, mengeVerfuegbar: event.target.value }))}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Einheit</label>
+                                            <Input
+                                                value={angebotForm.einheit}
+                                                onChange={(event) => setAngebotForm((prev) => ({ ...prev, einheit: event.target.value }))}
+                                                placeholder="z.B. kg, StÃ¼ck"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Preis (â‚¬)</label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={angebotForm.euroPreis}
+                                                onChange={(event) => setAngebotForm((prev) => ({ ...prev, euroPreis: event.target.value }))}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Saat/Pflanz Datum</label>
+                                            <Input
+                                                type="date"
+                                                value={angebotForm.saatPflanzDatum}
+                                                onChange={(event) => setAngebotForm((prev) => ({ ...prev, saatPflanzDatum: event.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Bereits abgeholt</label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={angebotForm.mengeAbgeholt}
+                                                onChange={(event) => setAngebotForm((prev) => ({ ...prev, mengeAbgeholt: event.target.value }))}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Ernteprognose (Komma getrennt)</label>
+                                        <Input
+                                            value={angebotForm.ernteProjektion}
+                                            onChange={(event) => setAngebotForm((prev) => ({ ...prev, ernteProjektion: event.target.value }))}
+                                            placeholder="YYYY-MM-DD, YYYY-MM-DD"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Beschreibung</label>
+                                        <Input
+                                            value={angebotForm.beschreibung}
+                                            onChange={(event) => setAngebotForm((prev) => ({ ...prev, beschreibung: event.target.value }))}
+                                            placeholder="Kurze Beschreibung"
+                                        />
+                                    </div>
+                                    <Button type="submit" className="w-full bg-permdal-800 hover:bg-permdal-700 text-white" disabled={angebotResult.state === "loading"}>
+                                        {angebotResult.state === "loading" ? "Speichernâ€¦" : "Angebot anlegen"}
+                                    </Button>
+                                    {angebotResult.message && (
+                                        <p className={`text-sm text-center ${angebotResult.state === "success" ? "text-green-600" : "text-red-600"}`}>
+                                            {angebotResult.message}
+                                        </p>
+                                    )}
+                                </form>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="h-fit bg-white shadow-md border-gray-200">
+                            <CardHeader>
+                                <CardTitle>Aktive Angebote (Staffeln)</CardTitle>
+                                <CardDescription>Ãœbersicht aller aktiven Angebote.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="max-h-[600px] overflow-y-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Produkt</TableHead>
+                                            <TableHead>Menge</TableHead>
+                                            <TableHead>Preis</TableHead>
+                                            <TableHead>VerfÃ¼gbar</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {staffeln.map((staffel) => (
+                                            <TableRow key={staffel.$id}>
+                                                <TableCell className="font-medium">{staffel.produktID}</TableCell>
+                                                <TableCell>{staffel.menge} {staffel.einheit}</TableCell>
+                                                <TableCell>{staffel.euroPreis}â‚¬</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={Number(staffel.mengeVerfuegbar) > 0 ? "default" : "secondary"}>
+                                                        {staffel.mengeVerfuegbar}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="finanzen">
+                    <div className="max-w-2xl mx-auto">
+                        <Card className="bg-white shadow-md border-gray-200">
+                            <CardHeader>
+                                <CardTitle>Zahlung verifizieren</CardTitle>
+                                <CardDescription>ÃœberprÃ¼fe und bestÃ¤tige eingehende Zahlungen.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form className="space-y-6" onSubmit={handleVerifyPayment}>
+                                    <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Rechnungsreferenz suchen</label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={refSearchValue}
+                                                    onChange={(event) => setRefSearchValue(event.target.value)}
+                                                    placeholder="Ref eingeben (z.B. REF-123)"
+                                                    autoComplete="off"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    onClick={handleFindPaymentByRef}
+                                                    disabled={refSearchStatus.state === "loading"}
+                                                >
+                                                    {refSearchStatus.state === "loading" ? "..." : "Suchen"}
+                                                </Button>
+                                            </div>
+                                            {refSearchStatus.message && (
+                                                <p className={`text-xs ${refSearchStatus.state === "success" ? "text-green-600" : "text-red-600"}`}>
+                                                    {refSearchStatus.message}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Payment ID</label>
+                                            <Input
+                                                value={paymentForm.paymentId}
+                                                onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentId: event.target.value }))}
+                                                placeholder="ID der Zahlung"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Mitgliedschaft ID (Optional)</label>
+                                            <Input
+                                                value={paymentForm.membershipId}
+                                                onChange={(event) => setPaymentForm((prev) => ({ ...prev, membershipId: event.target.value }))}
+                                                placeholder="ID der Mitgliedschaft"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium">Status</label>
+                                                <Select
+                                                    value={paymentForm.status}
+                                                    onValueChange={(value) => setPaymentForm((prev) => ({ ...prev, status: value }))}
+                                                >
+                                                    <SelectTrigger className="bg-white">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-white">
+                                                        {["offen", "teilbezahlt", "bezahlt", "fehler"].map((status) => (
+                                                            <SelectItem key={status} value={status}>
+                                                                {status}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium">Betrag (â‚¬)</label>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={paymentForm.amount}
+                                                    onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: event.target.value }))}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Notiz</label>
+                                            <Input
+                                                value={paymentForm.note}
+                                                onChange={(event) => setPaymentForm((prev) => ({ ...prev, note: event.target.value }))}
+                                                placeholder="Interne Notiz"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <Button type="submit" className="w-full bg-permdal-800 hover:bg-permdal-700 text-white" disabled={paymentResult.state === "loading"}>
+                                        {paymentResult.state === "loading" ? "Verarbeite..." : "Zahlung bestÃ¤tigen"}
+                                    </Button>
+                                    {paymentResult.message && (
+                                        <p className={`text-sm text-center ${paymentResult.state === "success" ? "text-green-600" : "text-red-600"}`}>
+                                            {paymentResult.message}
+                                        </p>
+                                    )}
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 };
+

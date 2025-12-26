@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { functions, databases } from "@/models/client/config"
 import env from "@/app/env"
 import { useAuthStore } from "@/store/Auth";
+import { Models } from "appwrite";
 
 type Props = {
   angebotId: string
@@ -20,10 +21,17 @@ export default function OrderDialog({ angebotId }: Props) {
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState<string | null>(null)
 
-  const { session, user } = useAuthStore();
+  const { user } = useAuthStore();
   const user_mail = user?.email ?? "";
 
-  const [angebot, setAngebot] = React.useState<any | null>(null)
+  type AngebotDoc = Models.Document & {
+    einheit?: string;
+    mengeVerfuegbar?: number;
+    euroPreis?: number;
+    menge?: number;
+  };
+
+  const [angebot, setAngebot] = React.useState<AngebotDoc | null>(null)
 
   React.useEffect(() => {
     let mounted = true
@@ -111,8 +119,8 @@ export default function OrderDialog({ angebotId }: Props) {
         setDisplayedAmount("")
         setSuccess(null)
       }, 1200)
-    } catch (err: any) {
-      const message = err?.message || "Unbekannter Fehler beim Senden."
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler beim Senden."
       setError(message)
     } finally {
       setSubmitting(false)
@@ -123,7 +131,7 @@ export default function OrderDialog({ angebotId }: Props) {
   const formatCurrency = (value: number) => {
     try {
       return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
-    } catch (e) {
+    } catch {
       return `${value.toFixed(2)} €`
     }
   }
@@ -309,4 +317,3 @@ export default function OrderDialog({ angebotId }: Props) {
     </Dialog>
   )
 }
-
