@@ -23,25 +23,11 @@ function fail(res: any, msg: string, status = 400, extra: Record<string, unknown
     return res.json({ success: false, error: msg, ...extra }, status);
 }
 
-const readEnv = (key: string): string => {
-    const deno = (globalThis as any)?.Deno;
-    if (deno?.env?.get) {
-        const fromDeno = deno.env.get(key);
-        if (fromDeno) return fromDeno;
-    }
-    if (typeof process !== "undefined" && process.env) {
-        const fromProcess = process.env[key];
-        if (fromProcess) return fromProcess;
-    }
-    return "";
-};
-
 const getApiKey = (req: any, log: (msg: string) => void): string => {
     const envKey =
-        readEnv("APPWRITE_FUNCTION_KEY") ||
-        readEnv("APPWRITE_FUNCTION_API_KEY") ||
-        readEnv("APPWRITE_API_KEY") ||
-        "";
+        (Deno.env.get("APPWRITE_FUNCTION_KEY") ?? process.env.APPWRITE_FUNCTION_KEY ?? "") ||
+        (Deno.env.get("APPWRITE_FUNCTION_API_KEY") ?? process.env.APPWRITE_FUNCTION_API_KEY ?? "") ||
+        (Deno.env.get("APPWRITE_API_KEY") ?? process.env.APPWRITE_API_KEY ?? "");
 
     if (envKey) return envKey;
 
@@ -115,7 +101,11 @@ const cleanPayload = (body: Body): Record<string, unknown> => {
 };
 
 export default async ({ req, res, log, error }: any) => {
-    const debugFlag = readEnv("APPWRITE_FUNCTION_DEBUG") || readEnv("APP_DEBUG");
+    const debugFlag =
+        Deno.env.get("APPWRITE_FUNCTION_DEBUG") ??
+        Deno.env.get("APP_DEBUG") ??
+        process.env.APPWRITE_FUNCTION_DEBUG ??
+        process.env.APP_DEBUG;
     const debugOn = String(debugFlag ?? "").trim() === "1";
     try {
         const callerId: string | undefined =
@@ -133,10 +123,19 @@ export default async ({ req, res, log, error }: any) => {
             return fail(res, "Field \"hauptkategorie\" is required", 400);
         }
 
-        const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
-        const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
-        const dbId = readEnv("APPWRITE_FUNCTION_DATABASE_ID");
-        const collectionId = readEnv("APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID");
+        const endpoint =
+            Deno.env.get("APPWRITE_FUNCTION_API_ENDPOINT") ??
+            (process.env.APPWRITE_FUNCTION_API_ENDPOINT as string | undefined) ??
+            "";
+        const projectId =
+            Deno.env.get("APPWRITE_FUNCTION_PROJECT_ID") ??
+            (process.env.APPWRITE_FUNCTION_PROJECT_ID as string | undefined) ??
+            "";
+        const dbId = Deno.env.get("APPWRITE_FUNCTION_DATABASE_ID") ?? process.env.APPWRITE_FUNCTION_DATABASE_ID ?? "";
+        const collectionId =
+            Deno.env.get("APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID") ??
+            process.env.APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID ??
+            "";
         const apiKey = getApiKey(req, log);
 
         if (!endpoint || !projectId) {
