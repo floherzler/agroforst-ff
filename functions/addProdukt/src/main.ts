@@ -169,7 +169,6 @@ export default async ({ req, res, log, error }: any) => {
                 rowId: targetId,
                 data: {
                     ...payload,
-                    createdBy: callerId,
                 },
             });
             log(`[addProdukt] Created new product ${result.$id}`);
@@ -181,8 +180,6 @@ export default async ({ req, res, log, error }: any) => {
                     rowId: targetId,
                     data: {
                         ...payload,
-                        updatedBy: callerId,
-                        updatedAt: new Date().toISOString(),
                     },
                 });
                 log(`[addProdukt] Upserted existing product ${result.$id}`);
