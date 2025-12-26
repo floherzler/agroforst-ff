@@ -73,32 +73,73 @@ function normalizeMembership(raw: GenericDoc): Membership {
     duration = Number.isFinite(parsed) ? parsed : null;
   }
 
+  const toStringOrUndefined = (v: unknown): string | undefined => {
+    if (typeof v === "string") return v;
+    if (typeof v === "number") {
+      try {
+        return new Date(v).toISOString();
+      } catch {
+        return String(v);
+      }
+    }
+    if (v instanceof Date) return v.toISOString();
+    return undefined;
+  };
+
+  const toNumberOrNull = (v: unknown): number | null | undefined => {
+    if (v === undefined) return undefined;
+    if (v === null) return null;
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    if (typeof v === "string") {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  const beantragungsCandidate =
+    raw.beantragungs_datum ?? raw.beantragt_am ?? raw.createdAt ?? raw.$createdAt ?? undefined;
+  const beantragungs_datum = toStringOrUndefined(beantragungsCandidate);
+  const createdAtCandidate = raw.$createdAt ?? raw.createdAt ?? undefined;
+  const createdAtStr = toStringOrUndefined(createdAtCandidate);
+
   return {
     $id: String(raw.$id ?? raw.id ?? ""),
-    typ: raw.typ ?? raw.type ?? undefined,
-    status: raw.status ?? raw.state ?? undefined,
-    beantragungs_datum:
-      raw.beantragungs_datum ??
-      raw.beantragt_am ??
-      raw.createdAt ??
-      raw.$createdAt ??
-      undefined,
-    $createdAt: raw.$createdAt ?? raw.createdAt ?? undefined,
+    typ:
+      typeof raw.typ === "string"
+        ? raw.typ
+        : typeof raw.type === "string"
+          ? raw.type
+          : undefined,
+    status:
+      typeof raw.status === "string"
+        ? raw.status
+        : typeof raw.state === "string"
+          ? raw.state
+          : undefined,
+    beantragungs_datum: beantragungs_datum,
+    $createdAt: createdAtStr,
     dauer_jahre: duration,
-    bezahl_status: raw.bezahl_status ?? raw.payment_status ?? undefined,
-    kontingent_aktuell:
-      raw.kontingent_aktuell ??
-      raw.aktuelles_kontingent ??
-      raw.kontingent ??
-      raw.balance ??
-      raw.guthaben ??
-      undefined,
-    kontingent_start:
-      raw.kontingent_start ??
-      raw.start_kontingent ??
-      raw.kontingent_gesamt ??
-      undefined,
-    adresse: raw.rechnungsadresse ?? raw.adresse ?? raw.address ?? undefined,
+    bezahl_status: toStringOrUndefined(raw.bezahl_status ?? raw.payment_status ?? raw.paymentStatus ?? undefined),
+    kontingent_aktuell: (() => {
+      const candidate =
+        raw.kontingent_aktuell ??
+        raw.aktuelles_kontingent ??
+        raw.kontingent ??
+        raw.balance ??
+        raw.guthaben ??
+        undefined;
+      return toNumberOrNull(candidate);
+    })(),
+    kontingent_start: (() => {
+      const candidate =
+        raw.kontingent_start ??
+        raw.start_kontingent ??
+        raw.kontingent_gesamt ??
+        undefined;
+      return toNumberOrNull(candidate);
+    })(),
+    adresse: toStringOrUndefined(raw.rechnungsadresse ?? raw.adresse ?? raw.address ?? undefined),
     payments: (() => {
       const paymentsRaw =
         raw.zahlungen ?? raw.payments ?? raw.payment ?? raw.rechnungen ?? [];
@@ -112,10 +153,23 @@ function normalizePayment(raw: GenericDoc): Payment {
   if (!raw) {
     return { $id: "" };
   }
+
+  const toStringOrUndefined = (v: unknown): string | undefined => {
+    if (typeof v === "string") return v;
+    if (typeof v === "number") return String(v);
+    if (v instanceof Date) return v.toISOString();
+    return undefined;
+  };
+
+  const status = toStringOrUndefined(raw.status ?? raw.state ?? undefined);
+  const ref = toStringOrUndefined(raw.ref ?? raw.reference ?? raw.verwendungszweck ?? undefined);
+  const faellig_am = toStringOrUndefined(raw.faellig_am ?? raw.due_at ?? undefined);
+  const createdAt = toStringOrUndefined(raw.$createdAt ?? raw.createdAt ?? undefined);
+
   return {
     $id: String(raw.$id ?? raw.id ?? ""),
-    status: raw.status ?? raw.state ?? undefined,
-    ref: raw.ref ?? raw.reference ?? raw.verwendungszweck ?? undefined,
+    status,
+    ref,
     betrag:
       typeof raw.betrag === "number"
         ? raw.betrag
@@ -127,13 +181,13 @@ function normalizePayment(raw: GenericDoc): Payment {
     betrag_eur:
       typeof raw.betrag_eur === "number"
         ? raw.betrag_eur
-        : typeof raw.rechnung?.betrag_eur === "number"
-          ? raw.rechnung.betrag_eur
+        : typeof (raw.rechnung as any)?.betrag_eur === "number"
+          ? (raw.rechnung as any).betrag_eur
           : typeof raw.invoice_amount === "number"
             ? raw.invoice_amount
             : undefined,
-    faellig_am: raw.faellig_am ?? raw.faellig_am ?? raw.due_at ?? undefined,
-    $createdAt: raw.$createdAt ?? raw.createdAt ?? undefined,
+    faellig_am,
+    $createdAt: createdAt,
   };
 }
 
@@ -325,7 +379,7 @@ export default function AccountPage() {
     } catch {
       setCopiedEmail(false);
     }
-  }, [user, user?.email]);
+  }, [user]);
 
   React.useEffect(() => {
     if (!user) return;
@@ -339,26 +393,26 @@ export default function AccountPage() {
           [Query.equal("userID", user!.$id), Query.orderDesc("$createdAt"), Query.limit(100)]
         );
         if (!cancelled) {
-        const toOrder = (doc: Models.Document): Bestellung => {
-          const record = doc as unknown as Record<string, unknown>;
-          const num = (value: unknown) => (typeof value === "number" ? value : Number(value));
-          const str = (value: unknown) => (typeof value === "string" ? value : undefined);
-          return {
-            $id: doc.$id,
-            $createdAt: doc.$createdAt,
-            userID: str(record.userID),
-            angebotID: str(record.angebotID),
-            menge: num(record.menge),
-            abholung: record.abholung as boolean | undefined,
-            preis_einheit: num(record.preis_einheit),
-            preis_gesamt: num(record.preis_gesamt),
-            einheit: str(record.einheit),
-            mitgliedschaftID: str(record.mitgliedschaftID),
-            produkt_name: str(record.produkt_name),
-            status: str(record.status),
+          const toOrder = (doc: Models.Document): Bestellung => {
+            const record = doc as unknown as Record<string, unknown>;
+            const num = (value: unknown) => (typeof value === "number" ? value : Number(value));
+            const str = (value: unknown) => (typeof value === "string" ? value : undefined);
+            return {
+              $id: doc.$id,
+              $createdAt: doc.$createdAt,
+              userID: str(record.userID),
+              angebotID: str(record.angebotID),
+              menge: num(record.menge),
+              abholung: record.abholung as boolean | undefined,
+              preis_einheit: num(record.preis_einheit),
+              preis_gesamt: num(record.preis_gesamt),
+              einheit: str(record.einheit),
+              mitgliedschaftID: str(record.mitgliedschaftID),
+              produkt_name: str(record.produkt_name),
+              status: str(record.status),
+            };
           };
-        };
-        setOrders(resp.documents.map(toOrder));
+          setOrders(resp.documents.map(toOrder));
         }
       } catch {
         if (!cancelled) setOrders([]);
@@ -401,7 +455,7 @@ export default function AccountPage() {
       ]
     );
     return response.documents.map((doc) => normalizeMembership(doc as unknown as GenericDoc));
-  }, [membershipCollectionId, user, user?.$id]);
+  }, [membershipCollectionId, user]);
 
   React.useEffect(() => {
     if (!user) {
@@ -460,16 +514,17 @@ export default function AccountPage() {
     } finally {
       setLoadingMemberships(false);
     }
-  }, [fetchMemberships, user, user?.$id]);
+  }, [fetchMemberships, user]);
 
-  function formatPrice(v: number | string) {
+  function formatPrice(v?: number | string | null) {
+    if (v === undefined || v === null) return "-";
     const num = typeof v === "string" ? Number(v) : v;
     if (!Number.isFinite(num)) return "-";
     try {
       return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(num as number);
     } catch {
       const n = num as number;
-      return `${Number.isFinite(n) ? n.toFixed(2) : n} Ôé¼`;
+      return `${Number.isFinite(n) ? n.toFixed(2) : n} €`;
     }
   }
 
@@ -592,12 +647,20 @@ export default function AccountPage() {
           (execution as ExecutionShape)?.stderr ??
           rawResponse ??
           "Die Anfrage konnte nicht gesendet werden.";
-        throw new Error(errorMessage);
+        const errorText =
+          typeof errorMessage === "string"
+            ? errorMessage
+            : errorMessage == null
+              ? "Die Anfrage konnte nicht gesendet werden."
+              : typeof errorMessage === "object"
+                ? JSON.stringify(errorMessage)
+                : String(errorMessage);
+        throw new Error(errorText);
       }
 
       let createdMembership: Membership | null = null;
       if (payload?.membership) {
-        createdMembership = normalizeMembership(payload.membership);
+        createdMembership = normalizeMembership(payload.membership as GenericDoc);
         setMemberships((prev) => {
           const filtered = prev.filter((m) => m.$id !== createdMembership!.$id);
           return [createdMembership!, ...filtered];
@@ -667,8 +730,18 @@ export default function AccountPage() {
   const isEmailVerified = Boolean(user.emailVerification);
 
   // Theme and preferences
-  const themePreference: "dark" | "light" | "system" = "system"; // Default to system theme
-  const themeLabel = themePreference === "dark" ? "Dunkel" : themePreference === "system" ? "System" : "Hell";
+  let themePreference: string = "system"; // Default to system theme
+  let themeLabel: string;
+  switch (themePreference) {
+    case "dark":
+      themeLabel = "Dunkel";
+      break;
+    case "system":
+      themeLabel = "System";
+      break;
+    default:
+      themeLabel = "Hell";
+  }
   const newsletterOptIn = false; // Default newsletter opt-in
   const contextualLabels = memberLabels.filter((label) => {
     const value = label.toLowerCase();

@@ -375,7 +375,7 @@ function mapProdukt(doc: ProduktDoc): Produkt {
         $createdAt: doc.$createdAt,
         name: doc.name,
         sorte: doc.sorte,
-        hauptkategorie: doc.hauptkategorie,
+        hauptkategorie: doc.hauptkategorie ?? "Sonstiges",
         unterkategorie: doc.unterkategorie,
         lebensdauer: doc.lebensdauer,
         fruchtfolge_vor: doc.fruchtfolge_vor,
