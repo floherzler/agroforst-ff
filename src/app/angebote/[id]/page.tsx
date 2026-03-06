@@ -1,22 +1,73 @@
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
+"use client";
 
-// app/angebote/[id]/page.tsx
+import React from "react";
+import { useParams } from "@tanstack/react-router";
 import AngebotLive from "@/components/AngebotLive";
 import OrderDialog from "@/components/OrderDialog";
+import { databases } from "@/models/client/config";
+import env from "@/app/env";
+import { Models } from "appwrite";
 
-export default async function AngebotPage({
-    params,
-}: {
-    params: Promise<{ id: string }>;
-}) {
-    const { id } = await params;
-    const angebot = await databases.getDocument(
-        env.appwrite.db,
-        env.appwrite.angebote_collection_id,
-        id
-    );
+type Angebot = Models.Document & {
+    mengeVerfuegbar: number;
+    einheit: string;
+    menge: number;
+    euroPreis: number;
+    saatPflanzDatum?: string;
+    ernteProjektion?: string[];
+};
 
+export default function AngebotPage() {
+    const { id } = useParams({ from: "/angebote/$id" });
+    const [angebot, setAngebot] = React.useState<Angebot | null>(null);
+    const [error, setError] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        let cancelled = false;
+
+        async function loadAngebot() {
+            try {
+                const document = await databases.getDocument(
+                    env.appwrite.db,
+                    env.appwrite.angebote_collection_id,
+                    id
+                );
+
+                if (!cancelled) {
+                    setAngebot(document as Angebot);
+                    setError(null);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : "Angebot konnte nicht geladen werden.");
+                }
+            }
+        }
+
+        loadAngebot();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [id]);
+
+    if (error) {
+        return (
+            <main className="container mx-auto max-w-2xl p-6">
+                <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800">
+                    {error}
+                </div>
+            </main>
+        );
+    }
+
+    if (!angebot) {
+        return (
+            <main className="container mx-auto max-w-2xl p-6">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">Angebot wird geladen...</div>
+            </main>
+        );
+    }
 
     return (
         <main className="container mx-auto p-6 max-w-2xl">

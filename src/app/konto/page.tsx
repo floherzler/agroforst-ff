@@ -12,8 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { account, databases, functions } from "@/models/client/config";
 import env from "@/app/env";
 import { Query, Models } from "appwrite";
-import Link from "next/link";
-import Image from "next/image";
+import { Link } from "@tanstack/react-router";
+
 import { Plus, RefreshCw, Copy, Check } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -711,10 +711,10 @@ export default function AccountPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Button asChild className="w-full rounded-full bg-[#2c3e2d] hover:bg-[#3a523b]">
-              <Link href="/login?redirect=/konto">Zum Login</Link>
+              <Link to="/login" search={{ redirect: "/konto" }}>Zum Login</Link>
             </Button>
             <Button asChild variant="outline" className="w-full rounded-full border-permdal-300">
-              <Link href="/signup?redirect=/konto">Konto erstellen</Link>
+              <Link to="/signup" search={{ redirect: "/konto" }}>Konto erstellen</Link>
             </Button>
           </CardContent>
         </Card>
@@ -896,13 +896,10 @@ export default function AccountPage() {
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/15">
-                                  <Image
+                                  <img
                                     src="/img/agroforst_ff_icon_bg.png"
                                     alt="Permdal Mitgliedschaft"
-                                    fill
-                                    sizes="36px"
-                                    className="object-cover"
-                                    priority
+                                    className="h-full w-full object-cover"
                                   />
                                 </div>
                                 <div>
@@ -1052,12 +1049,10 @@ export default function AccountPage() {
                           <div className="space-y-3">
                             <div className="flex items-center gap-3">
                               <div className="relative h-9 w-9 overflow-hidden rounded-full bg-white/60">
-                                <Image
+                                <img
                                   src="/img/agroforst_ff_icon_bg.png"
                                   alt="AFF Mitgliedschaft"
-                                  fill
-                                  sizes="36px"
-                                  className="object-cover"
+                                  className="h-full w-full object-cover"
                                 />
                               </div>
                               <div>
@@ -1450,7 +1445,7 @@ export default function AccountPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Angebot</span>
                                   <Button asChild variant="outline" size="sm">
-                                    <Link href={`/angebote/${o.angebotID}`}>Details</Link>
+                                    <Link to="/angebote/$id" params={{ id: String(o.angebotID) }}>Details</Link>
                                   </Button>
                                 </div>
                               </div>
@@ -1471,7 +1466,7 @@ export default function AccountPage() {
                         Besuchen Sie unseren Marktplatz, um Produkte zu bestellen.
                       </p>
                       <Button asChild>
-                        <a href="/marktplatz">Zum Marktplatz</a>
+                        <Link to="/marktplatz">Zum Marktplatz</Link>
                       </Button>
                     </div>
                   )}
@@ -1484,4 +1479,3 @@ export default function AccountPage() {
     </main>
   );
 }
-

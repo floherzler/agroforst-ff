@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,23 +17,17 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/Auth";
 import { Loader2, LockKeyhole } from "lucide-react";
 
-const LabelInputContainer = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => {
+const LabelInputContainer = ({ children, className }: { children: React.ReactNode; className?: string }) => {
   return <div className={cn("flex w-full flex-col space-y-2", className)}>{children}</div>;
 };
 
 export default function Login() {
   const { login } = useAuthStore();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const searchStr = useLocation({ select: (state) => state.searchStr });
+  const redirectTo = new URLSearchParams(searchStr).get("redirect") || "/konto";
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
-  const redirectTo = searchParams.get("redirect") || "/konto";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,8 +49,7 @@ export default function Login() {
       setError(loginResponse.error.message ?? "Der Login ist fehlgeschlagen.");
       setIsLoading(false);
     } else {
-      // Successful login - redirect
-      router.push(redirectTo);
+      void navigate({ to: redirectTo, replace: true });
     }
   };
 
@@ -73,57 +65,24 @@ export default function Login() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {error ? (
-          <div className="rounded-lg border border-destructive/40 bg-destructive/15 px-4 py-3 text-sm font-medium text-destructive">
-            {error}
-          </div>
-        ) : null}
+        {error ? <div className="rounded-lg border border-destructive/40 bg-destructive/15 px-4 py-3 text-sm font-medium text-destructive">{error}</div> : null}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <LabelInputContainer>
             <Label htmlFor="email">Email-Adresse</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="email@beispiel.de"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
-            />
+            <Input id="email" name="email" type="email" autoComplete="email" placeholder="email@beispiel.de" className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background" />
           </LabelInputContainer>
           <LabelInputContainer>
             <Label htmlFor="password">Passwort</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
-            />
+            <Input id="password" name="password" type="password" autoComplete="current-password" placeholder="••••••••" className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background" />
           </LabelInputContainer>
-
           <Button type="submit" disabled={isLoading} className="w-full shadow-brand-strong">
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                Wird eingeloggt…
-              </span>
-            ) : (
-              "Anmelden"
-            )}
+            {isLoading ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />Wird eingeloggt…</span> : "Anmelden"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex flex-col items-center gap-3 text-sm text-[#1f2021]">
-        <p>
-          Noch kein Profil?{" "}
-          <Link href="/signup" className="font-semibold text-primary hover:text-lilac-600">
-            Jetzt registrieren
-          </Link>
-        </p>
-        <p className="max-w-sm text-xs text-muted-foreground">
-          Wir schützen deine Daten und nutzen sie nur, um dir saisonale Updates zu schicken, wenn du zustimmst.
-        </p>
+        <p>Noch kein Profil? <Link to="/signup" search={{ redirect: redirectTo }} className="font-semibold text-primary hover:text-lilac-600">Jetzt registrieren</Link></p>
+        <p className="max-w-sm text-xs text-muted-foreground">Wir schützen deine Daten und nutzen sie nur, um dir saisonale Updates zu schicken, wenn du zustimmst.</p>
       </CardFooter>
     </Card>
   );

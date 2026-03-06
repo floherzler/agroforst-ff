@@ -1,19 +1,19 @@
 "use client";
 
 import { useAuthStore } from "@/store/Auth";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { Link, useParams } from "@tanstack/react-router";
 import React from "react";
 
 const EditButton = () => {
-    const { userId, userSlug } = useParams();
+    const { userId, userSlug } = useParams({ from: "/users/$userId/$userSlug" });
     const { user } = useAuthStore();
 
     if (user?.$id !== userId) return null;
 
     return (
         <Link
-            href={`/users/${userId}/${userSlug}/edit`}
+            to="/users/$userId/$userSlug"
+            params={{ userId, userSlug }}
             className="relative rounded-full border border-neutral-200 px-4 py-2 text-sm font-medium text-black dark:border-white/20 dark:text-white"
         >
             <span>Edit</span>
