@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { Link } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/Auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,15 +72,15 @@ export default function Home() {
             {!user ? (
               <>
                 <Button asChild size="lg" className="rounded-full px-8 shadow-lg bg-[#2c3e2d] hover:bg-[#3a523b] text-white">
-                  <Link href="/signup?redirect=/">Kostenloses Konto erstellen</Link>
+                  <Link to="/signup" search={{ redirect: "/" }}>Kostenloses Konto erstellen</Link>
                 </Button>
                 <Button asChild variant="ghost" size="lg" className="text-[#5a5a5a] hover:text-[#2c3e2d]">
-                  <Link href="#wie-es-funktioniert">Wie funktioniert&apos;s?</Link>
+                  <a href="#wie-es-funktioniert">Wie funktioniert&apos;s?</a>
                 </Button>
               </>
             ) : (
               <Button asChild size="lg" className="rounded-full px-8 shadow-lg">
-                <Link href="/konto">Zum Mitgliederbereich</Link>
+                <Link to="/konto">Zum Mitgliederbereich</Link>
               </Button>
             )}
           </div>
@@ -104,13 +103,10 @@ export default function Home() {
             {/* Schema SVG */}
             <div className="order-2 md:order-1">
               <div className="relative bg-white p-8 rounded-3xl shadow-lg border-2 border-permdal-100 hover:border-permdal-200 transition-all duration-300 hover:scale-105">
-                <Image
+                <img
                   src="/schema.svg"
                   alt="AFF Kreislauf: Vom Agroforst über Produkte und Kunden zur Bestellung"
-                  width={600}
-                  height={700}
                   className="w-full h-auto"
-                  priority
                 />
               </div>
             </div>
@@ -317,7 +313,7 @@ export default function Home() {
                     asChild
                     className="w-full bg-permdal-500 hover:bg-permdal-400 text-white border-none h-12 text-base font-semibold shadow-lg"
                   >
-                    <Link href="/signup?redirect=/">Jetzt Konto erstellen für Feedback</Link>
+                    <Link to="/signup" search={{ redirect: "/" }}>Jetzt Konto erstellen für Feedback</Link>
                   </Button>
                 )}
                 {submitStatus === "error" && (
@@ -334,7 +330,7 @@ export default function Home() {
                   <p className="text-sm text-center text-white/80">
                     💡 Mit einem kostenlosen Account können wir dein Feedback direkt speichern und dich über Updates informieren.
                     <br />
-                    <Link href="/login?redirect=/" className="underline font-semibold hover:text-white">
+                    <Link to="/login" search={{ redirect: "/" }} className="underline font-semibold hover:text-white">
                       Bereits registriert? Zum Login
                     </Link>
                   </p>

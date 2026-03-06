@@ -7,7 +7,7 @@ import env from "@/app/env";
 import BlogPostList from "@/components/BlogPostList";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 export default function Page() {
   const [posts, setPosts] = useState<BlogPost[] | null>(null);
@@ -61,7 +61,7 @@ export default function Page() {
               </p>
             </div>
             <Button asChild size="lg" className="shadow-lg">
-              <Link href="/produkte">Zu den Produkten</Link>
+              <Link to="/produkte">Zu den Produkten</Link>
             </Button>
           </div>
           <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />

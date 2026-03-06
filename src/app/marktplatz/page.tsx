@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { databases } from "@/models/client/config";
 import env from "@/app/env";
 import { Query, Models } from "appwrite";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Search as SearchIcon, Calendar, Package, Euro, Filter } from "lucide-react";
 import {
@@ -235,7 +235,7 @@ export default function MarktplatzPage() {
                     Aktuelle Angebote aus der Ostprignitz
                 </p>
                 <div className="flex justify-center mt-4">
-                    <Link href="/produkte" passHref>
+                    <Link to="/produkte">
                         <Button variant="outline" size="sm" className="text-permdal-700 border-permdal-200 hover:bg-permdal-50 text-xs sm:text-sm">
                             Alle Produkte anzeigen
                         </Button>
@@ -425,7 +425,7 @@ export default function MarktplatzPage() {
                                 )}
 
                                 <div className="pt-2">
-                                    <Link href={`/angebote/${angebot.$id}`} passHref>
+                                    <Link to="/angebote/$id" params={{ id: angebot.$id }}>
                                         <Button className="w-full bg-permdal-600 hover:bg-permdal-700 shadow-brand-soft">
                                             Details anzeigen
                                         </Button>
