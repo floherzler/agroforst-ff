@@ -1,9 +1,12 @@
-import { Client, Databases, ID, Query, Storage } from "appwrite";
+import { ID, Query } from "appwrite";
 import { z } from "zod";
 
 import {
+  appwriteClient as client,
   appwriteConfig,
+  appwriteDatabases as databases,
   appwriteDocumentMetaSchema,
+  appwriteStorage as storage,
   createRealtimeChangeType,
   ensureConfigured,
   parseNumber,
@@ -11,13 +14,6 @@ import {
   parseStringArray,
   RealtimeChange,
 } from "@/lib/appwrite/shared";
-
-const client = new Client()
-  .setEndpoint(ensureConfigured(appwriteConfig.endpoint, "Appwrite Endpoint"))
-  .setProject(ensureConfigured(appwriteConfig.projectId, "Appwrite Projekt-ID"));
-
-const databases = new Databases(client);
-const storage = new Storage(client);
 
 const productDocumentSchema = appwriteDocumentMetaSchema.extend({
   name: z.string().min(1),
@@ -142,11 +138,13 @@ export function normalizeBlogPost(raw: unknown): BlogPost {
   };
 }
 
-export async function listProdukte(input: {
-  hauptkategorie?: string;
-  search?: string;
-  limit?: number;
-} = {}): Promise<Produkt[]> {
+export async function listProdukte(
+  input: {
+    hauptkategorie?: string;
+    search?: string;
+    limit?: number;
+  } = {},
+): Promise<Produkt[]> {
   const parsedInput = productListInputSchema.parse(input);
   const queries = [Query.limit(parsedInput.limit ?? 200)];
 
@@ -179,13 +177,18 @@ export async function listAlleProdukte(): Promise<Produkt[]> {
   return response.documents.map(normalizeProdukt);
 }
 
-export async function listStaffeln(input: {
-  produktId?: string;
-  produktIds?: string[];
-  limit?: number;
-} = {}): Promise<Staffel[]> {
+export async function listStaffeln(
+  input: {
+    produktId?: string;
+    produktIds?: string[];
+    limit?: number;
+  } = {},
+): Promise<Staffel[]> {
   const parsedInput = offerListInputSchema.parse(input);
-  const queries = [Query.limit(parsedInput.limit ?? 500), Query.orderDesc("$createdAt")];
+  const queries = [
+    Query.limit(parsedInput.limit ?? 500),
+    Query.orderDesc("$createdAt"),
+  ];
 
   if (parsedInput.produktId) {
     queries.push(Query.equal("produktID", parsedInput.produktId));
@@ -214,8 +217,13 @@ export async function getStaffelById(id: string): Promise<Staffel> {
   return normalizeStaffel(response);
 }
 
-export async function listProdukteMitStaffeln(): Promise<ProduktMitAngeboten[]> {
-  const [produkte, staffeln] = await Promise.all([listAlleProdukte(), listStaffeln()]);
+export async function listProdukteMitStaffeln(): Promise<
+  ProduktMitAngeboten[]
+> {
+  const [produkte, staffeln] = await Promise.all([
+    listAlleProdukte(),
+    listStaffeln(),
+  ]);
   const staffelnByProdukt = new Map<string, Staffel[]>();
 
   for (const staffel of staffeln) {
@@ -248,7 +256,10 @@ export async function submitFeedbackMessage(input: {
 
   await databases.createDocument(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.feedbackCollectionId, "Nachrichten-Collection"),
+    ensureConfigured(
+      appwriteConfig.feedbackCollectionId,
+      "Nachrichten-Collection",
+    ),
     ID.unique(),
     {
       text: parsedInput.text,

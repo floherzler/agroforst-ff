@@ -1,19 +1,14 @@
-import { Client, Databases, Query } from "appwrite";
+import { Query } from "appwrite";
 import { z } from "zod";
 
 import {
   appwriteConfig,
+  appwriteDatabases as databases,
   appwriteDocumentMetaSchema,
   ensureConfigured,
   parseOptionalNumber,
   parseOptionalString,
 } from "@/lib/appwrite/shared";
-
-const client = new Client()
-  .setEndpoint(ensureConfigured(appwriteConfig.endpoint, "Appwrite Endpoint"))
-  .setProject(ensureConfigured(appwriteConfig.projectId, "Appwrite Projekt-ID"));
-
-const databases = new Databases(client);
 
 const paymentDocumentSchema = appwriteDocumentMetaSchema.extend({
   status: z.string().optional(),
@@ -102,9 +97,13 @@ export function normalizeMembershipPayment(raw: unknown): MembershipPayment {
   return {
     id: parsed.$id,
     status: parseOptionalString(parsed.status ?? parsed.state),
-    ref: parseOptionalString(parsed.ref ?? parsed.reference ?? parsed.verwendungszweck),
+    ref: parseOptionalString(
+      parsed.ref ?? parsed.reference ?? parsed.verwendungszweck,
+    ),
     betrag: parseOptionalNumber(parsed.betrag ?? parsed.amount),
-    betragEur: parseOptionalNumber(parsed.betrag_eur ?? parsed.rechnung?.betrag_eur),
+    betragEur: parseOptionalNumber(
+      parsed.betrag_eur ?? parsed.rechnung?.betrag_eur,
+    ),
     faelligAm: parseOptionalString(parsed.faellig_am ?? parsed.due_at),
     createdAt: parsed.$createdAt,
   };
@@ -123,19 +122,35 @@ export function normalizeMembership(raw: unknown): MembershipRecord {
     id: parsed.$id,
     typ: parseOptionalString(parsed.typ ?? parsed.type),
     status: parseOptionalString(parsed.status ?? parsed.state),
-    beantragungsDatum: parseOptionalString(parsed.beantragungs_datum ?? parsed.beantragt_am ?? parsed.$createdAt),
+    beantragungsDatum: parseOptionalString(
+      parsed.beantragungs_datum ?? parsed.beantragt_am ?? parsed.$createdAt,
+    ),
     createdAt: parsed.$createdAt,
-    dauerJahre: parseOptionalNumber(parsed.dauer_jahre ?? parsed.dauer ?? parsed.laufzeit),
-    bezahlStatus: parseOptionalString(parsed.bezahl_status ?? parsed.payment_status ?? parsed.paymentStatus),
+    dauerJahre: parseOptionalNumber(
+      parsed.dauer_jahre ?? parsed.dauer ?? parsed.laufzeit,
+    ),
+    bezahlStatus: parseOptionalString(
+      parsed.bezahl_status ?? parsed.payment_status ?? parsed.paymentStatus,
+    ),
     kontingentAktuell: parseOptionalNumber(
-      parsed.kontingent_aktuell ?? parsed.aktuelles_kontingent ?? parsed.kontingent ?? parsed.balance ?? parsed.guthaben,
+      parsed.kontingent_aktuell ??
+        parsed.aktuelles_kontingent ??
+        parsed.kontingent ??
+        parsed.balance ??
+        parsed.guthaben,
     ),
     kontingentStart: parseOptionalNumber(
-      parsed.kontingent_start ?? parsed.start_kontingent ?? parsed.kontingent_gesamt,
+      parsed.kontingent_start ??
+        parsed.start_kontingent ??
+        parsed.kontingent_gesamt,
     ),
-    adresse: parseOptionalString(parsed.rechnungsadresse ?? parsed.adresse ?? parsed.address),
+    adresse: parseOptionalString(
+      parsed.rechnungsadresse ?? parsed.adresse ?? parsed.address,
+    ),
     payments: Array.isArray(paymentsRaw)
-      ? paymentsRaw.map(normalizeMembershipPayment).filter((payment) => payment.id)
+      ? paymentsRaw
+          .map(normalizeMembershipPayment)
+          .filter((payment) => payment.id)
       : [],
   };
 }
@@ -148,7 +163,10 @@ export async function listMembershipsByUserId(input: {
 
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.membershipCollectionId, "Mitgliedschafts-Collection"),
+    ensureConfigured(
+      appwriteConfig.membershipCollectionId,
+      "Mitgliedschafts-Collection",
+    ),
     [
       Query.equal("userID", parsedInput.userId),
       Query.orderDesc("$createdAt"),

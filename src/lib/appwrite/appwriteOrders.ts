@@ -1,8 +1,10 @@
-import { Client, Databases, Query } from "appwrite";
+import { Query } from "appwrite";
 import { z } from "zod";
 
 import {
+  appwriteClient as client,
   appwriteConfig,
+  appwriteDatabases as databases,
   appwriteDocumentMetaSchema,
   createRealtimeChangeType,
   ensureConfigured,
@@ -10,12 +12,6 @@ import {
   parseOptionalString,
   RealtimeChange,
 } from "@/lib/appwrite/shared";
-
-const client = new Client()
-  .setEndpoint(ensureConfigured(appwriteConfig.endpoint, "Appwrite Endpoint"))
-  .setProject(ensureConfigured(appwriteConfig.projectId, "Appwrite Projekt-ID"));
-
-const databases = new Databases(client);
 
 const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
   angebotID: z.string().optional().default(""),
@@ -54,12 +50,17 @@ export function normalizeBestellung(raw: unknown): Bestellung {
   };
 }
 
-export async function listBestellungen(input: {
-  userId?: string;
-  limit?: number;
-} = {}): Promise<Bestellung[]> {
+export async function listBestellungen(
+  input: {
+    userId?: string;
+    limit?: number;
+  } = {},
+): Promise<Bestellung[]> {
   const parsedInput = orderListInputSchema.parse(input);
-  const queries = [Query.orderDesc("$createdAt"), Query.limit(parsedInput.limit ?? 100)];
+  const queries = [
+    Query.orderDesc("$createdAt"),
+    Query.limit(parsedInput.limit ?? 100),
+  ];
 
   if (parsedInput.userId) {
     queries.push(Query.equal("userID", parsedInput.userId));
@@ -67,7 +68,10 @@ export async function listBestellungen(input: {
 
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.orderCollectionId, "Bestellungs-Collection"),
+    ensureConfigured(
+      appwriteConfig.orderCollectionId,
+      "Bestellungs-Collection",
+    ),
     queries,
   );
 

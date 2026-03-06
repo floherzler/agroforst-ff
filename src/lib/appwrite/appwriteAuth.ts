@@ -1,18 +1,11 @@
-import { Account, Client, ID } from "appwrite";
+import { ID } from "appwrite";
 import { z } from "zod";
 
 import {
-  appwriteConfig,
-  ensureConfigured,
+  appwriteAccount as account,
   parseOptionalString,
   parseStringArray,
 } from "@/lib/appwrite/shared";
-
-const client = new Client()
-  .setEndpoint(ensureConfigured(appwriteConfig.endpoint, "Appwrite Endpoint"))
-  .setProject(ensureConfigured(appwriteConfig.projectId, "Appwrite Projekt-ID"));
-
-const account = new Account(client);
 
 const authUserPrefsSchema = z.object({
   name: z.string().optional(),
@@ -144,7 +137,10 @@ export async function signInWithEmailPassword(input: {
 }): Promise<AuthSnapshot> {
   const parsedInput = signInInputSchema.parse(input);
 
-  await account.createEmailPasswordSession(parsedInput.email, parsedInput.password);
+  await account.createEmailPasswordSession(
+    parsedInput.email,
+    parsedInput.password,
+  );
 
   const snapshot = await getCurrentAuthSnapshot();
   if (!snapshot.user.prefs.theme) {
@@ -167,7 +163,12 @@ export async function createEmailPasswordAccount(input: {
 }): Promise<void> {
   const parsedInput = signUpInputSchema.parse(input);
 
-  await account.create(ID.unique(), parsedInput.email, parsedInput.password, parsedInput.name);
+  await account.create(
+    ID.unique(),
+    parsedInput.email,
+    parsedInput.password,
+    parsedInput.name,
+  );
 }
 
 export async function deleteCurrentSession(): Promise<void> {
