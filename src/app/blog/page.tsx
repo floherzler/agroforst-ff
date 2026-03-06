@@ -2,8 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
+import { listBlogPosts } from "@/lib/appwrite/appwriteProducts";
 import BlogPostList from "@/components/BlogPostList";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,23 +14,7 @@ export default function Page() {
   useEffect(() => {
     async function load() {
       console.log("Fetching blog posts on the client…");
-      const resp = await databases.listDocuments(
-        env.appwrite.db,
-        env.appwrite.post_collection_id
-      );
-      setPosts(
-        resp.documents.map((doc) => ({
-          $id: doc.$id,
-          $createdAt: doc.$createdAt,
-          title: doc.title,
-          description: doc.description,
-          content: doc.content,
-          tags: doc.tags,
-          writtenBy: doc.writtenBy,
-          writtenAt: doc.writtenAt,
-          updatedAt: doc.updatedAt,
-        }))
-      );
+      setPosts(await listBlogPosts());
     }
     load();
   }, []);

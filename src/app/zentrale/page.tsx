@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
+import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
 import ZentraleAdmin from "@/components/ZentraleAdmin";
 
 export default function Page() {
@@ -11,47 +10,13 @@ export default function Page() {
 
   useEffect(() => {
     async function load() {
-      const [produkteResp, staffelnResp] = await Promise.all([
-        databases.listDocuments(
-          env.appwrite.db,
-          env.appwrite.produce_collection_id
-        ),
-        databases.listDocuments(
-          env.appwrite.db,
-          env.appwrite.angebote_collection_id
-        ),
+      const [produkteResponse, staffelnResponse] = await Promise.all([
+        listAlleProdukte(),
+        listStaffeln(),
       ]);
 
-      setProdukte(
-        produkteResp.documents.map((doc) => ({
-          $id: doc.$id,
-          $createdAt: doc.$createdAt,
-          name: doc.name,
-          sorte: doc.sorte,
-          hauptkategorie: doc.hauptkategorie,
-          unterkategorie: doc.unterkategorie,
-          lebensdauer: doc.lebensdauer,
-          fruchtfolge_vor: doc.fruchtfolge_vor,
-          fruchtfolge_nach: doc.fruchtfolge_nach,
-          bodenansprueche: doc.bodenansprueche,
-          begleitpflanzen: doc.begleitpflanzen,
-        }))
-      );
-
-      setStaffeln(
-        staffelnResp.documents.map((doc) => ({
-          $id: doc.$id,
-          $createdAt: doc.$createdAt,
-          produktID: doc.produktID,
-          saatPflanzDatum: doc.saatPflanzDatum,
-          ernteProjektion: doc.ernteProjektion,
-          menge: doc.menge,
-          einheit: doc.einheit,
-          euroPreis: doc.euroPreis,
-          mengeVerfuegbar: doc.mengeVerfuegbar,
-          mengeAbgeholt: doc.mengeAbgeholt,
-        }))
-      );
+      setProdukte(produkteResponse);
+      setStaffeln(staffelnResponse);
     }
     load();
   }, []);

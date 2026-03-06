@@ -4,10 +4,9 @@ import React from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { functions, databases } from "@/models/client/config"
-import env from "@/app/env"
+import { placeOrderRequest } from "@/lib/appwrite/appwriteFunctions"
+import { getStaffelById } from "@/lib/appwrite/appwriteProducts"
 import { useAuthStore } from "@/store/Auth";
-import { Models } from "appwrite";
 
 type Props = {
   angebotId: string
@@ -24,25 +23,14 @@ export default function OrderDialog({ angebotId }: Props) {
   const { user } = useAuthStore();
   const user_mail = user?.email ?? "";
 
-  type AngebotDoc = Models.Document & {
-    einheit?: string;
-    mengeVerfuegbar?: number;
-    euroPreis?: number;
-    menge?: number;
-  };
-
-  const [angebot, setAngebot] = React.useState<AngebotDoc | null>(null)
+  const [angebot, setAngebot] = React.useState<Staffel | null>(null)
 
   React.useEffect(() => {
     let mounted = true
     async function fetchAngebot() {
       try {
-        const doc = await databases.getDocument(
-          env.appwrite.db,
-          env.appwrite.angebote_collection_id,
-          angebotId
-        )
-        if (mounted) setAngebot(doc)
+        const record = await getStaffelById(angebotId)
+        if (mounted) setAngebot(record)
       } catch (err) {
         console.error('Failed to fetch angebot', err)
       }
@@ -102,16 +90,11 @@ export default function OrderDialog({ angebotId }: Props) {
 
     setSubmitting(true)
     try {
-      const payload = {
-        angebotID: angebotId,
+      await placeOrderRequest({
+        angebotId,
         menge: internalMenge,
-        user_mail: user_mail, // Pass user_mail to the function
-      }
-
-      await functions.createExecution(
-        env.appwrite.order_function_id,
-        JSON.stringify(payload)
-      )
+        userMail: user_mail,
+      })
 
       setSuccess("Anfrage gesendet. Wir melden uns zeitnah!")
       setTimeout(() => {

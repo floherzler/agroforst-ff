@@ -2,8 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
+import { listBestellungen } from "@/lib/appwrite/appwriteOrders";
 import BestellungsList from "@/components/BestellungsList";
 
 export default function Page() {
@@ -12,26 +11,7 @@ export default function Page() {
   useEffect(() => {
     async function load() {
       console.log("Fetching staffeln on the client…");
-      const resp = await databases.listDocuments(
-        env.appwrite.db,
-        env.appwrite.order_collection_id
-      );
-      setBestellungen(
-        resp.documents.map((doc) => ({
-          $id: doc.$id,
-          $createdAt: doc.$createdAt,
-          userID: doc.userID,
-          angebotID: doc.angebotID,
-          menge: doc.menge,
-          abholung: doc.abholung,
-          preis_einheit: doc.preis_einheit,
-          preis_gesamt: doc.preis_gesamt,
-          einheit: doc.einheit,
-          mitgliedschaftID: doc.mitgliedschaftID,
-          produkt_name: doc.produkt_name,
-          status: doc.status,
-        }))
-      );
+      setBestellungen(await listBestellungen());
     }
     load();
   }, []);

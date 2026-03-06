@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { account } from "@/models/client/config";
+import { completeEmailVerification } from "@/lib/appwrite/appwriteAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -30,7 +30,7 @@ export default function VerifyEmailPage() {
     async function verifyEmail() {
       setVerificationState({ status: "pending", message: "Wir verifizieren Ihre Email…" });
       try {
-        await account.updateVerification(userId, secret);
+        await completeEmailVerification({ userId, secret });
         if (!cancelled) setVerificationState({ status: "success", message: "Ihre Email-Adresse wurde erfolgreich bestätigt." });
       } catch (error) {
         if (!cancelled) {

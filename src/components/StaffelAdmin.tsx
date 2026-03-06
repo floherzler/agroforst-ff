@@ -1,6 +1,5 @@
 'use client'
 
-import env from "@/app/env";
 import {
     Dialog,
     DialogContent,
@@ -18,7 +17,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { client } from '@/models/client/config';
+import { subscribeToStaffeln } from "@/lib/appwrite/appwriteProducts";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useEffect, useState } from 'react';
@@ -44,8 +43,8 @@ import { z } from "zod";
 
 // Neuere Zod 4+ Schreibweise mit coerce
 const formSchema = z.object({
-    produktID: z.string().min(2, {
-        message: "produktID must be at least 2 characters.",
+    produktId: z.string().min(2, {
+        message: "produktId must be at least 2 characters.",
     }),
     saatDatum: z.coerce.date(),
     euroPreis: z.coerce
@@ -62,10 +61,8 @@ export function StaffelEditForm({ staffel }: { staffel: Staffel }) {
     const form = useForm<Input, unknown, Output>({
         resolver: zodResolver(formSchema) as Resolver<Input, unknown, Output>,
         defaultValues: {
-            produktID: staffel.produktID,
-            saatDatum: typeof staffel.saatPflanzDatum === 'string'
-                ? new Date(staffel.saatPflanzDatum)
-                : staffel.saatPflanzDatum,
+            produktId: staffel.produktId,
+            saatDatum: new Date(staffel.saatPflanzDatum),
             euroPreis: staffel.euroPreis,
             einheit: staffel.einheit as Output['einheit'],
         },
@@ -82,7 +79,7 @@ export function StaffelEditForm({ staffel }: { staffel: Staffel }) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                     control={form.control}
-                    name="produktID"
+                    name="produktId"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Produkt-ID</FormLabel>
@@ -182,10 +179,8 @@ export function StaffelOrderForm({ staffel }: { staffel: Staffel }) {
     const form = useForm<Input, unknown, Output>({
         resolver: zodResolver(formSchema) as Resolver<Input, unknown, Output>,
         defaultValues: {
-            produktID: staffel.produktID,
-            saatDatum: typeof staffel.saatPflanzDatum === 'string'
-                ? new Date(staffel.saatPflanzDatum)
-                : staffel.saatPflanzDatum,
+            produktId: staffel.produktId,
+            saatDatum: new Date(staffel.saatPflanzDatum),
             euroPreis: staffel.euroPreis,
             einheit: staffel.einheit as Output['einheit'],
         },
@@ -202,7 +197,7 @@ export function StaffelOrderForm({ staffel }: { staffel: Staffel }) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                     control={form.control}
-                    name="produktID"
+                    name="produktId"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Produkt-ID</FormLabel>
@@ -221,25 +216,19 @@ export function StaffelOrderForm({ staffel }: { staffel: Staffel }) {
 
 export default function StaffelAdmin({ initialStaffeln }: { initialStaffeln: Staffel[] }) {
     const [staffeln, setStaffeln] = useState<Staffel[]>(initialStaffeln);
-    const db = env.appwrite.db;
-    const staffelCollection = env.appwrite.angebote_collection_id;
-    const channel = `databases.${db}.collections.${staffelCollection}.documents`;
 
     useEffect(() => {
-        const unsubscribe = client.subscribe(channel, (response) => {
-            const eventType = response.events[0];
-            const changedStaffel = response.payload as Staffel;
-
-            if (eventType.includes('create')) {
-                setStaffeln((prev) => [...prev, changedStaffel]);
-            } else if (eventType.includes('delete')) {
-                setStaffeln((prev) => prev.filter((s) => s.$id !== changedStaffel.$id));
-            } else if (eventType.includes('update')) {
-                setStaffeln((prev) => prev.map((s) => s.$id === changedStaffel.$id ? changedStaffel : s));
+        const unsubscribe = subscribeToStaffeln(({ type, record }) => {
+            if (type === 'create') {
+                setStaffeln((prev) => [...prev, record]);
+            } else if (type === 'delete') {
+                setStaffeln((prev) => prev.filter((s) => s.id !== record.id));
+            } else if (type === 'update') {
+                setStaffeln((prev) => prev.map((s) => s.id === record.id ? record : s));
             }
         });
         return () => unsubscribe();
-    }, [channel]);
+    }, []);
 
     return (
         <div className="flex flex-wrap gap-4 justify-center pt-8">
@@ -255,14 +244,14 @@ export default function StaffelAdmin({ initialStaffeln }: { initialStaffeln: Sta
                         <TableCell className="font-bold">Preis (Euro)</TableCell>
                         <TableCell className="font-bold">Menge Verfügbar</TableCell>
                         <TableCell className="font-bold">Menge Abgeholt</TableCell>
-                        <TableCell className="font-bold">Bestellen</TableCell>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {staffeln.map((staffel) => (
-                        <TableRow key={staffel.$id}>
-                            <TableCell>{staffel.$id}</TableCell>
-                            <TableCell>{staffel.produktID}</TableCell>
+                    <TableCell className="font-bold">Bestellen</TableCell>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {staffeln.map((staffel) => (
+                        <TableRow key={staffel.id}>
+                            <TableCell>{staffel.id}</TableCell>
+                            <TableCell>{staffel.produktId}</TableCell>
                             <TableCell>{new Date(staffel.saatPflanzDatum).toDateString()}</TableCell>
                             <TableCell>
                                 {new Date(staffel.ernteProjektion[0]).toDateString()} -

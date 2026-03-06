@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Impressum() {
   return (
     <div className="container mx-auto p-6 min-h-screen bg-gray-50 dark:bg-black text-gray-800 dark:text-gray-100">

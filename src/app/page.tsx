@@ -10,9 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Footer from "@/components/Footer";
 import { Sprout, Users, Mail, Sparkles, Loader2 } from "lucide-react";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
-import { ID } from "appwrite";
+import { submitFeedbackMessage } from "@/lib/appwrite/appwriteProducts";
 
 export default function Home() {
   const { user } = useAuthStore();
@@ -29,15 +27,10 @@ export default function Home() {
     setSubmitStatus("idle");
 
     try {
-      await databases.createDocument(
-        env.appwrite.db,
-        env.appwrite.nachrichten_collection_id,
-        ID.unique(),
-        {
-          text: feedbackText.trim(),
-          userID: user.$id,
-        }
-      );
+      await submitFeedbackMessage({
+        text: feedbackText.trim(),
+        userId: user.id,
+      });
 
       setSubmitStatus("success");
       setFeedbackText("");

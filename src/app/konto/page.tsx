@@ -9,187 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { account, databases, functions } from "@/models/client/config";
-import env from "@/app/env";
-import { Query, Models } from "appwrite";
+import { sendVerificationEmail as sendVerificationEmailRequest } from "@/lib/appwrite/appwriteAuth";
+import {
+  listMembershipsByUserId,
+  type MembershipPayment as Payment,
+  type MembershipRecord as Membership,
+} from "@/lib/appwrite/appwriteMemberships";
+import { listBestellungen } from "@/lib/appwrite/appwriteOrders";
+import { requestMembership as requestMembershipAction } from "@/lib/appwrite/appwriteFunctions";
 import { Link } from "@tanstack/react-router";
 
 import { Plus, RefreshCw, Copy, Check } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-type Membership = {
-  $id: string;
-  typ?: string;
-  status?: string;
-  beantragungs_datum?: string;
-  dauer_jahre?: number | null;
-  $createdAt?: string | null;
-  bezahl_status?: string | null;
-  kontingent_aktuell?: number | null;
-  kontingent_start?: number | null;
-  adresse?: string | null;
-  payments?: Payment[];
-};
-
-type Payment = {
-  $id: string;
-  status?: string;
-  ref?: string;
-  betrag?: number | null;
-  betrag_eur?: number | null;
-  faellig_am?: string | null;
-  $createdAt?: string | null;
-};
-
-type Bestellung = {
-  $id: string;
-  $createdAt: string;
-  userID?: string;
-  angebotID?: string;
-  menge?: number;
-  abholung?: boolean;
-  preis_einheit?: number;
-  preis_gesamt?: number;
-  einheit?: string;
-  mitgliedschaftID?: string;
-  produkt_name?: string;
-  status?: string;
-};
-
-type GenericDoc = Record<string, unknown>;
-
-function normalizeMembership(raw: GenericDoc): Membership {
-  if (!raw) {
-    return {
-      $id: "",
-    };
-  }
-  const durationCandidate = raw.dauer_jahre ?? raw.dauer ?? raw.laufzeit ?? null;
-  let duration: number | null = null;
-  if (typeof durationCandidate === "number") {
-    duration = Number.isFinite(durationCandidate) ? durationCandidate : null;
-  } else if (typeof durationCandidate === "string") {
-    const parsed = Number(durationCandidate);
-    duration = Number.isFinite(parsed) ? parsed : null;
-  }
-
-  const toStringOrUndefined = (v: unknown): string | undefined => {
-    if (typeof v === "string") return v;
-    if (typeof v === "number") {
-      try {
-        return new Date(v).toISOString();
-      } catch {
-        return String(v);
-      }
-    }
-    if (v instanceof Date) return v.toISOString();
-    return undefined;
-  };
-
-  const toNumberOrNull = (v: unknown): number | null | undefined => {
-    if (v === undefined) return undefined;
-    if (v === null) return null;
-    if (typeof v === "number") return Number.isFinite(v) ? v : null;
-    if (typeof v === "string") {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
-    return null;
-  };
-
-  const beantragungsCandidate =
-    raw.beantragungs_datum ?? raw.beantragt_am ?? raw.createdAt ?? raw.$createdAt ?? undefined;
-  const beantragungs_datum = toStringOrUndefined(beantragungsCandidate);
-  const createdAtCandidate = raw.$createdAt ?? raw.createdAt ?? undefined;
-  const createdAtStr = toStringOrUndefined(createdAtCandidate);
-
-  return {
-    $id: String(raw.$id ?? raw.id ?? ""),
-    typ:
-      typeof raw.typ === "string"
-        ? raw.typ
-        : typeof raw.type === "string"
-          ? raw.type
-          : undefined,
-    status:
-      typeof raw.status === "string"
-        ? raw.status
-        : typeof raw.state === "string"
-          ? raw.state
-          : undefined,
-    beantragungs_datum: beantragungs_datum,
-    $createdAt: createdAtStr,
-    dauer_jahre: duration,
-    bezahl_status: toStringOrUndefined(raw.bezahl_status ?? raw.payment_status ?? raw.paymentStatus ?? undefined),
-    kontingent_aktuell: (() => {
-      const candidate =
-        raw.kontingent_aktuell ??
-        raw.aktuelles_kontingent ??
-        raw.kontingent ??
-        raw.balance ??
-        raw.guthaben ??
-        undefined;
-      return toNumberOrNull(candidate);
-    })(),
-    kontingent_start: (() => {
-      const candidate =
-        raw.kontingent_start ??
-        raw.start_kontingent ??
-        raw.kontingent_gesamt ??
-        undefined;
-      return toNumberOrNull(candidate);
-    })(),
-    adresse: toStringOrUndefined(raw.rechnungsadresse ?? raw.adresse ?? raw.address ?? undefined),
-    payments: (() => {
-      const paymentsRaw =
-        raw.zahlungen ?? raw.payments ?? raw.payment ?? raw.rechnungen ?? [];
-      if (!Array.isArray(paymentsRaw)) return [];
-      return paymentsRaw.map(normalizePayment).filter((p) => p.$id);
-    })(),
-  };
-}
-
-function normalizePayment(raw: GenericDoc): Payment {
-  if (!raw) {
-    return { $id: "" };
-  }
-
-  const toStringOrUndefined = (v: unknown): string | undefined => {
-    if (typeof v === "string") return v;
-    if (typeof v === "number") return String(v);
-    if (v instanceof Date) return v.toISOString();
-    return undefined;
-  };
-
-  const status = toStringOrUndefined(raw.status ?? raw.state ?? undefined);
-  const ref = toStringOrUndefined(raw.ref ?? raw.reference ?? raw.verwendungszweck ?? undefined);
-  const faellig_am = toStringOrUndefined(raw.faellig_am ?? raw.due_at ?? undefined);
-  const createdAt = toStringOrUndefined(raw.$createdAt ?? raw.createdAt ?? undefined);
-
-  return {
-    $id: String(raw.$id ?? raw.id ?? ""),
-    status,
-    ref,
-    betrag:
-      typeof raw.betrag === "number"
-        ? raw.betrag
-        : typeof raw.betrag === "string"
-          ? Number(raw.betrag)
-          : typeof raw.amount === "number"
-            ? raw.amount
-            : undefined,
-    betrag_eur:
-      typeof raw.betrag_eur === "number"
-        ? raw.betrag_eur
-        : typeof (raw.rechnung as any)?.betrag_eur === "number"
-          ? (raw.rechnung as any).betrag_eur
-          : typeof raw.invoice_amount === "number"
-            ? raw.invoice_amount
-            : undefined,
-    faellig_am,
-    $createdAt: createdAt,
-  };
-}
 
 function getMembershipStatusStyle(
   status?: string
@@ -268,7 +99,7 @@ function formatPaymentStatusLabel(status?: string | null): string {
 
 function extractPaymentAmount(payment?: Payment | null): number | null {
   if (!payment) return null;
-  const fields = [payment.betrag_eur, payment.betrag];
+  const fields = [payment.betragEur, payment.betrag];
   for (const value of fields) {
     if (typeof value === "number" && Number.isFinite(value)) return value;
   }
@@ -317,8 +148,6 @@ export default function AccountPage() {
   const [loadingMemberships, setLoadingMemberships] = React.useState(false);
   const [membershipLoadError, setMembershipLoadError] = React.useState<string | null>(null);
   const [showApplicationForm, setShowApplicationForm] = React.useState(false);
-  const membershipFunctionId = env.appwrite.membership_function_id;
-  const membershipCollectionId = env.appwrite.membership_collection_id;
   const [copiedPaymentRef, setCopiedPaymentRef] = React.useState<string | null>(null);
   const [copiedEmail, setCopiedEmail] = React.useState(false);
   const copyEmailTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -383,36 +212,14 @@ export default function AccountPage() {
 
   React.useEffect(() => {
     if (!user) return;
+    const currentUserId = user.id;
     let cancelled = false;
     async function load() {
       try {
         setLoadingOrders(true);
-        const resp = await databases.listDocuments(
-          env.appwrite.db,
-          env.appwrite.order_collection_id,
-          [Query.equal("userID", user!.$id), Query.orderDesc("$createdAt"), Query.limit(100)]
-        );
+        const resp = await listBestellungen({ userId: currentUserId, limit: 100 });
         if (!cancelled) {
-          const toOrder = (doc: Models.Document): Bestellung => {
-            const record = doc as unknown as Record<string, unknown>;
-            const num = (value: unknown) => (typeof value === "number" ? value : Number(value));
-            const str = (value: unknown) => (typeof value === "string" ? value : undefined);
-            return {
-              $id: doc.$id,
-              $createdAt: doc.$createdAt,
-              userID: str(record.userID),
-              angebotID: str(record.angebotID),
-              menge: num(record.menge),
-              abholung: record.abholung as boolean | undefined,
-              preis_einheit: num(record.preis_einheit),
-              preis_gesamt: num(record.preis_gesamt),
-              einheit: str(record.einheit),
-              mitgliedschaftID: str(record.mitgliedschaftID),
-              produkt_name: str(record.produkt_name),
-              status: str(record.status),
-            };
-          };
-          setOrders(resp.documents.map(toOrder));
+          setOrders(resp);
         }
       } catch {
         if (!cancelled) setOrders([]);
@@ -424,38 +231,12 @@ export default function AccountPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, user?.$id]);
+  }, [user, user?.id]);
 
   const fetchMemberships = React.useCallback(async (): Promise<Membership[]> => {
     if (!user) return [];
-    if (!membershipCollectionId || membershipCollectionId === "undefined") {
-      throw new Error("Mitgliedschaften sind derzeit nicht konfiguriert.");
-    }
-    const response = await databases.listDocuments(
-      env.appwrite.db,
-      membershipCollectionId,
-      [
-        Query.equal("userID", user.$id),
-        Query.orderDesc("$createdAt"),
-        Query.limit(10),
-        Query.select([
-          "*",
-          "zahlungen.$id",
-          "zahlungen.status",
-          "zahlungen.ref",
-          "zahlungen.betrag",
-          "zahlungen.betrag_eur",
-          "zahlungen.amount",
-          "zahlungen.rechnung.betrag_eur",
-          "zahlungen.faellig_am",
-          "zahlungen.f├ñllig_am",
-          "zahlungen.due_at",
-          "zahlungen.$createdAt",
-        ]),
-      ]
-    );
-    return response.documents.map((doc) => normalizeMembership(doc as unknown as GenericDoc));
-  }, [membershipCollectionId, user]);
+    return listMembershipsByUserId({ userId: user.id, limit: 10 });
+  }, [user]);
 
   React.useEffect(() => {
     if (!user) {
@@ -492,7 +273,7 @@ export default function AccountPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, user?.$id, fetchMemberships]);
+  }, [user, user?.id, fetchMemberships]);
 
   React.useEffect(() => {
     setShowApplicationForm(memberships.length === 0);
@@ -558,16 +339,6 @@ export default function AccountPage() {
     }
   }
 
-  function formatPaymentStatus(status?: string) {
-    const value = (status ?? "").toString().toLowerCase();
-    if (value === "bezahlt" || value === "paid") return "Bezahlt";
-    if (value === "warten" || value === "wartet" || value === "pending") return "Wartet auf Zahlung";
-    if (value === "offen") return "Offen";
-    if (value === "erinnert" || value === "reminded") return "Zahlungserinnerung gesendet";
-    if (value === "rueckerstattet" || value === "erstattet" || value === "refunded") return "Erstattet";
-    return status ?? "ÔÇö";
-  }
-
   function statusBadge(status?: string) {
     const s = (status ?? "").toLowerCase();
     let variant: React.ComponentProps<typeof Badge>["variant"] = "secondary";
@@ -592,7 +363,7 @@ export default function AccountPage() {
       if (!origin) {
         throw new Error("Die aktuelle Seitenadresse konnte nicht ermittelt werden.");
       }
-      await account.createVerification(`${origin}/verify-email`);
+      await sendVerificationEmailRequest({ verificationUrl: `${origin}/verify-email` });
       setVerificationStatus({
         state: "sent",
         message: "Wir haben eine Verifizierungs-E-Mail versendet.",
@@ -606,7 +377,7 @@ export default function AccountPage() {
     }
   }, [user, verificationStatus.state]);
 
-  const requestMembership = React.useCallback(async () => {
+  const submitMembershipRequest = React.useCallback(async () => {
     if (!user) return;
     if (!user.emailVerification) {
       setMembershipStatus({
@@ -615,54 +386,15 @@ export default function AccountPage() {
       });
       return;
     }
-    if (!membershipFunctionId || membershipFunctionId === "undefined") {
-      setMembershipStatus({
-        state: "error",
-        message: "Mitgliedschaftsanfragen sind derzeit nicht konfiguriert.",
-      });
-      return;
-    }
 
     setMembershipStatus({ state: "loading" });
     try {
-      const execution = await functions.createExecution(
-        membershipFunctionId,
-        JSON.stringify({ type: membershipType })
-      );
-      type ExecutionShape = { status?: string; response?: unknown; stderr?: unknown };
-      let payload: Record<string, unknown> | null = null;
-      const rawResponse = (execution as ExecutionShape)?.response;
-      if (typeof rawResponse === "string" && rawResponse.trim().length > 0) {
-        try {
-          payload = JSON.parse(rawResponse);
-        } catch {
-          payload = null; // ignore parse errors and fall back to generic handling
-        }
-      }
-      const executionStatus = String((execution as ExecutionShape)?.status ?? "").toLowerCase();
-      const succeeded = executionStatus === "completed" && payload?.success !== false;
-      if (!succeeded) {
-        const errorMessage =
-          payload?.error ??
-          (execution as ExecutionShape)?.stderr ??
-          rawResponse ??
-          "Die Anfrage konnte nicht gesendet werden.";
-        const errorText =
-          typeof errorMessage === "string"
-            ? errorMessage
-            : errorMessage == null
-              ? "Die Anfrage konnte nicht gesendet werden."
-              : typeof errorMessage === "object"
-                ? JSON.stringify(errorMessage)
-                : String(errorMessage);
-        throw new Error(errorText);
-      }
-
+      const response = await requestMembershipAction({ type: membershipType });
       let createdMembership: Membership | null = null;
-      if (payload?.membership) {
-        createdMembership = normalizeMembership(payload.membership as GenericDoc);
+      if (response.membership) {
+        createdMembership = response.membership;
         setMemberships((prev) => {
-          const filtered = prev.filter((m) => m.$id !== createdMembership!.$id);
+          const filtered = prev.filter((m) => m.id !== createdMembership!.id);
           return [createdMembership!, ...filtered];
         });
       } else {
@@ -692,7 +424,7 @@ export default function AccountPage() {
           : "Die Anfrage konnte nicht gesendet werden.";
       setMembershipStatus({ state: "error", message });
     }
-  }, [fetchMemberships, hasBusinessMembership, hasPrivatMembership, membershipFunctionId, membershipType, user]);
+  }, [fetchMemberships, hasBusinessMembership, hasPrivatMembership, membershipType, user]);
 
   const selectMembershipType = React.useCallback((type: "privat" | "business") => {
     setMembershipType(type);
@@ -835,14 +567,14 @@ export default function AccountPage() {
                     {memberships.map((membership) => {
                       const statusStyle = getMembershipStatusStyle(membership.status);
                       const typeLabel = formatMembershipTypeLabel(membership.typ);
-                      const appliedAt = membership.beantragungs_datum ?? membership.$createdAt;
+                      const appliedAt = membership.beantragungsDatum ?? membership.createdAt;
                       const typeLower = (membership.typ ?? "").toLowerCase();
                       const isPrivat = typeLower === "privat";
                       const appliedAtDate = appliedAt ? new Date(appliedAt) : null;
                       let expiresAtIso: string | undefined;
                       if (appliedAtDate) {
-                        const durationYears = typeof membership.dauer_jahre === "number" && membership.dauer_jahre > 0
-                          ? membership.dauer_jahre
+                        const durationYears = typeof membership.dauerJahre === "number" && membership.dauerJahre > 0
+                          ? membership.dauerJahre
                           : 1;
                         const expiryDate = new Date(appliedAtDate);
                         expiryDate.setFullYear(expiryDate.getFullYear() + durationYears);
@@ -850,12 +582,12 @@ export default function AccountPage() {
                       }
                       const validUntilFormatted = formatDateShort(expiresAtIso);
                       const startBalance =
-                        typeof membership.kontingent_start === "number" && membership.kontingent_start > 0
-                          ? membership.kontingent_start
+                        typeof membership.kontingentStart === "number" && membership.kontingentStart > 0
+                          ? membership.kontingentStart
                           : null;
                       const currentBalance =
-                        typeof membership.kontingent_aktuell === "number" && membership.kontingent_aktuell >= 0
-                          ? membership.kontingent_aktuell
+                        typeof membership.kontingentAktuell === "number" && membership.kontingentAktuell >= 0
+                          ? membership.kontingentAktuell
                           : null;
                       const addressDisplay =
                         membership.adresse ?? "Muster GmbH\nMusterstra├ƒe 1\n12345 Musterstadt";
@@ -870,7 +602,7 @@ export default function AccountPage() {
                         .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
                         .reduce((acc, value) => acc + value, 0);
                       const totalPaidDisplay = totalPaidAmount > 0 ? formatPrice(totalPaidAmount) : formatPrice(0);
-                      const paymentStatusLabel = formatPaymentStatusLabel(primaryPayment?.status ?? membership.bezahl_status);
+                      const paymentStatusLabel = formatPaymentStatusLabel(primaryPayment?.status ?? membership.bezahlStatus);
                       const relevantPayment = openPayment ?? primaryPayment;
                       const outstandingAmount = extractPaymentAmount(relevantPayment);
                       const outstandingDisplay =
@@ -881,11 +613,11 @@ export default function AccountPage() {
                       const balancePercent = hasActiveBalance
                         ? Math.min(100, Math.max(0, (currentBalance / startBalance) * 100))
                         : null;
-                      const membershipSince = formatDateShort(membership.beantragungs_datum ?? membership.$createdAt);
+                      const membershipSince = formatDateShort(membership.beantragungsDatum ?? membership.createdAt);
                       const headerMeta = isPrivat ? (validUntilFormatted !== "ÔÇö" ? `g├╝ltig bis ${validUntilFormatted}` : null) : (membershipSince !== "ÔÇö" ? `seit ${membershipSince}` : null);
                       return (
                         <Card
-                          key={membership.$id}
+                          key={membership.id}
                           className={`relative overflow-hidden border-2 text-white shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${isPrivat
                             ? "bg-gradient-to-br from-[#2c3e2d] via-[#3a523b] to-[#4a6b4f] border-permdal-300"
                             : "bg-gradient-to-br from-[#4a3a5c] via-[#6b4a7a] to-[#8b5a9a] border-lilac-300"
@@ -966,10 +698,10 @@ export default function AccountPage() {
                                                 variant="outline"
                                                 size="sm"
                                                 className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
-                                                onClick={() => handleCopyPaymentRef(`${membership.$id}-iban`, ibanPlaceholder)}
+                                                onClick={() => handleCopyPaymentRef(`${membership.id}-iban`, ibanPlaceholder)}
                                               >
                                                 <Copy className="mr-1 h-3.5 w-3.5" />
-                                                {copiedPaymentRef === `${membership.$id}-iban` ? "Kopiert!" : "Kopieren"}
+                                                {copiedPaymentRef === `${membership.id}-iban` ? "Kopiert!" : "Kopieren"}
                                               </Button>
                                             </div>
                                           </div>
@@ -982,10 +714,10 @@ export default function AccountPage() {
                                                   variant="outline"
                                                   size="sm"
                                                   className="h-8 w-full border-amber-200 text-xs text-amber-900 hover:bg-amber-50 sm:w-auto"
-                                                  onClick={() => handleCopyPaymentRef(`${membership.$id}-ref`, openPaymentRef)}
+                                                  onClick={() => handleCopyPaymentRef(`${membership.id}-ref`, openPaymentRef)}
                                                 >
                                                   <Copy className="mr-1 h-3.5 w-3.5" />
-                                                  {copiedPaymentRef === `${membership.$id}-ref` ? "Kopiert!" : "Kopieren"}
+                                                  {copiedPaymentRef === `${membership.id}-ref` ? "Kopiert!" : "Kopieren"}
                                                 </Button>
                                               </div>
                                             </div>
@@ -1092,7 +824,7 @@ export default function AccountPage() {
                             </div>
                             <Button
                               className="w-full"
-                              onClick={requestMembership}
+                              onClick={submitMembershipRequest}
                               disabled={
                                 !user.emailVerification ||
                                 membershipStatus.state === "loading" ||
@@ -1208,9 +940,9 @@ export default function AccountPage() {
                                 {membershipStatusStyle.label}
                               </span>
                             </div>
-                            {primaryMembership.$createdAt && (
+                            {primaryMembership.createdAt && (
                               <p className="mt-1 text-sm text-muted-foreground">
-                                Erstellt am {formatDateShort(primaryMembership.$createdAt)}
+                                Erstellt am {formatDateShort(primaryMembership.createdAt)}
                               </p>
                             )}
                           </div>
@@ -1405,15 +1137,15 @@ export default function AccountPage() {
                         const isGram = unitRaw === 'gramm' || unitRaw === 'g';
                         const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
                         return (
-                          <Card key={o.$id} className="border-2 border-permdal-200 bg-white hover:shadow-md transition-shadow">
+                          <Card key={o.id} className="border-2 border-permdal-200 bg-white hover:shadow-md transition-shadow">
                             <CardHeader className="pb-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
                                   <CardTitle className="text-base font-semibold text-[#2c3e2d]">
-                                    {o.produkt_name || `Bestellung ${o.$id.slice(0, 6)}`}
+                                    {o.produktName || `Bestellung ${o.id.slice(0, 6)}`}
                                   </CardTitle>
                                   <CardDescription className="text-sm text-[#5a5a5a]">
-                                    {formatDate(o.$createdAt)}
+                                    {formatDate(o.createdAt)}
                                   </CardDescription>
                                 </div>
                                 {statusBadge(o.status)}
@@ -1430,12 +1162,12 @@ export default function AccountPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Preis pro Einheit</span>
                                   <span className="font-medium">
-                                    {formatPrice(o.preis_einheit)} / {displayAsKg ? 'kg' : o.einheit}
+                                    {formatPrice(o.preisEinheit)} / {displayAsKg ? 'kg' : o.einheit}
                                   </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Gesamt</span>
-                                  <span className="font-semibold">{formatPrice(o.preis_gesamt)}</span>
+                                  <span className="font-semibold">{formatPrice(o.preisGesamt)}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Abholung</span>
@@ -1445,7 +1177,7 @@ export default function AccountPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">Angebot</span>
                                   <Button asChild variant="outline" size="sm">
-                                    <Link to="/angebote/$id" params={{ id: String(o.angebotID) }}>Details</Link>
+                                    <Link to="/angebote/$id" params={{ id: String(o.angebotId) }}>Details</Link>
                                   </Button>
                                 </div>
                               </div>

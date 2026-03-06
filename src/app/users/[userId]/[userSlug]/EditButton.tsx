@@ -2,13 +2,12 @@
 
 import { useAuthStore } from "@/store/Auth";
 import { Link, useParams } from "@tanstack/react-router";
-import React from "react";
 
 const EditButton = () => {
     const { userId, userSlug } = useParams({ from: "/users/$userId/$userSlug" });
     const { user } = useAuthStore();
 
-    if (user?.$id !== userId) return null;
+    if (user?.id !== userId) return null;
 
     return (
         <Link

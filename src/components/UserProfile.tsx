@@ -22,7 +22,7 @@ export default function UserProfile() {
         <p><strong>Email:</strong> {user.email}</p>
         <p><strong>Labels:</strong> {user.labels?.join(", ") || "Keine"}</p>
         <p><strong>Email verifiziert:</strong> {user.emailVerification ? "Ja" : "Nein"}</p>
-        <p><strong>Session ID:</strong> {session.$id}</p>
+        <p><strong>Session ID:</strong> {session.id}</p>
       </div>
     </div>
   );

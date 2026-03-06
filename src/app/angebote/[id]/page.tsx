@@ -4,22 +4,11 @@ import React from "react";
 import { useParams } from "@tanstack/react-router";
 import AngebotLive from "@/components/AngebotLive";
 import OrderDialog from "@/components/OrderDialog";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
-import { Models } from "appwrite";
-
-type Angebot = Models.Document & {
-    mengeVerfuegbar: number;
-    einheit: string;
-    menge: number;
-    euroPreis: number;
-    saatPflanzDatum?: string;
-    ernteProjektion?: string[];
-};
+import { getStaffelById } from "@/lib/appwrite/appwriteProducts";
 
 export default function AngebotPage() {
     const { id } = useParams({ from: "/angebote/$id" });
-    const [angebot, setAngebot] = React.useState<Angebot | null>(null);
+    const [angebot, setAngebot] = React.useState<Staffel | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -27,14 +16,9 @@ export default function AngebotPage() {
 
         async function loadAngebot() {
             try {
-                const document = await databases.getDocument(
-                    env.appwrite.db,
-                    env.appwrite.angebote_collection_id,
-                    id
-                );
-
+                const record = await getStaffelById(id);
                 if (!cancelled) {
-                    setAngebot(document as Angebot);
+                    setAngebot(record);
                     setError(null);
                 }
             } catch (err) {
@@ -78,10 +62,6 @@ export default function AngebotPage() {
                 <AngebotLive
                     initial={{
                         ...angebot,
-                        mengeVerfuegbar: angebot.mengeVerfuegbar,
-                        einheit: angebot.einheit,
-                        menge: angebot.menge,
-                        euroPreis: angebot.euroPreis,
                     }}
                 />
 

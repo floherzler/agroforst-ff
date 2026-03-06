@@ -1,9 +1,7 @@
 ﻿'use client'
 
-import env from "@/app/env";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { client, functions, databases } from '@/models/client/config';
 import { FormEvent, useEffect, useState } from 'react';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Query } from "appwrite";
+import { createAngebot, createProdukt, verifyPayment } from "@/lib/appwrite/appwriteFunctions";
+import { findPaymentIdByRef } from "@/lib/appwrite/appwriteMemberships";
+import { subscribeToProdukte, subscribeToStaffeln } from "@/lib/appwrite/appwriteProducts";
 
 const hauptkategorieValues = ["Obst", "Gemüse", "Kräuter", "Blumen", "Maschine", "Dienstleistung", "Sonstiges"] as const;
 const unterkategorieValues = [
@@ -41,7 +41,7 @@ type PaymentFormState = {
     note: string;
 };
 type AngebotFormState = {
-    produktID: string;
+    produktId: string;
     menge: string;
     mengeVerfuegbar: string;
     einheit: string;
@@ -51,15 +51,6 @@ type AngebotFormState = {
     mengeAbgeholt: string;
     beschreibung: string;
 };
-type AppwriteExecution = {
-    status?: string;
-    response?: string;
-    stderr?: string;
-};
-type ExecutionPayload = Record<string, unknown> & {
-    success?: boolean;
-    error?: string;
-};
 
 const formSchema = z.object({
     id: z.string().optional(),
@@ -68,8 +59,8 @@ const formSchema = z.object({
     hauptkategorie: z.enum(hauptkategorieValues).optional(),
     unterkategorie: z.enum(unterkategorieValues).optional(),
     lebensdauer: z.enum(lebensdauerValues).optional(),
-    fruchtfolge_vor: z.array(z.string()).optional(),
-    fruchtfolge_nach: z.array(z.string()).optional(),
+    fruchtfolgeVor: z.array(z.string()).optional(),
+    fruchtfolgeNach: z.array(z.string()).optional(),
     bodenansprueche: z.array(z.string()).optional(),
     begleitpflanzen: z.array(z.string()).optional(),
 })
@@ -79,7 +70,7 @@ function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (valu
     const form = useForm<z.infer<typeof formSchema>>({
         defaultValues: produkt
             ? {
-                id: produkt.$id ?? "",
+                id: produkt.id ?? "",
                 name: produkt.name ?? "",
                 sorte: produkt.sorte ?? "",
                 hauptkategorie: hauptkategorieValues.includes(
@@ -97,8 +88,8 @@ function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (valu
                 )
                     ? (produkt.lebensdauer as typeof lebensdauerValues[number])
                     : undefined,
-                fruchtfolge_vor: produkt.fruchtfolge_vor ?? [],
-                fruchtfolge_nach: produkt.fruchtfolge_nach ?? [],
+                fruchtfolgeVor: produkt.fruchtfolgeVor ?? [],
+                fruchtfolgeNach: produkt.fruchtfolgeNach ?? [],
                 bodenansprueche: Array.isArray(produkt.bodenansprueche)
                     ? produkt.bodenansprueche
                     : [],
@@ -111,8 +102,8 @@ function ProduktForm({ produkt, onSubmit }: { produkt?: Produkt, onSubmit: (valu
                 hauptkategorie: undefined,
                 unterkategorie: undefined,
                 lebensdauer: undefined,
-                fruchtfolge_vor: [],
-                fruchtfolge_nach: [],
+                fruchtfolgeVor: [],
+                fruchtfolgeNach: [],
                 bodenansprueche: [],
                 begleitpflanzen: [],
             },
@@ -174,9 +165,6 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
     const [staffeln, setStaffeln] = useState<Staffel[]>(initialStaffeln);
     const [produkte, setProdukte] = useState<Produkt[]>(initialProdukte);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const paymentVerifyFunctionId = env.appwrite.payment_verify_function_id;
-    const addProduktFunctionId = env.appwrite.add_produkt_function_id;
-    const addAngebotFunctionId = env.appwrite.add_angebot_function_id;
     const [paymentForm, setPaymentForm] = useState<PaymentFormState>({
         paymentId: "",
         membershipId: "",
@@ -188,7 +176,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
     const [refSearchValue, setRefSearchValue] = useState("");
     const [refSearchStatus, setRefSearchStatus] = useState<FunctionStatus>({ state: "idle" });
     const [angebotForm, setAngebotForm] = useState<AngebotFormState>({
-        produktID: "",
+        produktId: "",
         menge: "",
         mengeVerfuegbar: "",
         einheit: "",
@@ -199,47 +187,20 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
         beschreibung: "",
     });
     const [angebotResult, setAngebotResult] = useState<FunctionStatus>({ state: "idle" });
-    const db = env.appwrite.db;
-    const staffelCollection = env.appwrite.angebote_collection_id;
-    const produktCollection = env.appwrite.produce_collection_id;
-    const paymentCollection = env.appwrite.payment_collection_id;
-    const staffelChannel = `databases.${db}.collections.${staffelCollection}.documents`;
-    const produktChannel = `databases.${db}.collections.${produktCollection}.documents`;
 
-    const executeAdminFunction = async (functionId: string, payload: Record<string, unknown>) => {
-        if (!functionId || functionId === "undefined") {
-            throw new Error("Die Cloud Function ist nicht konfiguriert");
-        }
-        const execution = (await functions.createExecution(functionId, JSON.stringify(payload))) as AppwriteExecution;
-        const statusText = String(execution.status ?? "").toLowerCase();
-        const rawResponse = execution.response;
-        let parsedResponse: Record<string, unknown> | string | null = null;
-        if (typeof rawResponse === "string" && rawResponse.trim().length > 0) {
-            try {
-                parsedResponse = JSON.parse(rawResponse);
-            } catch {
-                parsedResponse = rawResponse;
-            }
-        }
-        const parsedPayload =
-            typeof parsedResponse === "object" && parsedResponse !== null
-                ? (parsedResponse as ExecutionPayload)
-                : null;
-        if (statusText !== "completed" || (parsedPayload && parsedPayload.success === false)) {
-            const errMsg =
-                parsedPayload?.error ??
-                execution.stderr ??
-                "Die Funktion konnte nicht ausgefÃ¼hrt werden";
-            throw new Error(errMsg);
-        }
-        return parsedPayload ?? execution;
-    };
-
-    async function createProdukt(values: z.infer<typeof formSchema>) {
+    async function handleCreateProdukt(values: z.infer<typeof formSchema>) {
         try {
-            await executeAdminFunction(addProduktFunctionId, {
-                ...values,
+            await createProdukt({
                 id: values.id || undefined,
+                name: values.name ?? "",
+                sorte: values.sorte,
+                hauptkategorie: values.hauptkategorie ?? "",
+                unterkategorie: values.unterkategorie,
+                lebensdauer: values.lebensdauer,
+                fruchtfolgeVor: values.fruchtfolgeVor,
+                fruchtfolgeNach: values.fruchtfolgeNach,
+                bodenansprueche: values.bodenansprueche,
+                begleitpflanzen: values.begleitpflanzen,
             });
             setIsCreateOpen(false);
         } catch (rawError: unknown) {
@@ -251,7 +212,13 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
         event.preventDefault();
         setPaymentResult({ state: "loading" });
         try {
-            const payload: Record<string, unknown> = {
+            const payload: {
+                paymentId: string;
+                status: string;
+                membershipId?: string;
+                note?: string;
+                amount?: number;
+            } = {
                 paymentId: paymentForm.paymentId.trim(),
                 status: paymentForm.status,
             };
@@ -265,7 +232,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             if (paymentForm.amount.trim() && !Number.isNaN(amountValue)) {
                 payload.amount = amountValue;
             }
-            await executeAdminFunction(paymentVerifyFunctionId, payload);
+            await verifyPayment(payload);
             setPaymentResult({ state: "success", message: "Zahlung wurde validiert." });
             setPaymentForm({
                 paymentId: "",
@@ -292,23 +259,15 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             setRefSearchStatus({ state: "error", message: "Bitte eine Ref eingeben." });
             return;
         }
-        if (!paymentCollection) {
-            setRefSearchStatus({ state: "error", message: "Zahlungssammlung nicht konfiguriert." });
-            return;
-        }
         setRefSearchStatus({ state: "loading" });
         try {
-            const response = await databases.listDocuments(db, paymentCollection, [
-                Query.equal("ref", ref),
-                Query.limit(1),
-            ]);
-            if (response.documents.length === 0) {
+            const paymentId = await findPaymentIdByRef(ref);
+            if (!paymentId) {
                 setRefSearchStatus({ state: "error", message: "Keine Zahlung mit dieser Ref gefunden." });
                 return;
             }
-            const payment = response.documents[0];
-            setPaymentForm((prev) => ({ ...prev, paymentId: payment.$id }));
-            setRefSearchStatus({ state: "success", message: `ID gesetzt: ${payment.$id}` });
+            setPaymentForm((prev) => ({ ...prev, paymentId }));
+            setRefSearchStatus({ state: "success", message: `ID gesetzt: ${paymentId}` });
         } catch (rawError: unknown) {
             const message =
                 rawError instanceof Error
@@ -329,7 +288,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             const availableCandidate = Number(angebotForm.mengeVerfuegbar);
             const euroPreisCandidate = Number(angebotForm.euroPreis);
             const payload: Record<string, unknown> = {
-                produktID: angebotForm.produktID.trim(),
+                produktId: angebotForm.produktId.trim(),
                 menge: mengeValue,
                 mengeVerfuegbar: Number.isFinite(availableCandidate) ? availableCandidate : mengeValue,
                 einheit: angebotForm.einheit.trim(),
@@ -351,10 +310,20 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             if (angebotForm.beschreibung.trim()) {
                 payload.beschreibung = angebotForm.beschreibung.trim();
             }
-            await executeAdminFunction(addAngebotFunctionId, payload);
+            await createAngebot(payload as {
+                produktId: string;
+                menge: number;
+                mengeVerfuegbar: number;
+                einheit: string;
+                euroPreis: number;
+                saatPflanzDatum?: string;
+                ernteProjektion?: string[];
+                mengeAbgeholt?: number;
+                beschreibung?: string;
+            });
             setAngebotResult({ state: "success", message: "Angebot wurde gespeichert." });
             setAngebotForm({
-                produktID: "",
+                produktId: "",
                 menge: "",
                 mengeVerfuegbar: "",
                 einheit: "",
@@ -377,29 +346,23 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
     };
 
     useEffect(() => {
-        const staffelUnsubscribe = client.subscribe(staffelChannel, (response) => {
-            const eventType = response.events[0];
-            const changedStaffel = response.payload as Staffel
-
-            if (eventType.includes('create')) {
-                setStaffeln((prevStaffeln) => [...prevStaffeln, changedStaffel])
-            } else if (eventType.includes('delete')) {
-                setStaffeln((prevStaffeln) => prevStaffeln.filter((staffel) => staffel.$id !== changedStaffel.$id))
-            } else if (eventType.includes('update')) {
-                setStaffeln((prevStaffeln) => prevStaffeln.map((staffel) => staffel.$id === changedStaffel.$id ? changedStaffel : staffel))
+        const staffelUnsubscribe = subscribeToStaffeln(({ type, record }) => {
+            if (type === 'create') {
+                setStaffeln((prevStaffeln) => [...prevStaffeln, record])
+            } else if (type === 'delete') {
+                setStaffeln((prevStaffeln) => prevStaffeln.filter((staffel) => staffel.id !== record.id))
+            } else if (type === 'update') {
+                setStaffeln((prevStaffeln) => prevStaffeln.map((staffel) => staffel.id === record.id ? record : staffel))
             }
         });
 
-        const produktUnsubscribe = client.subscribe(produktChannel, (response) => {
-            const eventType = response.events[0];
-            const changedProdukt = response.payload as Produkt
-
-            if (eventType.includes('create')) {
-                setProdukte((prevProdukte) => [...prevProdukte, changedProdukt])
-            } else if (eventType.includes('delete')) {
-                setProdukte((prevProdukte) => prevProdukte.filter((produkt) => produkt.$id !== changedProdukt.$id))
-            } else if (eventType.includes('update')) {
-                setProdukte((prevProdukte) => prevProdukte.map((produkt) => produkt.$id === changedProdukt.$id ? changedProdukt : produkt))
+        const produktUnsubscribe = subscribeToProdukte(({ type, record }) => {
+            if (type === 'create') {
+                setProdukte((prevProdukte) => [...prevProdukte, record])
+            } else if (type === 'delete') {
+                setProdukte((prevProdukte) => prevProdukte.filter((produkt) => produkt.id !== record.id))
+            } else if (type === 'update') {
+                setProdukte((prevProdukte) => prevProdukte.map((produkt) => produkt.id === record.id ? record : produkt))
             }
         });
 
@@ -407,7 +370,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
             staffelUnsubscribe();
             produktUnsubscribe();
         }
-    }, [staffelChannel, produktChannel])
+    }, [])
 
     return (
         <div className="w-full p-4">
@@ -435,7 +398,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                                     <DialogHeader>
                                         <DialogTitle>Neues Produkt erstellen</DialogTitle>
                                     </DialogHeader>
-                                    <ProduktForm onSubmit={createProdukt} />
+                                    <ProduktForm onSubmit={handleCreateProdukt} />
                                 </DialogContent>
                             </Dialog>
                         </CardHeader>
@@ -452,8 +415,8 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                                 </TableHeader>
                                 <TableBody>
                                     {produkte.map((produkt) => (
-                                        <TableRow key={produkt.$id}>
-                                            <TableCell className="font-mono text-xs">{produkt.$id}</TableCell>
+                                        <TableRow key={produkt.id}>
+                                            <TableCell className="font-mono text-xs">{produkt.id}</TableCell>
                                             <TableCell className="font-medium">{produkt.name}</TableCell>
                                             <TableCell>{produkt.sorte}</TableCell>
                                             <TableCell><Badge variant="outline">{produkt.hauptkategorie}</Badge></TableCell>
@@ -478,15 +441,15 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Produkt ID</label>
                                         <Select
-                                            value={angebotForm.produktID}
-                                            onValueChange={(value) => setAngebotForm((prev) => ({ ...prev, produktID: value }))}
+                                            value={angebotForm.produktId}
+                                            onValueChange={(value) => setAngebotForm((prev) => ({ ...prev, produktId: value }))}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Produkt wÃ¤hlen" />
                                             </SelectTrigger>
                                             <SelectContent className="max-h-60 bg-white">
                                                 {produkte.map(p => (
-                                                    <SelectItem key={p.$id} value={p.$id}>{p.name} - {p.sorte}</SelectItem>
+                                                    <SelectItem key={p.id} value={p.id}>{p.name} - {p.sorte}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -599,8 +562,8 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                                     </TableHeader>
                                     <TableBody>
                                         {staffeln.map((staffel) => (
-                                            <TableRow key={staffel.$id}>
-                                                <TableCell className="font-medium">{staffel.produktID}</TableCell>
+                                            <TableRow key={staffel.id}>
+                                                <TableCell className="font-medium">{staffel.produktId}</TableCell>
                                                 <TableCell>{staffel.menge} {staffel.einheit}</TableCell>
                                                 <TableCell>{staffel.euroPreis}â‚¬</TableCell>
                                                 <TableCell>

@@ -1,7 +1,6 @@
 "use client";
 
 import { Link, useLocation, useParams } from "@tanstack/react-router";
-import React from "react";
 
 const Navbar = () => {
     const { userId, userSlug } = useParams({ from: "/users/$userId/$userSlug" });

@@ -2,8 +2,15 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { immer } from "zustand/middleware/immer"
 
-import { account } from "@/models/client/config"
-import { AppwriteException, ID, Models } from "appwrite"
+import {
+    createEmailPasswordAccount,
+    deleteCurrentSession,
+    getCurrentAuthSnapshot,
+    getCurrentUser,
+    signInWithEmailPassword,
+    type AuthSession,
+    type AuthUser,
+} from "@/lib/appwrite/appwriteAuth"
 
 export interface UserPrefs {
     name: string
@@ -13,21 +20,21 @@ export interface UserPrefs {
 }
 
 interface AuthState {
-    session: Models.Session | null;
+    session: AuthSession | null;
     jwt: string | null;
-    user: Models.User<UserPrefs> | null;
+    user: AuthUser | null;
     hydrated: boolean;
 
     setHydrated(): void;
-    setSession(session: Models.Session | null, user: Models.User<UserPrefs> | null): void;
-    updateUser(user: Models.User<Models.Preferences>): void;
+    setSession(session: AuthSession | null, user: AuthUser | null): void;
+    updateUser(): Promise<void>;
     verifySession(): Promise<void>;
     login(
         email: string,
         password: string
     ): Promise<{
         success: boolean;
-        error?: AppwriteException | null;
+        error?: Error | null;
     }>;
     createAccount(
         name: string,
@@ -35,7 +42,7 @@ interface AuthState {
         password: string
     ): Promise<{
         success: boolean;
-        error?: AppwriteException | null;
+        error?: Error | null;
     }>;
     logout(): Promise<void>;
 }
@@ -44,9 +51,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
     persist(
         immer((set) => ({
-            session: null as Models.Session | null,
+            session: null as AuthSession | null,
             jwt: null as string | null,
-            user: null as Models.User<UserPrefs> | null,
+            user: null as AuthUser | null,
             hydrated: false,
 
             setHydrated() {
@@ -55,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            setSession(session: Models.Session | null, user: Models.User<UserPrefs> | null) {
+            setSession(session: AuthSession | null, user: AuthUser | null) {
                 set((state) => {
                     state.session = session;
                     state.user = user;
@@ -64,7 +71,7 @@ export const useAuthStore = create<AuthState>()(
 
             async updateUser() {
                 try {
-                    const updatedUser = await account.get<UserPrefs>();
+                    const updatedUser = await getCurrentUser();
                     set((state) => {
                         state.user = updatedUser;
                     });
@@ -75,17 +82,11 @@ export const useAuthStore = create<AuthState>()(
 
             async verifySession() {
                 try {
-                    const session = await account.getSession("current");
+                    const snapshot = await getCurrentAuthSnapshot();
                     set((state) => {
-                        state.session = session;
-                    });
-                    const [user, { jwt }] = await Promise.all([
-                        account.get<UserPrefs>(),
-                        account.createJWT(),
-                    ]);
-                    set((state) => {
-                        state.user = user;
-                        state.jwt = jwt;
+                        state.session = snapshot.session;
+                        state.user = snapshot.user;
+                        state.jwt = snapshot.jwt;
                     });
                 } catch (error) {
                     console.log(error);
@@ -94,46 +95,41 @@ export const useAuthStore = create<AuthState>()(
 
             async login(email: string, password: string) {
                 try {
-                    const session = await account.createEmailPasswordSession(
+                    const snapshot = await signInWithEmailPassword({
                         email,
-                        password
-                    );
-                    const [user, { jwt }] = await Promise.all([
-                        account.get<UserPrefs>(),
-                        account.createJWT(),
-                    ]);
-                    if (!user.prefs) await account.updatePrefs<UserPrefs>({ theme: "light" });
+                        password,
+                    });
                     set((state) => {
-                        state.session = session;
-                        state.user = user;
-                        state.jwt = jwt;
+                        state.session = snapshot.session;
+                        state.user = snapshot.user;
+                        state.jwt = snapshot.jwt;
                     });
                     return { success: true };
                 } catch (error) {
                     console.log(error);
                     return {
                         success: false,
-                        error: error instanceof AppwriteException ? error : null,
+                        error: error instanceof Error ? error : null,
                     };
                 }
             },
 
             async createAccount(name: string, email: string, password: string) {
                 try {
-                    await account.create(ID.unique(), email, password, name);
+                    await createEmailPasswordAccount({ name, email, password });
                     return { success: true };
                 } catch (error) {
                     console.log(error);
                     return {
                         success: false,
-                        error: error instanceof AppwriteException ? error : null,
+                        error: error instanceof Error ? error : null,
                     };
                 }
             },
 
             async logout() {
                 try {
-                    await account.deleteSession('current');
+                    await deleteCurrentSession();
                     set((state) => {
                         state.session = null;
                         state.jwt = null;

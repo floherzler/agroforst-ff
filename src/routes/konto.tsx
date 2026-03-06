@@ -6,7 +6,7 @@ export const Route = createFileRoute("/konto")({ component: RouteComponent });
 
 function RouteComponent() {
   return (
-    <ProtectedRoute requireAuth redirectTo="/login?redirect=/konto">
+    <ProtectedRoute requireAuth redirectTo="/login?redirect=%2Fkonto">
       <Page />
     </ProtectedRoute>
   );
