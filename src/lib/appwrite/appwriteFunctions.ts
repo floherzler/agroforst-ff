@@ -1,18 +1,15 @@
-import { Client, Functions } from "appwrite";
 import { z } from "zod";
 
-import { normalizeMembership, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
+import {
+  normalizeMembership,
+  type MembershipRecord,
+} from "@/lib/appwrite/appwriteMemberships";
 import {
   appwriteConfig,
+  appwriteFunctions as functions,
   ensureConfigured,
   parseExecutionPayload,
 } from "@/lib/appwrite/shared";
-
-const client = new Client()
-  .setEndpoint(ensureConfigured(appwriteConfig.endpoint, "Appwrite Endpoint"))
-  .setProject(ensureConfigured(appwriteConfig.projectId, "Appwrite Projekt-ID"));
-
-const functions = new Functions(client);
 
 const functionExecutionSchema = z.object({
   status: z.string().optional(),
@@ -131,7 +128,9 @@ export async function requestMembership(input: {
   );
 
   return {
-    membership: payload.membership ? normalizeMembership(payload.membership) : undefined,
+    membership: payload.membership
+      ? normalizeMembership(payload.membership)
+      : undefined,
   };
 }
 
@@ -143,7 +142,10 @@ export async function verifyPayment(input: {
   note?: string;
 }): Promise<void> {
   const parsedInput = verifyPaymentInputSchema.parse(input);
-  await executeValidatedFunction<void>(appwriteConfig.paymentVerifyFunctionId, parsedInput);
+  await executeValidatedFunction<void>(
+    appwriteConfig.paymentVerifyFunctionId,
+    parsedInput,
+  );
 }
 
 export async function createProdukt(input: {

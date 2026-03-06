@@ -1,3 +1,4 @@
+import { Account, Client, Databases, Functions, Storage } from "appwrite";
 import { z } from "zod";
 
 import env from "@/app/env";
@@ -11,20 +12,46 @@ export const appwriteConfig = {
   offerCollectionId: String(env.appwrite.angebote_collection_id ?? "").trim(),
   orderCollectionId: String(env.appwrite.order_collection_id ?? "").trim(),
   postCollectionId: String(env.appwrite.post_collection_id ?? "").trim(),
-  membershipCollectionId: String(env.appwrite.membership_collection_id ?? "").trim(),
+  membershipCollectionId: String(
+    env.appwrite.membership_collection_id ?? "",
+  ).trim(),
   paymentCollectionId: String(env.appwrite.payment_collection_id ?? "").trim(),
-  feedbackCollectionId: String(env.appwrite.nachrichten_collection_id ?? "").trim(),
+  feedbackCollectionId: String(
+    env.appwrite.nachrichten_collection_id ?? "",
+  ).trim(),
   orderFunctionId: String(env.appwrite.order_function_id ?? "").trim(),
-  membershipFunctionId: String(env.appwrite.membership_function_id ?? "").trim(),
-  paymentVerifyFunctionId: String(env.appwrite.payment_verify_function_id ?? "").trim(),
-  addProduktFunctionId: String(env.appwrite.add_produkt_function_id ?? "").trim(),
-  addAngebotFunctionId: String(env.appwrite.add_angebot_function_id ?? "").trim(),
+  membershipFunctionId: String(
+    env.appwrite.membership_function_id ?? "",
+  ).trim(),
+  paymentVerifyFunctionId: String(
+    env.appwrite.payment_verify_function_id ?? "",
+  ).trim(),
+  addProduktFunctionId: String(
+    env.appwrite.add_produkt_function_id ?? "",
+  ).trim(),
+  addAngebotFunctionId: String(
+    env.appwrite.add_angebot_function_id ?? "",
+  ).trim(),
 };
 
 export const appwriteDocumentMetaSchema = z.object({
   $id: z.string().min(1),
   $createdAt: z.string().min(1),
 });
+
+const endpoint = ensureConfigured(appwriteConfig.endpoint, "Appwrite Endpoint");
+const projectId = ensureConfigured(
+  appwriteConfig.projectId,
+  "Appwrite Projekt-ID",
+);
+
+export const appwriteClient = new Client()
+  .setEndpoint(endpoint)
+  .setProject(projectId);
+export const appwriteAccount = new Account(appwriteClient);
+export const appwriteDatabases = new Databases(appwriteClient);
+export const appwriteFunctions = new Functions(appwriteClient);
+export const appwriteStorage = new Storage(appwriteClient);
 
 export type RealtimeChangeType = "create" | "update" | "delete";
 
@@ -33,7 +60,9 @@ export type RealtimeChange<T> = {
   record: T;
 };
 
-export function createRealtimeChangeType(events: unknown): RealtimeChangeType | null {
+export function createRealtimeChangeType(
+  events: unknown,
+): RealtimeChangeType | null {
   if (!Array.isArray(events)) {
     return null;
   }
