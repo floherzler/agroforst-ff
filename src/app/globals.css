@@ -1,9 +1,7 @@
 /* globals.css */
 @import "tailwindcss";
 
-/* Brand colors as theme tokens */
 @theme {
-  /* Core brand green: #76ae78 */
   --color-permdal-50: #f5faf5;
   --color-permdal-100: #e3f1e3;
   --color-permdal-200: #c1debff5;
@@ -27,7 +25,6 @@
   --color-earth-800: #0e0c08;
   --color-earth-900: #060504;
 
-  /* Lilac accent: #a699d3 */
   --color-lilac-50: #f6f3fb;
   --color-lilac-100: #e9e4f6;
   --color-lilac-200: #d0c7ec;
@@ -39,39 +36,42 @@
   --color-lilac-800: #3a2d6f;
   --color-lilac-900: #251c53;
 
-  /* Semantic colors for shadcn/ui */
-  --surface-base: #f3eadc;
-  --surface-card: rgba(255, 255, 255, 0.96);
-  --surface-card-strong: rgba(255, 255, 255, 0.98);
-  --surface-soft: rgba(106, 168, 114, 0.14);
-  --surface-outline: rgba(39, 38, 21, 0.08);
-  --shadow-soft: 0 22px 48px -28px rgba(39, 38, 21, 0.35);
-  --shadow-strong: 0 24px 60px -26px rgba(106, 168, 114, 0.48);
+  --shadow-soft: 0 16px 40px -24px rgba(39, 38, 21, 0.22);
+  --shadow-strong: 0 22px 50px -28px rgba(39, 38, 21, 0.28);
 
-  --color-background: var(--surface-base);
+  --color-background: #f7f4ee;
   --color-foreground: #1f2021;
+  --color-card: rgba(255, 255, 255, 0.94);
+  --color-card-foreground: #1f2021;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1f2021;
   --color-primary: var(--color-permdal-600);
   --color-primary-foreground: #ffffff;
-  --color-secondary: color-mix(in srgb, var(--color-lilac-200) 65%, #ffffff 35%);
-  --color-secondary-foreground: var(--color-lilac-700);
-  --color-muted: color-mix(in srgb, var(--color-permdal-100) 55%, #ffffff 45%);
-  --color-muted-foreground: color-mix(in srgb, #3d3d3f 85%, #000 5%);
-  --color-accent: color-mix(in srgb, var(--color-permdal-300) 70%, #ffffff 30%);
+  --color-secondary: #edf3ea;
+  --color-secondary-foreground: #345339;
+  --color-muted: #eef0ea;
+  --color-muted-foreground: #5f625d;
+  --color-accent: #edf3ea;
   --color-accent-foreground: #132611;
-  --color-border: color-mix(in srgb, var(--color-earth-100) 70%, #ffffff 30%);
-  --color-input: color-mix(in srgb, var(--color-permdal-50) 60%, #ffffff 40%);
-  --color-ring: var(--color-lilac-500);
+  --color-border: rgba(39, 38, 21, 0.1);
+  --color-input: rgba(39, 38, 21, 0.1);
+  --color-ring: rgba(81, 137, 91, 0.35);
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #ffffff;
 }
 
-/* Base styles */
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   html {
-    font-family: 'Inter', sans-serif;
     scroll-behavior: smooth;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
   }
 
   a {
@@ -79,27 +79,11 @@
   }
 
   a:hover {
-    color: var(--color-lilac-600);
+    color: var(--color-permdal-700);
   }
 }
 
 @layer utilities {
-  .bg-surface-card {
-    background-color: var(--surface-card);
-  }
-
-  .bg-surface-card-strong {
-    background-color: var(--surface-card-strong);
-  }
-
-  .bg-surface-soft {
-    background-color: var(--surface-soft);
-  }
-
-  .bg-surface-lilac {
-    background-color: color-mix(in srgb, var(--color-lilac-200) 60%, #ffffff 40%);
-  }
-
   .shadow-brand-soft {
     box-shadow: var(--shadow-soft);
   }
@@ -108,15 +92,15 @@
     box-shadow: var(--shadow-strong);
   }
 
-  .shadow-accent-lilac {
-    box-shadow: 0 24px 52px -28px rgba(128, 117, 190, 0.48);
+  .bg-surface-card {
+    background-color: color-mix(in srgb, var(--color-card) 92%, #ffffff 8%);
   }
 
-  .border-surface-outline {
-    border-color: var(--surface-outline);
+  .bg-surface-card-strong {
+    background-color: #ffffff;
   }
 
-  .border-lilac-soft {
-    border-color: color-mix(in srgb, var(--color-lilac-300) 70%, #ffffff 30%);
+  .bg-surface-soft {
+    background-color: color-mix(in srgb, var(--color-secondary) 78%, #ffffff 22%);
   }
 }

@@ -1,16 +1,15 @@
 "use client";
 
 import { Search as SearchIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import AngeboteModal from "@/components/AngeboteModal";
 import {
-  catalogCategories,
-  getProductImageUrl,
-  listProductCatalog,
-  type CatalogCategory,
-} from "@/features/catalog/catalog";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
+  EmptyState,
+  PageHeader,
+  PageShell,
+  SurfaceSection,
+} from "@/components/base/page-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  catalogCategories,
+  getProductImageUrl,
+  listProductCatalog,
+  type CatalogCategory,
+} from "@/features/catalog/catalog";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 type ViewMode = "cards" | "table";
 
@@ -67,84 +73,68 @@ export default function ProductsCatalogPage() {
   }, [debouncedSearch, selectedCategory]);
 
   return (
-    <main className="container mx-auto min-h-screen space-y-4 p-4">
-      <section className="grid grid-cols-12 items-start gap-4">
-        <div className="col-span-12 space-y-3 lg:col-span-8">
-          <div>
-            <h1 className="text-3xl font-bold">Katalog</h1>
-            <p className="text-sm text-muted-foreground">
-              {loading ? "Laden…" : `${products.length} Produkte`}
-            </p>
+    <PageShell>
+      <PageHeader
+        title="Produktkatalog"
+        description={
+          loading
+            ? "Produkte werden geladen."
+            : `${products.length} Produkte in der aktuellen Ansicht.`
+        }
+      />
+
+      <SurfaceSection className="p-5 sm:p-6">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="space-y-4">
+            <Tabs
+              value={selectedCategory}
+              onValueChange={(value) =>
+                setSelectedCategory(value as CatalogCategory)
+              }
+            >
+              <TabsList>
+                {catalogCategories.map((category) => (
+                  <TabsTrigger key={category} value={category}>
+                    {category}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
 
-          <Tabs
-            value={selectedCategory}
-            onValueChange={(value) =>
-              setSelectedCategory(value as CatalogCategory)
-            }
-          >
-            <TabsList className="flex flex-wrap gap-1 rounded-xl border border-permdal-100 bg-permdal-50/60 p-1">
-              {catalogCategories.map((category) => (
-                <TabsTrigger
-                  key={category}
-                  value={category}
-                  className="rounded-lg px-3 py-1.5 text-sm transition hover:bg-permdal-100/40 data-[state=active]:bg-permdal-200/60 data-[state=active]:text-permdal-900 data-[state=active]:shadow-sm"
-                >
-                  {category}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-
-        <div className="col-span-12 lg:col-span-4">
-          <div
-            className="flex flex-col gap-2 rounded-xl border bg-white/70 p-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/60 lg:sticky lg:top-2"
-            role="region"
-            aria-label="Ansicht und Suche"
-          >
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <SearchIcon className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="w-full pl-8"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Suche (Name oder Sorte)…"
-                  aria-label="Produkte suchen"
-                />
-              </div>
-
-              <Tabs
-                value={view}
-                onValueChange={(value) => setView(value as ViewMode)}
-              >
-                <TabsList className="flex gap-1 rounded-lg border border-permdal-100 bg-permdal-50/60 p-1">
-                  <TabsTrigger
-                    value="cards"
-                    className="shrink-0 rounded-md px-3 py-1.5 text-sm transition hover:bg-permdal-100/40 data-[state=active]:bg-permdal-200/60 data-[state=active]:text-permdal-900 data-[state=active]:shadow-sm"
-                  >
-                    Karten
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="table"
-                    className="shrink-0 rounded-md px-3 py-1.5 text-sm transition hover:bg-permdal-100/40 data-[state=active]:bg-permdal-200/60 data-[state=active]:text-permdal-900 data-[state=active]:shadow-sm"
-                  >
-                    Tabelle
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative min-w-[260px]">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Produkt oder Sorte suchen"
+                className="pl-9"
+                aria-label="Produkte suchen"
+              />
             </div>
+
+            <Tabs value={view} onValueChange={(value) => setView(value as ViewMode)}>
+              <TabsList>
+                <TabsTrigger value="cards">Karten</TabsTrigger>
+                <TabsTrigger value="table">Tabelle</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
-      </section>
+      </SurfaceSection>
 
-      {view === "cards" ? (
+      {products.length === 0 && !loading ? (
+        <EmptyState
+          title="Keine Produkte gefunden"
+          description="Passe Kategorie oder Suchbegriff an."
+        />
+      ) : view === "cards" ? (
         <CardsView products={products} offerCounts={offerCounts} />
       ) : (
         <TableView products={products} offerCounts={offerCounts} />
       )}
-    </main>
+    </PageShell>
   );
 }
 
@@ -156,36 +146,32 @@ function CardsView({
   offerCounts: Record<string, number>;
 }) {
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {products.map((product) => {
         const imageUrl = getProductImageUrl(product.imageId);
 
         return (
-          <article
-            key={product.id}
-            className="flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 rounded-md">
+          <SurfaceSection key={product.id}>
+            <div className="flex items-start justify-between gap-4 p-5 sm:p-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-12 rounded-xl">
                   {imageUrl ? (
                     <AvatarImage src={imageUrl} alt={product.name} />
                   ) : (
-                    <AvatarFallback className="bg-permdal-100 text-permdal-800">
+                    <AvatarFallback className="bg-secondary text-primary">
                       {product.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   )}
                 </Avatar>
-
-                <Button
-                  variant="ghost"
-                  className="px-0 text-left font-semibold hover:underline"
-                  onClick={() => {}}
-                  title="Produktseite (bald)"
-                >
-                  {product.name}
-                  {product.sorte ? ` – ${product.sorte}` : ""}
-                </Button>
+                <div className="min-w-0 space-y-1">
+                  <h2 className="truncate text-base font-semibold">
+                    {product.name}
+                    {product.sorte ? ` – ${product.sorte}` : ""}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {product.unterkategorie || "Keine Unterkategorie"}
+                  </p>
+                </div>
               </div>
 
               <AngeboteModal
@@ -196,12 +182,10 @@ function CardsView({
               />
             </div>
 
-            <div className="text-sm text-muted-foreground">
-              {product.unterkategorie || "–"}
+            <div className="border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:px-6">
+              <Seasonality months={product.saisonalitaet} />
             </div>
-
-            <Seasonality months={product.saisonalitaet} />
-          </article>
+          </SurfaceSection>
         );
       })}
     </section>
@@ -216,7 +200,7 @@ function TableView({
   offerCounts: Record<string, number>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
+    <SurfaceSection className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -230,36 +214,20 @@ function TableView({
         <TableBody>
           {products.map((product) => {
             const count = offerCounts[product.id] ?? 0;
-            const hasOffers = count > 0;
-
             return (
               <TableRow key={product.id}>
                 <TableCell className="font-medium">
-                  <button
-                    type="button"
-                    className="hover:underline"
-                    onClick={() => {}}
-                    title="Produktseite (bald)"
-                  >
-                    {product.name}
-                    {product.sorte ? ` – ${product.sorte}` : ""}
-                  </button>
+                  {product.name}
+                  {product.sorte ? ` – ${product.sorte}` : ""}
                 </TableCell>
                 <TableCell>{product.hauptkategorie}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {product.unterkategorie || "–"}
                 </TableCell>
                 <TableCell>
-                  <span
-                    className={[
-                      "rounded-full px-2 py-1 text-xs",
-                      hasOffers
-                        ? "bg-permdal-100 text-permdal-900"
-                        : "bg-permdal-200 text-permdal-600",
-                    ].join(" ")}
-                  >
-                    {hasOffers ? `${count} Angebote` : "Keine"}
-                  </span>
+                  <Button variant="outline" size="sm" disabled={count === 0}>
+                    {count === 0 ? "Keine" : `${count} Angebote`}
+                  </Button>
                 </TableCell>
                 <TableCell>
                   <Seasonality months={product.saisonalitaet} />
@@ -269,121 +237,29 @@ function TableView({
           })}
         </TableBody>
       </Table>
-    </div>
+    </SurfaceSection>
   );
 }
 
-function Seasonality({ months }: { months: number[] }) {
-  const segments = useMemo(() => computeSegments(months), [months]);
-  const monthWidth = 100 / 12;
-
-  return (
-    <div className="mt-3">
-      <div className="mb-1 text-xs text-muted-foreground">Saisonalität</div>
-
-      <div className="relative">
-        <div className="grid h-8 grid-cols-12 gap-px">
-          {Array.from({ length: 12 }, (_, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-center rounded-[2px] bg-muted/60"
-            >
-              <span className="text-[10px] leading-none text-muted-foreground">
-                {shortMonth(index + 1)}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {segments.map((segment, index) => (
-          <div
-            key={index}
-            className="absolute top-1/2 h-3 -translate-y-1/2 rounded-full bg-green-500/60 ring-1 ring-green-600/20"
-            style={{
-              left: `${(segment.start - 1) * monthWidth}%`,
-              width: `${segment.len * monthWidth}%`,
-            }}
-            aria-label={`Saison von ${monthName(segment.start)} bis ${monthName(endOf(segment))}`}
-            title={`Saison: ${monthName(segment.start)} – ${monthName(endOf(segment))}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function computeSegments(months: number[]) {
-  const present = new Array<boolean>(13).fill(false);
-
-  months.forEach((month) => {
-    if (Number.isFinite(month) && month >= 1 && month <= 12) {
-      present[month] = true;
-    }
-  });
-
-  const segments: { start: number; len: number }[] = [];
-
-  for (let month = 1; month <= 12; month++) {
-    const previousMonth = month === 1 ? 12 : month - 1;
-
-    if (present[month] && !present[previousMonth]) {
-      let len = 1;
-      let next = month === 12 ? 1 : month + 1;
-
-      while (present[next] && next !== month) {
-        len++;
-        next = next === 12 ? 1 : next + 1;
-
-        if (len >= 12) {
-          break;
-        }
-      }
-
-      segments.push({ start: month, len });
-    }
+function Seasonality({
+  months,
+}: {
+  months?: Array<string | number> | null;
+}) {
+  if (!months || months.length === 0) {
+    return <span>Keine Angaben</span>;
   }
 
-  return segments;
-}
-
-function endOf(segment: { start: number; len: number }) {
-  return ((segment.start + segment.len - 2) % 12) + 1;
-}
-
-function monthName(value: number) {
   return (
-    [
-      "Januar",
-      "Februar",
-      "März",
-      "April",
-      "Mai",
-      "Juni",
-      "Juli",
-      "August",
-      "September",
-      "Oktober",
-      "November",
-      "Dezember",
-    ][value - 1] ?? String(value)
-  );
-}
-
-function shortMonth(value: number) {
-  return (
-    [
-      "Jan",
-      "Feb",
-      "Mär",
-      "Apr",
-      "Mai",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Okt",
-      "Nov",
-      "Dez",
-    ][value - 1] ?? String(value)
+    <div className="flex flex-wrap gap-1">
+      {months.map((month) => (
+        <span
+          key={month}
+          className="rounded-md bg-secondary px-2 py-1 text-xs text-secondary-foreground"
+        >
+          {month}
+        </span>
+      ))}
+    </div>
   );
 }

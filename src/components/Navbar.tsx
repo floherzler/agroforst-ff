@@ -1,47 +1,48 @@
 "use client";
 
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
 import { Link } from "@tanstack/react-router";
+import { Sprout } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/Auth";
 
 export default function Navbar() {
   const { user } = useAuthStore();
+
   return (
-    <header className="sticky top-0 z-50 border-b border-permdal-200/60 bg-[#f9f5ee]/90 backdrop-blur">
-      <div className="mx-auto max-w-5xl px-4">
-        <NavigationMenu className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center py-3">
-          <NavigationMenuList className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 md:gap-4">
-            <NavigationMenuItem>
-              <Link to="/" className="flex items-center gap-2 rounded-full border border-permdal-200/70 bg-white/90 px-3 py-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:px-4 sm:py-1.5">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-permdal-100/80">
-                  <img src="/img/agroforst_ff_blume.png" className="h-7 w-7 object-contain" alt="Agroforst Logo" />
-                </span>
-                <span className="text-sm font-semibold text-earth-500 sm:text-base">Agroforst</span>
-              </Link>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link to="/marktplatz" className="rounded-full border border-permdal-200 bg-white/90 px-3 py-1 text-xs font-medium text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-50/80 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm">Marktplatz</Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link to="/blog" className="rounded-full border border-permdal-200 bg-white/90 px-3 py-1 text-xs font-medium text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-50/80 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm">Blog</Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link to={user ? "/konto" : "/login"} className="max-w-[160px] truncate rounded-full border border-permdal-300 bg-permdal-600/10 px-3 py-1 text-xs font-semibold text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-600/15 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm">{user ? "Mein Konto" : "Anmelden"}</Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-3 text-foreground no-underline"
+        >
+          <span className="flex size-10 items-center justify-center rounded-full bg-secondary text-primary">
+            <Sprout className="size-5" />
+          </span>
+          <span className="flex flex-col">
+            <span className="text-sm font-semibold">Agroforst Frank Fege</span>
+            <span className="text-xs text-muted-foreground">
+              Direktvermarktung aus Brandenburg
+            </span>
+          </span>
+        </Link>
+
+        <nav className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/marktplatz">Marktplatz</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/produkte">Produkte</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/blog">Blog</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <Link to={user ? "/konto" : "/login"}>
+              {user ? "Mein Konto" : "Anmelden"}
+            </Link>
+          </Button>
+        </nav>
       </div>
     </header>
   );

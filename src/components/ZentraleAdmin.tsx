@@ -442,7 +442,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                                         <label className="text-sm font-medium">Produkt ID</label>
                                         <Select
                                             value={angebotForm.produktId}
-                                            onValueChange={(value) => setAngebotForm((prev) => ({ ...prev, produktId: value }))}
+                                            onValueChange={(value) => setAngebotForm((prev) => ({ ...prev, produktId: value ?? "" }))}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Produkt wÃ¤hlen" />
@@ -639,7 +639,7 @@ export default function ZentraleAdmin({ initialStaffeln, initialProdukte }: { in
                                                 <label className="text-sm font-medium">Status</label>
                                                 <Select
                                                     value={paymentForm.status}
-                                                    onValueChange={(value) => setPaymentForm((prev) => ({ ...prev, status: value }))}
+                                                    onValueChange={(value) => setPaymentForm((prev) => ({ ...prev, status: value ?? prev.status }))}
                                                 >
                                                     <SelectTrigger className="bg-white">
                                                         <SelectValue />
