@@ -1,0 +1,206 @@
+# Local Function Testing
+
+This repository supports local Appwrite function testing from the project root
+with one command.
+
+## Prerequisites
+
+- Appwrite CLI installed
+- Docker available from WSL
+- root
+  [`/home/flo178/projects/agroforst-ff/.env`](/home/flo178/projects/agroforst-ff/.env)
+  filled in
+
+## Required `.env` sections
+
+Use
+[`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example)
+as the template.
+
+For Appwrite CLI automation, keep these values in the root `.env`:
+
+```env
+VITE_APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=670b925800275a11d5c1
+APPWRITE_API_KEY=your_shared_appwrite_key
+
+# [appwrite-functions]
+APPWRITE_FUNCTION_DEBUG=1
+```
+
+Those are the only shared Appwrite variables needed for the automated local
+workflow.
+
+Do not put the key into a `VITE_` variable. `VITE_` values are client-exposed
+in the frontend build. Keep the secret in `APPWRITE_API_KEY`.
+
+For `addProdukt`, you can either rely on the existing `VITE_*` IDs or keep this
+optional override block in the root `.env`:
+
+```env
+# [addProdukt]
+APPWRITE_FUNCTION_DATABASE_ID=670bac4800336c5e29b5
+APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID=670bac8900319dfcc4e4
+```
+
+Other supported optional override blocks can be copied from
+[`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example):
+
+- `# [addAngebot]`
+- `# [createMembership]`
+- `# [verifyPayment]`
+- `# [placeOrder]`
+- `# [syncAVP]`
+
+In most cases you do not need those blocks at all. The runner derives defaults
+from:
+
+- `VITE_DATABASE_ID`
+- `VITE_PRODUCE_COLLECTION_ID`
+- `VITE_STAFFEL_COLLECTION_ID`
+- `VITE_ORDER_COLLECTION_ID`
+- `VITE_MEMBERSHIP_COLLECTION_ID`
+- `VITE_PAYMENT_COLLECTION_ID`
+
+Use the function blocks only when you want to override those defaults or when a
+function needs something extra like `NEXTCLOUD_CSV_URL`.
+
+## Required scope for `addProdukt`
+
+The runtime API key for
+[`/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.ts`](/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.ts)
+needs:
+
+- `rows.write`
+
+## Other functions and minimum scopes
+
+These are the current minimum runtime scopes based on the code in the repo.
+
+- `addAngebot`: `users.read`, `documents.read`, `documents.write`
+- `createMembership`: `users.read`, `rows.read`, `rows.write`
+- `verifyPayment`: `users.read`, `documents.read`, `documents.write`
+- `placeOrder`: `users.read`, `documents.read`, `documents.write`
+- `syncAVP`: no Appwrite data scope required by the current implementation; it currently fetches the CSV and logs rows, but once it starts writing Appwrite data it will need additional write scopes
+
+If you want to keep a single shared key for CLI automation and all current
+local function tests, the practical union is:
+
+- `users.read`
+- `documents.read`
+- `documents.write`
+- `rows.read`
+- `rows.write`
+
+## One-command local run
+
+Run:
+
+```bash
+scripts/appwrite-local-dev.sh addProdukt
+```
+
+By default this:
+
+1. reads the root `.env`
+2. configures the Appwrite CLI with your endpoint, project ID, and key
+3. pulls Appwrite functions into the gitignored local workspace
+   [`/home/flo178/projects/agroforst-ff/.appwrite-local`](/home/flo178/projects/agroforst-ff/.appwrite-local)
+4. generates the runtime `functions/addProdukt/.env` file inside that local
+   workspace
+5. starts the Docker-backed Appwrite function runner on `http://localhost:8091/`
+
+Optional arguments:
+
+```bash
+scripts/appwrite-local-dev.sh <function-id> [user-id] [port]
+```
+
+Example:
+
+```bash
+scripts/appwrite-local-dev.sh addProdukt local-dev-user 8091
+```
+
+You can also use:
+
+```bash
+scripts/appwrite-local-dev.sh addAngebot
+scripts/appwrite-local-dev.sh createMembership
+scripts/appwrite-local-dev.sh verifyPayment
+scripts/appwrite-local-dev.sh placeOrder
+scripts/appwrite-local-dev.sh syncAVP
+```
+
+`placeOrder` is accepted as a local alias even though the remote Appwrite
+function currently pulls down as `createOrder`.
+
+## Quick test request
+
+After the runner starts, test the function with:
+
+```bash
+curl -i -X POST http://localhost:8091/ \
+  -H 'Content-Type: application/json' \
+  --data '{"name":"CLI test","hauptkategorie":"Gemüse"}'
+```
+
+Expected result for a valid request:
+
+- `HTTP/1.1 200 OK`
+- JSON response with `"success": true`
+
+## Suggested local test payloads
+
+`addProdukt`
+
+```bash
+curl -i -X POST http://localhost:8091/ \
+  -H 'Content-Type: application/json' \
+  --data '{"name":"CLI test","hauptkategorie":"Gemüse"}'
+```
+
+`addAngebot`
+
+```bash
+curl -i -X POST http://localhost:8091/ \
+  -H 'Content-Type: application/json' \
+  --data '{"produktID":"<produce-id>","menge":10,"einheit":"kg","euroPreis":4.5}'
+```
+
+`createMembership`
+
+```bash
+curl -i -X POST http://localhost:8091/ \
+  -H 'Content-Type: application/json' \
+  --data '{"type":"privat"}'
+```
+
+`verifyPayment`
+
+```bash
+curl -i -X POST http://localhost:8091/ \
+  -H 'Content-Type: application/json' \
+  --data '{"paymentId":"<payment-id>","membershipId":"<membership-id>","status":"bezahlt"}'
+```
+
+`placeOrder`
+
+```bash
+curl -i -X POST http://localhost:8091/ \
+  -H 'Content-Type: application/json' \
+  --data '{"angebotID":"<angebot-id>","mitgliedschaftID":"<membership-id>","menge":1}'
+```
+
+## Notes
+
+- The local Appwrite workspace in
+  [`/home/flo178/projects/agroforst-ff/.appwrite-local`](/home/flo178/projects/agroforst-ff/.appwrite-local)
+  is generated and gitignored.
+- The repo itself does not need checked-in Appwrite function metadata for local
+  testing anymore.
+- If you want to force a fresh pull before running, use:
+
+```bash
+APPWRITE_LOCAL_REFRESH=1 scripts/appwrite-local-dev.sh addProdukt
+```

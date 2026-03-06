@@ -4,9 +4,8 @@ Appwrite Cloud Function that lets admin users mark payments as verified and keep
 
 **Environment Variables (set in Appwrite function settings)**
 
-- `APPWRITE_FUNCTION_API_ENDPOINT`
-- `APPWRITE_FUNCTION_PROJECT_ID`
-- `APPWRITE_FUNCTION_KEY` (provided via gateway header)
+- `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` in root `.env`
+- `APPWRITE_API_KEY` in root `.env` for local testing
 - `APPWRITE_FUNCTION_DATABASE_ID`
 - `APPWRITE_FUNCTION_PAYMENT_COLLECTION_ID`
 - `APPWRITE_FUNCTION_MEMBERSHIP_COLLECTION_ID` (optional, required if you want to update membership docs)

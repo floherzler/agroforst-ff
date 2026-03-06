@@ -4,9 +4,8 @@ Cloud Function that lets admins create new offer documents that are shown on the
 
 **Environment variables**
 
-- `APPWRITE_FUNCTION_API_ENDPOINT`
-- `APPWRITE_FUNCTION_PROJECT_ID`
-- `APPWRITE_FUNCTION_KEY`
+- `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` in root `.env`
+- `APPWRITE_API_KEY` in root `.env` for local testing
 - `APPWRITE_FUNCTION_DATABASE_ID`
 - `APPWRITE_FUNCTION_STAFFEL_COLLECTION_ID`
 - `APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID` (optional, used for sanity checks)

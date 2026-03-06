@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# agroforst-ff
 
-## Getting Started
+Frontend and Appwrite-backed workflow for the Agroforst project.
 
-First, run the development server:
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other useful commands:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run test:e2e
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+Copy the variable names from
+[`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example)
+into your local `.env` and fill in the Appwrite project, database, bucket,
+collection, and function IDs.
 
-To learn more about Next.js, take a look at the following resources:
+The app reads these values from
+[`/home/flo178/projects/agroforst-ff/src/app/env.ts`](/home/flo178/projects/agroforst-ff/src/app/env.ts).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Appwrite
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The Appwrite project is linked through
+[`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json).
 
-## Deploy on Vercel
+For the CLI workflow, schema management, buckets, and the current reset
+recommendations, use
+[`/home/flo178/projects/agroforst-ff/APPWRITE_CLI.md`](/home/flo178/projects/agroforst-ff/APPWRITE_CLI.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Short version:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- buckets can be managed from the CLI
+- database schema can be managed from the CLI
+- a full clean rebuild is possible, but this repo currently mixes Appwrite
+  legacy collections/documents and newer tables/rows APIs, so that should be
+  standardized before a full reset
+
+## Local Function Testing
+
+Put your dev-only local function settings into
+[`/home/flo178/projects/agroforst-ff/.env`](/home/flo178/projects/agroforst-ff/.env),
+using the function sections from
+[`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example).
+
+For `addProdukt`, the API key there should have `rows.write` scope.
+
+The full local testing guide is here:
+[`/home/flo178/projects/agroforst-ff/LOCAL_FUNCTION_TESTING.md`](/home/flo178/projects/agroforst-ff/LOCAL_FUNCTION_TESTING.md).
+
+Then run:
+
+```bash
+scripts/appwrite-local-dev.sh addProdukt
+```
+
+The same guide also covers `addAngebot`, `createMembership`, `verifyPayment`,
+`placeOrder`, and `syncAVP`.
