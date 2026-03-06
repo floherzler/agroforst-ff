@@ -2,12 +2,14 @@
 
 Appwrite Cloud Function for admins to insert or update produce catalog entries that power the `marketing` and `zentrale` pages.
 
+Canonical IDs now come from [`/home/flo178/projects/agroforst-ff/appwrite/resources.json`](/home/flo178/projects/agroforst-ff/appwrite/resources.json).
+
 **Required environment variables**
 
 - `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` in root `.env`
 - `APPWRITE_API_KEY` in root `.env` for local testing
-- `APPWRITE_FUNCTION_DATABASE_ID`
-- `APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID`
+- `APPWRITE_DATABASE_ID`
+- `APPWRITE_TABLE_PRODUCTS_ID`
 - `APPWRITE_FUNCTION_DEBUG` (optional)
 
 **Payload**
@@ -16,15 +18,14 @@ Appwrite Cloud Function for admins to insert or update produce catalog entries t
 {
   "id": "optional-document-id",
   "name": "Tomate",
-  "sorte": "San Marzano",
-  "hauptkategorie": "Gemüse",
-  "unterkategorie": "Fruchtgemüse",
-  "lebensdauer": "einjährig",
-  "fruchtfolge_vor": ["Kohl"],
-  "fruchtfolge_nach": ["Salat"],
-  "bodenansprueche": ["Löss"],
-  "begleitpflanzen": ["Basilikum"],
-  "meta": { "mengenEinheit": "st" }
+  "variety": "San Marzano",
+  "category": "gemuese",
+  "subcategory": "fruchtgemuese",
+  "lifespan": "einjaehrig",
+  "crop_rotation_before": ["Kohl"],
+  "crop_rotation_after": ["Salat"],
+  "soil_requirements": ["Loess"],
+  "companion_plants": ["Basilikum"]
 }
 ```
 

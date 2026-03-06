@@ -1,0 +1,385 @@
+{
+  "database": {
+    "id": "agroforst",
+    "name": "Agroforst FF"
+  },
+  "bucket": {
+    "id": "product_images",
+    "name": "Product Images",
+    "permissions": [
+      "read(\"any\")",
+      "create(\"label:admin\")",
+      "update(\"label:admin\")",
+      "delete(\"label:admin\")"
+    ],
+    "fileSecurity": true,
+    "enabled": true,
+    "maximumFileSize": 20000000,
+    "allowedFileExtensions": [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp",
+      "avif"
+    ],
+    "compression": "gzip",
+    "encryption": true,
+    "antivirus": true,
+    "transformations": true
+  },
+  "tables": {
+    "products": {
+      "id": "products",
+      "name": "Products",
+      "rowSecurity": false,
+      "permissions": [
+        "read(\"any\")",
+        "create(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "name", "type": "string", "size": 255, "required": true },
+        { "key": "variety", "type": "string", "size": 255, "required": false, "default": "" },
+        { "key": "category", "type": "string", "size": 100, "required": true },
+        { "key": "subcategory", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "lifespan", "type": "string", "size": 100, "required": false, "default": "" },
+        { "key": "crop_rotation_before", "type": "string", "size": 120, "required": false, "array": true },
+        { "key": "crop_rotation_after", "type": "string", "size": 120, "required": false, "array": true },
+        { "key": "soil_requirements", "type": "string", "size": 120, "required": false, "array": true },
+        { "key": "companion_plants", "type": "string", "size": 120, "required": false, "array": true },
+        { "key": "seasonality_months", "type": "integer", "required": false, "array": true, "min": 1, "max": 12 },
+        { "key": "image_file_id", "type": "string", "size": 36, "required": false },
+        { "key": "notes", "type": "text", "required": false }
+      ],
+      "indexes": [
+        { "key": "prod_name_ft", "type": "fulltext", "columns": ["name"] },
+        { "key": "prod_category_key", "type": "key", "columns": ["category"] }
+      ]
+    },
+    "offers": {
+      "id": "offers",
+      "name": "Offers",
+      "rowSecurity": false,
+      "permissions": [
+        "read(\"any\")",
+        "create(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "product_id", "type": "string", "size": 36, "required": true },
+        { "key": "year", "type": "integer", "required": false, "min": 2000, "max": 2100 },
+        { "key": "sowing_date", "type": "datetime", "required": false },
+        { "key": "harvest_projection", "type": "datetime", "required": false, "array": true },
+        { "key": "projected_quantity", "type": "float", "required": false, "min": 0 },
+        { "key": "available_quantity", "type": "float", "required": true, "min": 0 },
+        { "key": "allocated_quantity", "type": "float", "required": false, "default": 0, "min": 0 },
+        {
+          "key": "unit",
+          "type": "enum",
+          "required": true,
+          "elements": ["piece", "gram", "bundle", "liter"]
+        },
+        { "key": "unit_price_eur", "type": "float", "required": true, "min": 0 },
+        { "key": "producer_price_eur", "type": "float", "required": false, "min": 0 },
+        { "key": "standard_price_eur", "type": "float", "required": false, "min": 0 },
+        { "key": "member_price_eur", "type": "float", "required": false, "min": 0 },
+        { "key": "expected_revenue_eur", "type": "float", "required": false, "min": 0 },
+        { "key": "pickup_at", "type": "datetime", "required": false },
+        { "key": "description", "type": "text", "required": false },
+        { "key": "created_by_user_id", "type": "string", "size": 36, "required": false },
+        { "key": "updated_by_user_id", "type": "string", "size": 36, "required": false }
+      ],
+      "indexes": [
+        { "key": "offer_product_key", "type": "key", "columns": ["product_id"] },
+        { "key": "offer_year_key", "type": "key", "columns": ["year"] }
+      ]
+    },
+    "memberships": {
+      "id": "memberships",
+      "name": "Memberships",
+      "rowSecurity": true,
+      "permissions": [
+        "read(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "membership_number", "type": "string", "size": 32, "required": false },
+        { "key": "user_id", "type": "string", "size": 36, "required": true },
+        {
+          "key": "membership_type",
+          "type": "enum",
+          "required": true,
+          "elements": ["private", "business"]
+        },
+        { "key": "duration_years", "type": "integer", "required": false, "min": 1, "max": 10 },
+        { "key": "requested_at", "type": "datetime", "required": true },
+        {
+          "key": "status",
+          "type": "enum",
+          "required": true,
+          "elements": ["pending", "active", "expired", "cancelled"]
+        },
+        { "key": "cancel_reason", "type": "text", "required": false },
+        {
+          "key": "payment_status",
+          "type": "enum",
+          "required": true,
+          "elements": ["pending", "partial", "paid"]
+        },
+        { "key": "paid_at", "type": "datetime", "required": false },
+        { "key": "starts_at", "type": "datetime", "required": false },
+        { "key": "ends_at", "type": "datetime", "required": false },
+        { "key": "last_reminder_at", "type": "datetime", "required": false },
+        { "key": "credit_start_eur", "type": "float", "required": false, "min": 0 },
+        { "key": "credit_balance_eur", "type": "float", "required": false, "min": 0 },
+        { "key": "billing_address", "type": "text", "required": false },
+        { "key": "last_payment_id", "type": "string", "size": 36, "required": false },
+        { "key": "last_payment_at", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "mem_user_key", "type": "key", "columns": ["user_id"] },
+        { "key": "mem_number_unique", "type": "unique", "columns": ["membership_number"] }
+      ]
+    },
+    "membership_payments": {
+      "id": "membership_payments",
+      "name": "Membership Payments",
+      "rowSecurity": true,
+      "permissions": [
+        "read(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "membership_id", "type": "string", "size": 36, "required": true },
+        {
+          "key": "payment_type",
+          "type": "enum",
+          "required": true,
+          "elements": ["membership", "order", "other"]
+        },
+        {
+          "key": "customer_type",
+          "type": "enum",
+          "required": false,
+          "elements": ["private", "business"]
+        },
+        { "key": "amount_eur", "type": "float", "required": true, "min": 0 },
+        {
+          "key": "status",
+          "type": "enum",
+          "required": true,
+          "elements": ["open", "pending", "paid", "failed", "cancelled"]
+        },
+        { "key": "reference", "type": "string", "size": 64, "required": false },
+        { "key": "note", "type": "text", "required": false },
+        { "key": "verified_at", "type": "datetime", "required": false },
+        { "key": "due_at", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "pay_membership_key", "type": "key", "columns": ["membership_id"] },
+        { "key": "pay_ref_unique", "type": "unique", "columns": ["reference"] }
+      ]
+    },
+    "orders": {
+      "id": "orders",
+      "name": "Orders",
+      "rowSecurity": true,
+      "permissions": [
+        "read(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "user_id", "type": "string", "size": 36, "required": true },
+        { "key": "user_email", "type": "string", "size": 255, "required": false },
+        { "key": "membership_id", "type": "string", "size": 36, "required": false },
+        { "key": "offer_id", "type": "string", "size": 36, "required": true },
+        { "key": "quantity", "type": "float", "required": true, "min": 0 },
+        {
+          "key": "unit",
+          "type": "enum",
+          "required": true,
+          "elements": ["piece", "gram", "bundle", "liter"]
+        },
+        { "key": "unit_price_eur", "type": "float", "required": true, "min": 0 },
+        { "key": "total_price_eur", "type": "float", "required": true, "min": 0 },
+        { "key": "pickup_at", "type": "datetime", "required": false },
+        { "key": "product_name", "type": "string", "size": 255, "required": true },
+        {
+          "key": "status",
+          "type": "enum",
+          "required": true,
+          "elements": ["requested", "confirmed", "fulfilled", "cancelled"]
+        }
+      ],
+      "indexes": [
+        { "key": "order_user_key", "type": "key", "columns": ["user_id"] },
+        { "key": "order_offer_key", "type": "key", "columns": ["offer_id"] },
+        { "key": "order_member_key", "type": "key", "columns": ["membership_id"] }
+      ]
+    },
+    "blog_posts": {
+      "id": "blog_posts",
+      "name": "Blog Posts",
+      "rowSecurity": false,
+      "permissions": [
+        "read(\"any\")",
+        "create(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "title", "type": "string", "size": 255, "required": true },
+        { "key": "summary", "type": "text", "required": false },
+        { "key": "content", "type": "text", "required": true },
+        { "key": "tags", "type": "string", "size": 80, "required": false, "array": true },
+        { "key": "author_name", "type": "string", "size": 255, "required": false },
+        { "key": "published_at", "type": "datetime", "required": false },
+        { "key": "updated_at", "type": "datetime", "required": false }
+      ],
+      "indexes": [
+        { "key": "blog_published_key", "type": "key", "columns": ["published_at"] },
+        { "key": "blog_title_ft", "type": "fulltext", "columns": ["title"] }
+      ]
+    },
+    "customer_messages": {
+      "id": "customer_messages",
+      "name": "Customer Messages",
+      "rowSecurity": true,
+      "permissions": [
+        "create(\"users\")",
+        "read(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "user_id", "type": "string", "size": 36, "required": true },
+        {
+          "key": "message_type",
+          "type": "enum",
+          "required": true,
+          "elements": ["feedback", "newsletter_request", "grow_request"]
+        },
+        { "key": "message", "type": "text", "required": true },
+        {
+          "key": "status",
+          "type": "enum",
+          "required": true,
+          "elements": ["new", "done"]
+        }
+      ],
+      "indexes": [
+        { "key": "msg_user_key", "type": "key", "columns": ["user_id"] },
+        { "key": "msg_type_key", "type": "key", "columns": ["message_type"] }
+      ]
+    },
+    "backoffice_events": {
+      "id": "backoffice_events",
+      "name": "Backoffice Events",
+      "rowSecurity": true,
+      "permissions": [
+        "read(\"label:admin\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")"
+      ],
+      "columns": [
+        { "key": "event_type", "type": "string", "size": 80, "required": true },
+        { "key": "order_id", "type": "string", "size": 36, "required": false },
+        { "key": "offer_id", "type": "string", "size": 36, "required": false },
+        { "key": "user_id", "type": "string", "size": 36, "required": false },
+        { "key": "user_email", "type": "string", "size": 255, "required": false },
+        { "key": "subject", "type": "string", "size": 255, "required": false },
+        { "key": "message", "type": "text", "required": true },
+        { "key": "delivered", "type": "boolean", "required": true, "default": false },
+        { "key": "created_at", "type": "datetime", "required": true }
+      ],
+      "indexes": [
+        { "key": "evt_type_key", "type": "key", "columns": ["event_type"] },
+        { "key": "evt_order_key", "type": "key", "columns": ["order_id"] }
+      ]
+    }
+  },
+  "functions": {
+    "addProdukt": {
+      "id": "addProdukt"
+    },
+    "addAngebot": {
+      "id": "addAngebot"
+    },
+    "createMembership": {
+      "id": "createMembership"
+    },
+    "createOrder": {
+      "id": "createOrder"
+    },
+    "verifyPayment": {
+      "id": "verifyPayment"
+    }
+  },
+  "seedData": {
+    "demo": {
+      "products": [
+        {
+          "$id": "apple_topaz",
+          "name": "Apple",
+          "variety": "Topaz",
+          "category": "fruit",
+          "subcategory": "pome_fruit",
+          "lifespan": "perennial",
+          "seasonality_months": [9, 10, 11],
+          "notes": "Demo product created by the Appwrite seed script."
+        },
+        {
+          "$id": "tomato_sungold",
+          "name": "Tomato",
+          "variety": "Sungold",
+          "category": "vegetable",
+          "subcategory": "nightshade",
+          "lifespan": "annual",
+          "seasonality_months": [7, 8, 9],
+          "notes": "Demo product created by the Appwrite seed script."
+        }
+      ],
+      "offers": [
+        {
+          "$id": "offer_apple_topaz_2026",
+          "product_id": "apple_topaz",
+          "year": 2026,
+          "projected_quantity": 120000,
+          "available_quantity": 120000,
+          "allocated_quantity": 0,
+          "unit": "gram",
+          "unit_price_eur": 4.2,
+          "description": "Demo offer for seeded catalog data."
+        },
+        {
+          "$id": "offer_tomato_sungold_2026",
+          "product_id": "tomato_sungold",
+          "year": 2026,
+          "projected_quantity": 60000,
+          "available_quantity": 60000,
+          "allocated_quantity": 0,
+          "unit": "gram",
+          "unit_price_eur": 6.5,
+          "description": "Demo offer for seeded catalog data."
+        }
+      ],
+      "blog_posts": [
+        {
+          "$id": "welcome_2026",
+          "title": "Willkommen im Agroforst",
+          "summary": "Der Seed legt einen Beispielbeitrag an, damit die Blog-Ansicht nicht leer startet.",
+          "content": "Dies ist ein Demo-Beitrag. Er kann nach dem ersten erfolgreichen Seed jederzeit ersetzt oder geloescht werden.",
+          "tags": ["demo", "setup"],
+          "author_name": "Agroforst FF",
+          "published_at": "2026-03-01T09:00:00.000Z",
+          "updated_at": "2026-03-01T09:00:00.000Z"
+        }
+      ]
+    }
+  }
+}

@@ -7,7 +7,10 @@
     "dev": "vite dev",
     "build": "vite build",
     "serve": "vite preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "appwrite:seed": "node scripts/appwrite-seed.mjs",
+    "appwrite:seed:demo": "node scripts/appwrite-seed.mjs --with-demo-data",
+    "appwrite:reset": "node scripts/appwrite-seed.mjs --reset"
   },
   "dependencies": {
     "@hookform/devtools": "^4.4.0",

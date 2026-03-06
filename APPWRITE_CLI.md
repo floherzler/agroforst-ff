@@ -1,5 +1,14 @@
 # Appwrite CLI
 
+> Note:
+> This document predates the repo-controlled schema reset. The canonical
+> Appwrite IDs and schema now live in
+> [`/home/flo178/projects/agroforst-ff/appwrite/resources.json`](/home/flo178/projects/agroforst-ff/appwrite/resources.json),
+> and the supported bootstrap workflow is
+> [`npm run appwrite:seed`](/home/flo178/projects/agroforst-ff/package.json)
+> via
+> [`/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs).
+
 This document covers the Appwrite CLI workflow for this repository, with a
 focus on reducing Appwrite Cloud UI work for a solo developer.
 

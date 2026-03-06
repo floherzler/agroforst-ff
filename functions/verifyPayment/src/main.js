@@ -1,4 +1,8 @@
-import { Client, Databases, Users } from "node-appwrite";
+import { Client, TablesDB, Users } from "node-appwrite";
+
+const DEFAULT_DATABASE_ID = "agroforst";
+const DEFAULT_MEMBERSHIPS_TABLE_ID = "memberships";
+const DEFAULT_PAYMENTS_TABLE_ID = "membership_payments";
 
 function ok(res, data, status = 200) {
     return res.json(data, status);
@@ -50,8 +54,7 @@ async function extractBody(req) {
         // ignore
     }
 
-    const candidates = [req?.bodyJson, req?.bodyText, req?.bodyRaw, req?.payload];
-    for (const candidate of candidates) {
+    for (const candidate of [req?.bodyJson, req?.bodyText, req?.bodyRaw, req?.payload]) {
         const parsed = tryParse(candidate);
         if (parsed && typeof parsed === "object") {
             return parsed;
@@ -61,9 +64,33 @@ async function extractBody(req) {
     return {};
 }
 
-function normalizeStatus(status) {
-    const raw = typeof status === "string" ? status.trim().toLowerCase() : "";
-    return raw || "bezahlt";
+function normalizePaymentStatus(status) {
+    const raw = String(status ?? "").trim().toLowerCase();
+    switch (raw) {
+        case "bezahlt":
+            return "paid";
+        case "warten":
+            return "pending";
+        case "teilbezahlt":
+            return "partial";
+        case "offen":
+            return "open";
+        case "storniert":
+            return "cancelled";
+        default:
+            return raw || "paid";
+    }
+}
+
+function paymentStatusToMembershipStatus(status) {
+    switch (status) {
+        case "paid":
+            return "paid";
+        case "partial":
+            return "partial";
+        default:
+            return "pending";
+    }
 }
 
 async function ensureAdmin(users, callerId) {
@@ -76,48 +103,55 @@ async function ensureAdmin(users, callerId) {
     return caller;
 }
 
+function compactObject(value) {
+    return Object.fromEntries(
+        Object.entries(value).filter(([, entry]) => entry !== undefined)
+    );
+}
+
 export default async ({ req, res, log, error }) => {
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
-        log(`[verifyPayment] Received execution. Caller present: ${Boolean(callerId)}`);
         if (!callerId) {
             return fail(res, "Unauthenticated: missing x-appwrite-user-id header", 401);
         }
 
         const body = await extractBody(req);
-        const paymentId = String(body.paymentId ?? body.payment_id ?? "").trim();
-        const membershipId = String(body.membershipId ?? body.membership_id ?? "").trim() || undefined;
+        const paymentId = String(body.payment_id ?? body.paymentId ?? "").trim();
+        const membershipId = String(body.membership_id ?? body.membershipId ?? "").trim() || undefined;
         const note = typeof body.note === "string" ? body.note : undefined;
         const force = Boolean(body.force);
-        const status = normalizeStatus(body.status);
+        const status = normalizePaymentStatus(body.status);
 
         if (!paymentId) {
-            return fail(res, "Missing paymentId", 400);
+            return fail(res, "Missing payment_id", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
         const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
-        const apiKey = readEnv("APPWRITE_FUNCTION_API_KEY", "APPWRITE_API_KEY") || readHeader(req, "x-appwrite-key");
-        const dbId = readEnv("APPWRITE_FUNCTION_DATABASE_ID");
-        const paymentsCollection = readEnv("APPWRITE_FUNCTION_PAYMENT_COLLECTION_ID");
-        const membershipCollection = readEnv("APPWRITE_FUNCTION_MEMBERSHIP_COLLECTION_ID");
+        const apiKey =
+            readEnv("APPWRITE_FUNCTION_API_KEY", "APPWRITE_API_KEY") || readHeader(req, "x-appwrite-key");
+        const databaseId = readEnv("APPWRITE_DATABASE_ID") || DEFAULT_DATABASE_ID;
+        const paymentsTableId = readEnv("APPWRITE_TABLE_PAYMENTS_ID") || DEFAULT_PAYMENTS_TABLE_ID;
+        const membershipsTableId =
+            readEnv("APPWRITE_TABLE_MEMBERSHIPS_ID") || DEFAULT_MEMBERSHIPS_TABLE_ID;
 
         if (!endpoint || !projectId || !apiKey) {
             return fail(res, "Function endpoint, project ID, or API key is not configured", 500);
         }
-        if (!dbId || !paymentsCollection) {
-            return fail(res, "Payment collection or database is not configured", 500);
-        }
 
         const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
         const users = new Users(client);
-        const databases = new Databases(client);
+        const tables = new TablesDB(client);
 
         const caller = await ensureAdmin(users, callerId);
-        log(`[verifyPayment] Caller ${caller.$id} validated as admin (${caller.email ?? "n/a"})`);
+        log(`[verifyPayment] Caller ${caller.$id} validated as admin`);
 
-        const nowIso = new Date().toISOString();
-        const existing = await databases.getDocument(dbId, paymentsCollection, paymentId);
+        const existing = await tables.getRow({
+            databaseId,
+            tableId: paymentsTableId,
+            rowId: paymentId,
+        });
         const existingStatus = String(existing?.status ?? "").toLowerCase();
         if (existingStatus === status && !force) {
             return ok(res, {
@@ -127,29 +161,55 @@ export default async ({ req, res, log, error }) => {
             });
         }
 
-        let updatedPayment;
-        try {
-            updatedPayment = await databases.updateDocument(dbId, paymentsCollection, paymentId, {
+        const nowIso = new Date().toISOString();
+        const updatedPayment = await tables.updateRow({
+            databaseId,
+            tableId: paymentsTableId,
+            rowId: paymentId,
+            data: compactObject({
                 status,
-                verifiedAt: nowIso,
-                ...(note ? { note } : {}),
-            });
-            log(`[verifyPayment] Updated payment ${paymentId} -> ${status}`);
-        } catch (appwriteError) {
-            error(`[verifyPayment] Failed updating payment: ${appwriteError?.message ?? appwriteError}`);
-            return fail(res, "Failed to update payment", 500);
-        }
+                verified_at: nowIso,
+                note,
+            }),
+        });
 
-        if (membershipId && membershipCollection) {
+        const targetMembershipId = membershipId || String(existing.membership_id ?? "").trim() || undefined;
+        if (targetMembershipId) {
             try {
-                await databases.updateDocument(dbId, membershipCollection, membershipId, {
-                    bezahl_status: status,
-                    letzte_zahlung_id: paymentId,
-                    letzte_zahlung_zeit: nowIso,
+                const membership = await tables.getRow({
+                    databaseId,
+                    tableId: membershipsTableId,
+                    rowId: targetMembershipId,
                 });
-                log(`[verifyPayment] Updated membership ${membershipId} status=${status}`);
-            } catch (appwriteError) {
-                log(`[verifyPayment] Warning: membership update failed: ${appwriteError?.message ?? appwriteError}`);
+
+                const durationYears = Number(membership.duration_years ?? 1) || 1;
+                const startsAt = membership.starts_at ?? nowIso;
+                const endsAt = (() => {
+                    const end = new Date(startsAt);
+                    end.setFullYear(end.getFullYear() + durationYears);
+                    return end.toISOString();
+                })();
+
+                await tables.updateRow({
+                    databaseId,
+                    tableId: membershipsTableId,
+                    rowId: targetMembershipId,
+                    data: compactObject({
+                        payment_status: paymentStatusToMembershipStatus(status),
+                        last_payment_id: paymentId,
+                        last_payment_at: nowIso,
+                        ...(status === "paid"
+                            ? {
+                                  status: "active",
+                                  paid_at: nowIso,
+                                  starts_at: startsAt,
+                                  ends_at: endsAt,
+                              }
+                            : {}),
+                    }),
+                });
+            } catch (membershipError) {
+                log(`[verifyPayment] Membership update failed: ${membershipError?.message ?? membershipError}`);
             }
         }
 
@@ -160,7 +220,7 @@ export default async ({ req, res, log, error }) => {
         });
     } catch (caughtError) {
         const msg = String(caughtError?.message ?? caughtError ?? "Unknown error");
-        error(`[verifyPayment] Uncaught error: ${msg}`);
+        error(`[verifyPayment] ${msg}`);
         return fail(res, "Internal error", 500, { details: msg });
     }
 };

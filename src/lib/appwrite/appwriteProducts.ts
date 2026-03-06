@@ -17,37 +17,60 @@ import {
 
 const productDocumentSchema = appwriteDocumentMetaSchema.extend({
   name: z.string().min(1),
+  variety: z.string().optional().default(""),
   sorte: z.string().optional().default(""),
+  category: z.string().optional().default("other"),
   hauptkategorie: z.string().optional().default("Sonstiges"),
+  subcategory: z.string().optional().default(""),
   unterkategorie: z.string().optional().default(""),
+  lifespan: z.string().optional().default(""),
   lebensdauer: z.string().optional().default(""),
+  crop_rotation_before: z.unknown().optional(),
   fruchtfolge_vor: z.unknown().optional(),
+  crop_rotation_after: z.unknown().optional(),
   fruchtfolge_nach: z.unknown().optional(),
+  soil_requirements: z.unknown().optional(),
   bodenansprueche: z.unknown().optional(),
+  companion_plants: z.unknown().optional(),
   begleitpflanzen: z.unknown().optional(),
+  seasonality_months: z.unknown().optional(),
   saisonalitaet: z.unknown().optional(),
+  image_file_id: z.string().optional(),
   imageID: z.string().optional(),
 });
 
 const offerDocumentSchema = appwriteDocumentMetaSchema.extend({
-  produktID: z.string().min(1),
+  product_id: z.string().optional().default(""),
+  produktID: z.string().optional().default(""),
+  available_quantity: z.unknown().optional(),
   mengeVerfuegbar: z.unknown().optional(),
+  unit: z.string().optional().default(""),
   einheit: z.string().optional().default(""),
+  projected_quantity: z.unknown().optional(),
   menge: z.unknown().optional(),
+  unit_price_eur: z.unknown().optional(),
   euroPreis: z.unknown().optional(),
+  sowing_date: z.string().optional().default(""),
   saatPflanzDatum: z.string().optional().default(""),
+  harvest_projection: z.unknown().optional(),
   ernteProjektion: z.unknown().optional(),
+  allocated_quantity: z.unknown().optional(),
   mengeAbgeholt: z.unknown().optional(),
   beschreibung: z.string().optional(),
+  description: z.string().optional(),
 });
 
 const blogPostDocumentSchema = appwriteDocumentMetaSchema.extend({
   title: z.string().min(1),
+  summary: z.string().optional().default(""),
   description: z.string().optional().default(""),
   content: z.string().optional().default(""),
   tags: z.unknown().optional(),
+  author_name: z.string().optional().default(""),
   writtenBy: z.string().optional().default(""),
+  published_at: z.string().optional().default(""),
   writtenAt: z.string().optional().default(""),
+  updated_at: z.string().optional().default(""),
   updatedAt: z.string().optional().default(""),
 });
 
@@ -79,11 +102,34 @@ export type ProduktMitAngeboten = {
   angebote: Staffel[];
 };
 
+function normalizeUnit(value: string): string {
+  switch (value.trim().toLowerCase()) {
+    case "piece":
+      return "Stück";
+    case "gram":
+      return "Gramm";
+    case "bundle":
+      return "Bund";
+    case "kilogram":
+      return "kg";
+    case "liter":
+      return "Liter";
+    default:
+      return value;
+  }
+}
+
 export function normalizeProdukt(raw: unknown): Produkt {
   const parsed = productDocumentSchema.parse(raw);
   const seasonalitaet = Array.from(
     new Set(
-      (Array.isArray(parsed.saisonalitaet) ? parsed.saisonalitaet : [])
+      (
+        Array.isArray(parsed.seasonality_months)
+          ? parsed.seasonality_months
+          : Array.isArray(parsed.saisonalitaet)
+            ? parsed.saisonalitaet
+            : []
+      )
         .map((entry) => parseNumber(entry, Number.NaN))
         .filter((entry) => Number.isFinite(entry) && entry >= 1 && entry <= 12),
     ),
@@ -93,16 +139,24 @@ export function normalizeProdukt(raw: unknown): Produkt {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
     name: parsed.name,
-    sorte: parsed.sorte || "",
-    hauptkategorie: parsed.hauptkategorie || "Sonstiges",
-    unterkategorie: parsed.unterkategorie || "",
-    lebensdauer: parsed.lebensdauer || "",
-    fruchtfolgeVor: parseStringArray(parsed.fruchtfolge_vor),
-    fruchtfolgeNach: parseStringArray(parsed.fruchtfolge_nach),
-    bodenansprueche: parseStringArray(parsed.bodenansprueche),
-    begleitpflanzen: parseStringArray(parsed.begleitpflanzen),
+    sorte: parsed.variety || parsed.sorte || "",
+    hauptkategorie: parsed.category || parsed.hauptkategorie || "Sonstiges",
+    unterkategorie: parsed.subcategory || parsed.unterkategorie || "",
+    lebensdauer: parsed.lifespan || parsed.lebensdauer || "",
+    fruchtfolgeVor: parseStringArray(
+      parsed.crop_rotation_before ?? parsed.fruchtfolge_vor,
+    ),
+    fruchtfolgeNach: parseStringArray(
+      parsed.crop_rotation_after ?? parsed.fruchtfolge_nach,
+    ),
+    bodenansprueche: parseStringArray(
+      parsed.soil_requirements ?? parsed.bodenansprueche,
+    ),
+    begleitpflanzen: parseStringArray(
+      parsed.companion_plants ?? parsed.begleitpflanzen,
+    ),
     saisonalitaet: seasonalitaet,
-    imageId: parseOptionalString(parsed.imageID),
+    imageId: parseOptionalString(parsed.image_file_id ?? parsed.imageID),
   };
 }
 
@@ -111,15 +165,21 @@ export function normalizeStaffel(raw: unknown): Staffel {
   return {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
-    produktId: parsed.produktID,
-    mengeVerfuegbar: parseNumber(parsed.mengeVerfuegbar),
-    einheit: parsed.einheit || "",
-    menge: parseNumber(parsed.menge),
-    euroPreis: parseNumber(parsed.euroPreis),
-    saatPflanzDatum: parsed.saatPflanzDatum || "",
-    ernteProjektion: parseStringArray(parsed.ernteProjektion),
-    mengeAbgeholt: parseNumber(parsed.mengeAbgeholt),
-    beschreibung: parseOptionalString(parsed.beschreibung),
+    produktId: parsed.product_id || parsed.produktID,
+    mengeVerfuegbar: parseNumber(
+      parsed.available_quantity ?? parsed.mengeVerfuegbar,
+    ),
+    einheit: normalizeUnit(parsed.unit || parsed.einheit || ""),
+    menge: parseNumber(parsed.projected_quantity ?? parsed.menge),
+    euroPreis: parseNumber(parsed.unit_price_eur ?? parsed.euroPreis),
+    saatPflanzDatum: parsed.sowing_date || parsed.saatPflanzDatum || "",
+    ernteProjektion: parseStringArray(
+      parsed.harvest_projection ?? parsed.ernteProjektion,
+    ),
+    mengeAbgeholt: parseNumber(
+      parsed.allocated_quantity ?? parsed.mengeAbgeholt,
+    ),
+    beschreibung: parseOptionalString(parsed.description ?? parsed.beschreibung),
   };
 }
 
@@ -129,12 +189,12 @@ export function normalizeBlogPost(raw: unknown): BlogPost {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
     title: parsed.title,
-    description: parsed.description || "",
+    description: parsed.summary || parsed.description || "",
     content: parsed.content || "",
     tags: parseStringArray(parsed.tags),
-    writtenBy: parsed.writtenBy || "",
-    writtenAt: parsed.writtenAt || parsed.$createdAt,
-    updatedAt: parsed.updatedAt || parsed.$createdAt,
+    writtenBy: parsed.author_name || parsed.writtenBy || "",
+    writtenAt: parsed.published_at || parsed.writtenAt || parsed.$createdAt,
+    updatedAt: parsed.updated_at || parsed.updatedAt || parsed.$createdAt,
   };
 }
 
@@ -149,7 +209,7 @@ export async function listProdukte(
   const queries = [Query.limit(parsedInput.limit ?? 200)];
 
   if (parsedInput.hauptkategorie) {
-    queries.push(Query.equal("hauptkategorie", parsedInput.hauptkategorie));
+    queries.push(Query.equal("category", parsedInput.hauptkategorie));
   }
 
   if (parsedInput.search) {
@@ -191,11 +251,11 @@ export async function listStaffeln(
   ];
 
   if (parsedInput.produktId) {
-    queries.push(Query.equal("produktID", parsedInput.produktId));
+    queries.push(Query.equal("product_id", parsedInput.produktId));
   }
 
   if (parsedInput.produktIds && parsedInput.produktIds.length > 0) {
-    queries.push(Query.equal("produktID", parsedInput.produktIds));
+    queries.push(Query.equal("product_id", parsedInput.produktIds));
   }
 
   const response = await databases.listDocuments(
@@ -262,8 +322,10 @@ export async function submitFeedbackMessage(input: {
     ),
     ID.unique(),
     {
-      text: parsedInput.text,
-      userID: parsedInput.userId,
+      user_id: parsedInput.userId,
+      message_type: "feedback",
+      message: parsedInput.text,
+      status: "new",
     },
   );
 }

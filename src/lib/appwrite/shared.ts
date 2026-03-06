@@ -2,36 +2,25 @@ import { Account, Client, Databases, Functions, Storage } from "appwrite";
 import { z } from "zod";
 
 import env from "@/app/env";
+import resources from "../../../appwrite/resources.json";
 
 export const appwriteConfig = {
   endpoint: String(env.appwrite.endpoint ?? "").trim(),
   projectId: String(env.appwrite.project_id ?? "").trim(),
-  databaseId: String(env.appwrite.db ?? "").trim(),
-  storageId: String(env.appwrite.storage ?? "").trim(),
-  productCollectionId: String(env.appwrite.produce_collection_id ?? "").trim(),
-  offerCollectionId: String(env.appwrite.angebote_collection_id ?? "").trim(),
-  orderCollectionId: String(env.appwrite.order_collection_id ?? "").trim(),
-  postCollectionId: String(env.appwrite.post_collection_id ?? "").trim(),
-  membershipCollectionId: String(
-    env.appwrite.membership_collection_id ?? "",
-  ).trim(),
-  paymentCollectionId: String(env.appwrite.payment_collection_id ?? "").trim(),
-  feedbackCollectionId: String(
-    env.appwrite.nachrichten_collection_id ?? "",
-  ).trim(),
-  orderFunctionId: String(env.appwrite.order_function_id ?? "").trim(),
-  membershipFunctionId: String(
-    env.appwrite.membership_function_id ?? "",
-  ).trim(),
-  paymentVerifyFunctionId: String(
-    env.appwrite.payment_verify_function_id ?? "",
-  ).trim(),
-  addProduktFunctionId: String(
-    env.appwrite.add_produkt_function_id ?? "",
-  ).trim(),
-  addAngebotFunctionId: String(
-    env.appwrite.add_angebot_function_id ?? "",
-  ).trim(),
+  databaseId: resources.database.id,
+  storageId: resources.bucket.id,
+  productCollectionId: resources.tables.products.id,
+  offerCollectionId: resources.tables.offers.id,
+  orderCollectionId: resources.tables.orders.id,
+  postCollectionId: resources.tables.blog_posts.id,
+  membershipCollectionId: resources.tables.memberships.id,
+  paymentCollectionId: resources.tables.membership_payments.id,
+  feedbackCollectionId: resources.tables.customer_messages.id,
+  orderFunctionId: resources.functions.createOrder.id,
+  membershipFunctionId: resources.functions.createMembership.id,
+  paymentVerifyFunctionId: resources.functions.verifyPayment.id,
+  addProduktFunctionId: resources.functions.addProdukt.id,
+  addAngebotFunctionId: resources.functions.addAngebot.id,
 };
 
 export const appwriteDocumentMetaSchema = z.object({

@@ -112,9 +112,9 @@ export async function placeOrderRequest(input: {
   const parsedInput = placeOrderInputSchema.parse(input);
 
   await executeValidatedFunction<void>(appwriteConfig.orderFunctionId, {
-    angebotID: parsedInput.angebotId,
-    menge: parsedInput.menge,
-    user_mail: parsedInput.userMail,
+    offer_id: parsedInput.angebotId,
+    quantity: parsedInput.menge,
+    user_email: parsedInput.userMail,
   });
 }
 
@@ -124,7 +124,10 @@ export async function requestMembership(input: {
   const parsedInput = membershipRequestInputSchema.parse(input);
   const payload = await executeValidatedFunction<ExecutionPayload>(
     appwriteConfig.membershipFunctionId,
-    parsedInput,
+    {
+      membership_type:
+        parsedInput.type === "privat" ? "private" : parsedInput.type,
+    },
   );
 
   return {
@@ -144,7 +147,13 @@ export async function verifyPayment(input: {
   const parsedInput = verifyPaymentInputSchema.parse(input);
   await executeValidatedFunction<void>(
     appwriteConfig.paymentVerifyFunctionId,
-    parsedInput,
+    {
+      payment_id: parsedInput.paymentId,
+      status: parsedInput.status,
+      membership_id: parsedInput.membershipId,
+      amount: parsedInput.amount,
+      note: parsedInput.note,
+    },
   );
 }
 
@@ -164,14 +173,14 @@ export async function createProdukt(input: {
   await executeValidatedFunction<void>(appwriteConfig.addProduktFunctionId, {
     id: parsedInput.id,
     name: parsedInput.name,
-    sorte: parsedInput.sorte,
-    hauptkategorie: parsedInput.hauptkategorie,
-    unterkategorie: parsedInput.unterkategorie,
-    lebensdauer: parsedInput.lebensdauer,
-    fruchtfolge_vor: parsedInput.fruchtfolgeVor,
-    fruchtfolge_nach: parsedInput.fruchtfolgeNach,
-    bodenansprueche: parsedInput.bodenansprueche,
-    begleitpflanzen: parsedInput.begleitpflanzen,
+    variety: parsedInput.sorte,
+    category: parsedInput.hauptkategorie,
+    subcategory: parsedInput.unterkategorie,
+    lifespan: parsedInput.lebensdauer,
+    crop_rotation_before: parsedInput.fruchtfolgeVor,
+    crop_rotation_after: parsedInput.fruchtfolgeNach,
+    soil_requirements: parsedInput.bodenansprueche,
+    companion_plants: parsedInput.begleitpflanzen,
   });
 }
 
@@ -188,14 +197,14 @@ export async function createAngebot(input: {
 }): Promise<void> {
   const parsedInput = createAngebotInputSchema.parse(input);
   await executeValidatedFunction<void>(appwriteConfig.addAngebotFunctionId, {
-    menge: parsedInput.menge,
-    mengeVerfuegbar: parsedInput.mengeVerfuegbar,
-    einheit: parsedInput.einheit,
-    euroPreis: parsedInput.euroPreis,
-    saatPflanzDatum: parsedInput.saatPflanzDatum,
-    ernteProjektion: parsedInput.ernteProjektion,
-    mengeAbgeholt: parsedInput.mengeAbgeholt,
-    beschreibung: parsedInput.beschreibung,
-    produktID: parsedInput.produktId,
+    projected_quantity: parsedInput.menge,
+    available_quantity: parsedInput.mengeVerfuegbar,
+    unit: parsedInput.einheit,
+    unit_price_eur: parsedInput.euroPreis,
+    sowing_date: parsedInput.saatPflanzDatum,
+    harvest_projection: parsedInput.ernteProjektion,
+    allocated_quantity: parsedInput.mengeAbgeholt,
+    description: parsedInput.beschreibung,
+    product_id: parsedInput.produktId,
   });
 }
