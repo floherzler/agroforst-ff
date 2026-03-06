@@ -3,9 +3,20 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
+import { formatHarvestRange, formatPricePerUnit } from "@/features/catalog/catalog";
 import { listStaffeln } from "@/lib/appwrite/appwriteProducts";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AngeboteModal({
   produktId,
@@ -19,55 +30,99 @@ export default function AngeboteModal({
   produktAngebote: number;
 }) {
   const [angebote, setAngebote] = useState<Staffel[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function load() {
-    setAngebote(await listStaffeln({ produktId }));
+    setIsLoading(true);
+
+    try {
+      setAngebote(await listStaffeln({ produktId }));
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   if (produktAngebote === 0) {
-    return <Button variant="outline" size="sm" className="text-gray-500 border-gray-300 cursor-default" disabled>Keine Angebote</Button>;
+    return (
+      <Button variant="outline" size="sm" disabled>
+        Keine Angebote
+      </Button>
+    );
   }
 
   return (
     <Dialog onOpenChange={(open) => open && void load()}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-permdal-600 text-white hover:bg-permdal-700">{produktAngebote} {produktAngebote > 1 ? "Angebote" : "Angebot"} anzeigen</Button>
+        <Button size="sm">
+          {produktAngebote} {produktAngebote > 1 ? "Angebote" : "Angebot"} anzeigen
+        </Button>
       </DialogTrigger>
-      <DialogContent className="bg-white rounded-2xl p-6 shadow-xl max-w-lg">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-permdal-900">Angebote für {produktName}{produktSorte ? ` – ${produktSorte}` : ""}</DialogTitle>
+          <DialogTitle>
+            Angebote für {produktName}
+            {produktSorte ? ` – ${produktSorte}` : ""}
+          </DialogTitle>
         </DialogHeader>
-        {angebote.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">Keine Angebote vorhanden</p>
-        ) : (
-          <ul className="space-y-4 text-black">
-            {angebote.map((angebot) => (
-              <li key={angebot.id}>
-                <div className="rounded-xl border bg-white p-4 shadow-sm flex justify-between items-start">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-black">{angebot.mengeVerfuegbar} {angebot.einheit} verfügbar</p>
-                    <p className="text-sm">Preis: {(() => {
-                      let menge = angebot.menge;
-                      let einheit = angebot.einheit;
-                      if (einheit.toLowerCase() === "gramm" && menge >= 1000) {
-                        menge = menge / 1000;
-                        einheit = "kg";
-                      }
-                      if (menge === 1 && einheit.toLowerCase() === "stück") {
-                        return `${angebot.euroPreis.toFixed(2)} € / Stück`;
-                      }
-                      return `${angebot.euroPreis.toFixed(2)} € / ${menge} ${einheit}`;
-                    })()}</p>
-                    <p className="text-xs text-muted-foreground">Saat- / Pflanzdatum: {new Date(angebot.saatPflanzDatum).toLocaleDateString("de-DE")}</p>
-                    {angebot.ernteProjektion.length > 0 && (
-                      <p className="text-xs text-muted-foreground">Nächste Ernte: {angebot.ernteProjektion.length === 1 ? new Date(angebot.ernteProjektion[0]).toLocaleDateString("de-DE") : `${new Date(angebot.ernteProjektion[0]).toLocaleDateString("de-DE")} - ${new Date(angebot.ernteProjektion[angebot.ernteProjektion.length - 1]).toLocaleDateString("de-DE")}`}</p>
-                    )}
-                  </div>
-                  <Link to="/angebote/$id" params={{ id: angebot.id }}><Button variant="link" className="px-0 flex items-center gap-1">Details und Bestellung</Button></Link>
-                </div>
-              </li>
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: Math.min(produktAngebote, 3) }).map((_, index) => (
+              <Card key={index} size="sm">
+                <CardHeader className="border-b">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-28" />
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2 pt-3">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-4 w-48" />
+                </CardContent>
+              </Card>
             ))}
-          </ul>
+          </div>
+        ) : angebote.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Keine Angebote vorhanden.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {angebote.map((angebot) => (
+              <Card key={angebot.id} size="sm">
+                <CardHeader className="border-b">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <CardTitle>
+                        {angebot.mengeVerfuegbar} {angebot.einheit} verfügbar
+                      </CardTitle>
+                      <CardDescription>
+                        {formatPricePerUnit(
+                          angebot.euroPreis,
+                          angebot.menge,
+                          angebot.einheit,
+                        )}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={angebot.mengeVerfuegbar > 0 ? "secondary" : "outline"}>
+                      {angebot.mengeVerfuegbar > 0 ? "Aktiv" : "Leer"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2 pt-3 text-sm text-muted-foreground">
+                  <p>
+                    Saat- / Pflanzdatum:{" "}
+                    {new Date(angebot.saatPflanzDatum).toLocaleDateString("de-DE")}
+                  </p>
+                  <p>Nächste Ernte: {formatHarvestRange(angebot.ernteProjektion)}</p>
+                </CardContent>
+                <CardFooter className="justify-end">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/angebote/$id" params={{ id: angebot.id }}>
+                      Details und Bestellung
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         )}
       </DialogContent>
     </Dialog>

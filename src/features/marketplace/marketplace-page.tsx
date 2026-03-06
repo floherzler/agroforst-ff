@@ -20,27 +20,32 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  CardAction,
   Card,
   CardContent,
+  CardFooter,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   catalogCategories,
   filterMarketplaceOffers,
   formatHarvestRange,
   formatPricePerUnit,
-  getOfferAvailabilityClassName,
+  getOfferAvailabilityBadgeVariant,
   getOfferAvailabilityText,
   getProductImageUrl,
   listMarketplaceOffers,
@@ -123,7 +128,7 @@ export default function MarketplacePage() {
               setSelectedCategory(value as CatalogCategory)
             }
           >
-            <TabsList>
+            <TabsList variant="line" className="flex-wrap justify-start">
               {catalogCategories.map((category) => (
                 <TabsTrigger key={category} value={category}>
                   {category}
@@ -154,9 +159,11 @@ export default function MarketplacePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle Angebote</SelectItem>
-                <SelectItem value="available">Verfügbar</SelectItem>
-                <SelectItem value="low-stock">Wenig Bestand</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="all">Alle Angebote</SelectItem>
+                  <SelectItem value="available">Verfügbar</SelectItem>
+                  <SelectItem value="low-stock">Wenig Bestand</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
 
@@ -170,10 +177,12 @@ export default function MarketplacePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date">Nach Datum</SelectItem>
-                <SelectItem value="price">Nach Preis</SelectItem>
-                <SelectItem value="name">Nach Name</SelectItem>
-                <SelectItem value="availability">Nach Bestand</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="date">Nach Datum</SelectItem>
+                  <SelectItem value="price">Nach Preis</SelectItem>
+                  <SelectItem value="name">Nach Name</SelectItem>
+                  <SelectItem value="availability">Nach Bestand</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
 
@@ -187,6 +196,28 @@ export default function MarketplacePage() {
             </Button>
           </div>
         </div>
+
+        <Separator className="my-4" />
+
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <Badge variant="secondary">
+            {loading
+              ? "Angebote laden"
+              : visibleOffers.length === 1
+                ? "1 Angebot"
+                : `${visibleOffers.length} Angebote`}
+          </Badge>
+          <Badge variant="outline">
+            {filterBy === "all"
+              ? "Alle Bestände"
+              : filterBy === "available"
+                ? "Nur verfügbare"
+                : "Nur wenig Bestand"}
+          </Badge>
+          {debouncedSearch ? (
+            <Badge variant="outline">Suche: {debouncedSearch}</Badge>
+          ) : null}
+        </div>
       </SurfaceSection>
 
       <div className="text-sm text-muted-foreground">
@@ -198,20 +229,7 @@ export default function MarketplacePage() {
       </div>
 
       {loading ? (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 w-3/4 rounded bg-muted" />
-                <div className="h-3 w-1/2 rounded bg-muted" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="h-3 rounded bg-muted" />
-                <div className="h-3 w-2/3 rounded bg-muted" />
-              </CardContent>
-            </Card>
-          ))}
-        </section>
+        <MarketplaceSkeletonGrid />
       ) : visibleOffers.length === 0 ? (
         <EmptyState
           title="Keine Angebote gefunden"
@@ -223,64 +241,79 @@ export default function MarketplacePage() {
             const imageUrl = getProductImageUrl(offer.produkt.imageId);
 
             return (
-              <SurfaceSection key={offer.id}>
-                <CardHeader className="space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Avatar className="size-12 rounded-xl">
-                        {imageUrl ? (
-                          <AvatarImage src={imageUrl} alt={offer.produkt.name} />
-                        ) : (
-                          <AvatarFallback className="bg-secondary text-primary">
-                            {offer.produkt.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="min-w-0 space-y-1">
-                        <CardTitle className="truncate text-lg">
-                          {offer.produkt.name}
-                        </CardTitle>
-                        <CardDescription>
-                          {offer.produkt.sorte
-                            ? `${offer.produkt.sorte} · ${offer.produkt.unterkategorie || ""}`
-                            : offer.produkt.unterkategorie}
-                        </CardDescription>
-                      </div>
+              <SurfaceSection key={offer.id} className="h-full">
+                <CardHeader className="gap-4 border-b">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="size-12 rounded-xl">
+                      {imageUrl ? (
+                        <AvatarImage src={imageUrl} alt={offer.produkt.name} />
+                      ) : (
+                        <AvatarFallback className="bg-secondary text-primary">
+                          {offer.produkt.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="min-w-0 flex flex-col gap-1">
+                      <CardTitle className="truncate text-lg">
+                        {offer.produkt.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {offer.produkt.sorte
+                          ? `${offer.produkt.sorte} · ${offer.produkt.unterkategorie || ""}`
+                          : offer.produkt.unterkategorie}
+                      </CardDescription>
                     </div>
+                  </div>
 
-                    <Badge className={getOfferAvailabilityClassName(offer.mengeVerfuegbar)}>
+                  <CardAction>
+                    <Badge
+                      variant={getOfferAvailabilityBadgeVariant(
+                        offer.mengeVerfuegbar,
+                      )}
+                    >
                       {getOfferAvailabilityText(offer.mengeVerfuegbar)}
                     </Badge>
-                  </div>
+                  </CardAction>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
-                  <InfoRow
-                    icon={<Package className="size-4" />}
-                    label={`${offer.mengeVerfuegbar} ${offer.einheit} verfügbar`}
-                  />
-                  <InfoRow
-                    icon={<Euro className="size-4" />}
-                    label={formatPricePerUnit(
-                      offer.euroPreis,
-                      offer.menge,
-                      offer.einheit,
-                    )}
-                  />
-                  <InfoRow
-                    icon={<Calendar className="size-4" />}
-                    label={new Date(offer.saatPflanzDatum).toLocaleDateString("de-DE")}
-                  />
+                <CardContent className="flex flex-col gap-4 pt-4">
+                  <div className="grid gap-3">
+                    <InfoRow
+                      icon={<Package className="size-4" />}
+                      label={`${offer.mengeVerfuegbar} ${offer.einheit} verfügbar`}
+                    />
+                    <InfoRow
+                      icon={<Euro className="size-4" />}
+                      label={formatPricePerUnit(
+                        offer.euroPreis,
+                        offer.menge,
+                        offer.einheit,
+                      )}
+                    />
+                    <InfoRow
+                      icon={<Calendar className="size-4" />}
+                      label={new Date(offer.saatPflanzDatum).toLocaleDateString("de-DE")}
+                    />
+                  </div>
+
+                  <Separator />
+
                   <p className="text-sm text-muted-foreground">
                     Nächste Ernte: {formatHarvestRange(offer.ernteProjektion)}
                   </p>
+                </CardContent>
 
-                  <Button asChild className="w-full">
+                <CardFooter className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {offer.produkt.hauptkategorie}
+                  </p>
+
+                  <Button asChild className="w-full sm:w-auto">
                     <Link to="/angebote/$id" params={{ id: offer.id }}>
                       Details anzeigen
                     </Link>
                   </Button>
-                </CardContent>
+                </CardFooter>
               </SurfaceSection>
             );
           })}
@@ -302,5 +335,41 @@ function InfoRow({
       {icon}
       <span>{label}</span>
     </div>
+  );
+}
+
+function MarketplaceSkeletonGrid() {
+  return (
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="gap-4 border-b">
+            <div className="flex items-center gap-3">
+              <Skeleton className="size-12 rounded-xl" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+            <CardAction>
+              <Skeleton className="h-5 w-24 rounded-full" />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 pt-4">
+            <div className="grid gap-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-3/5" />
+            </div>
+            <Skeleton className="h-px w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </CardContent>
+          <CardFooter className="justify-between gap-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-32 rounded-lg" />
+          </CardFooter>
+        </Card>
+      ))}
+    </section>
   );
 }

@@ -17,6 +17,10 @@ export const catalogCategories = [
 export type CatalogCategory = (typeof catalogCategories)[number];
 export type MarketplaceSortOption = "date" | "price" | "name" | "availability";
 export type MarketplaceFilterOption = "all" | "available" | "low-stock";
+export type OfferAvailabilityBadgeVariant =
+  | "destructive"
+  | "outline"
+  | "secondary";
 export type ProductOffer = Staffel & {
   produkt: Produkt;
 };
@@ -138,16 +142,18 @@ export function getOfferAvailabilityText(amount: number) {
   return "Verfügbar";
 }
 
-export function getOfferAvailabilityClassName(amount: number) {
+export function getOfferAvailabilityBadgeVariant(
+  amount: number,
+): OfferAvailabilityBadgeVariant {
   if (amount <= 0) {
-    return "bg-destructive/10 text-destructive";
+    return "destructive";
   }
 
   if (amount <= 10) {
-    return "bg-orange-100 text-orange-800";
+    return "outline";
   }
 
-  return "bg-permdal-100 text-permdal-900";
+  return "secondary";
 }
 
 export function formatPricePerUnit(

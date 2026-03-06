@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type PageShellProps = {
@@ -66,9 +72,9 @@ export function PageHeader({
         className,
       )}
     >
-      <div className={cn("max-w-3xl space-y-3", centered && "mx-auto")}>
+      <div className={cn("mx-auto flex max-w-3xl flex-col gap-3", !centered && "mx-0")}>
         {badge ? <Badge variant="secondary">{badge}</Badge> : null}
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {title}
           </h1>
@@ -79,7 +85,11 @@ export function PageHeader({
           ) : null}
         </div>
       </div>
-      {actions ? <div className="flex items-center gap-3">{actions}</div> : null}
+      {actions ? (
+        <div className={cn("flex flex-wrap items-center gap-3", centered && "justify-center")}>
+          {actions}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -107,14 +117,18 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <SurfaceSection className={cn("p-8 text-center", className)}>
-      <div className="mx-auto max-w-md space-y-2">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+    <SurfaceSection className={cn("p-0", className)}>
+      <CardHeader className="justify-items-center px-8 pt-8 text-center">
+        <CardTitle>{title}</CardTitle>
         {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <CardDescription className="max-w-md">{description}</CardDescription>
         ) : null}
-      </div>
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+      </CardHeader>
+      {action ? (
+        <CardContent className="flex justify-center px-8 pb-8 pt-0">
+          {action}
+        </CardContent>
+      ) : null}
     </SurfaceSection>
   );
 }
