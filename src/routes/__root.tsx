@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 
 import AuthProvider from "@/components/AuthProvider";
+import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import appCss from "../styles.css?url";
 
@@ -41,9 +42,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 function RootShell() {
   return (
     <AuthProvider>
-      <Navbar />
-      <div className="pt-4">
-        <Outlet />
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        <Footer />
       </div>
     </AuthProvider>
   );
