@@ -1,0 +1,34 @@
+{
+  "functions": {
+    "addProdukt": {
+      "source": "functions/addProdukt",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
+    "addAngebot": {
+      "source": "functions/addAngebot",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
+    "createMembership": {
+      "source": "functions/createMembership",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
+    "createOrder": {
+      "source": "functions/placeOrder",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
+    "verifyPayment": {
+      "source": "functions/verifyPayment",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    }
+  }
+}

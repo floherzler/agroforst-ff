@@ -1,5 +1,9 @@
 # Local Function Testing
 
+See the full authoring guide in
+[`/home/flo178/projects/agroforst-ff/functions/FUNCTIONS_GUIDE.md`](/home/flo178/projects/agroforst-ff/functions/FUNCTIONS_GUIDE.md)
+for the repository template and workflow for new functions.
+
 This repository supports local Appwrite function testing from the project root
 with one command.
 
@@ -50,7 +54,6 @@ Other supported optional override blocks can be copied from
 - `# [createMembership]`
 - `# [verifyPayment]`
 - `# [placeOrder]`
-- `# [syncAVP]`
 
 In most cases you do not need those blocks at all. The runner derives defaults
 from:
@@ -81,8 +84,6 @@ These are the current minimum runtime scopes based on the code in the repo.
 - `createMembership`: `users.read`, `rows.read`, `rows.write`
 - `verifyPayment`: `users.read`, `documents.read`, `documents.write`
 - `placeOrder`: `users.read`, `documents.read`, `documents.write`
-- `syncAVP`: no Appwrite data scope required by the current implementation; it currently fetches the CSV and logs rows, but once it starts writing Appwrite data it will need additional write scopes
-
 If you want to keep a single shared key for CLI automation and all current
 local function tests, the practical union is:
 
@@ -106,9 +107,11 @@ By default this:
 2. configures the Appwrite CLI with your endpoint, project ID, and key
 3. pulls Appwrite functions into the gitignored local workspace
    [`/home/flo178/projects/agroforst-ff/.appwrite-local`](/home/flo178/projects/agroforst-ff/.appwrite-local)
-4. generates the runtime `functions/addProdukt/.env` file inside that local
+4. overlays the pulled function sources with the checked-in Node runtime
+   implementations and rewrites the local Appwrite metadata to `node-22`
+5. generates the runtime `functions/addProdukt/.env` file inside that local
    workspace
-5. starts the Docker-backed Appwrite function runner on `http://localhost:8091/`
+6. starts the Docker-backed Appwrite function runner on `http://localhost:8091/`
 
 Optional arguments:
 
@@ -129,11 +132,14 @@ scripts/appwrite-local-dev.sh addAngebot
 scripts/appwrite-local-dev.sh createMembership
 scripts/appwrite-local-dev.sh verifyPayment
 scripts/appwrite-local-dev.sh placeOrder
-scripts/appwrite-local-dev.sh syncAVP
 ```
 
-`placeOrder` is accepted as a local alias even though the remote Appwrite
-function currently pulls down as `createOrder`.
+`placeOrder` is accepted as a local alias even though the deployed Appwrite
+function is still named `createOrder`.
+
+The local runner intentionally patches the pulled Deno function definitions to
+`node-22` and uses the repo-owned `src/main.js` handlers plus each function's
+local `package.json`.
 
 ## Quick test request
 

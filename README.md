@@ -62,4 +62,4 @@ scripts/appwrite-local-dev.sh addProdukt
 ```
 
 The same guide also covers `addAngebot`, `createMembership`, `verifyPayment`,
-`placeOrder`, and `syncAVP`.
+and `placeOrder`.

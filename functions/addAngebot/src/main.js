@@ -1,43 +1,33 @@
-import { Client, Databases, Users, ID } from "https://deno.land/x/appwrite@7.0.0/mod.ts";
+import { Client, Databases, ID, Users } from "node-appwrite";
 
-type Body = {
-    id?: string;
-    angebotId?: string;
-    produktID?: string;
-    menge?: number;
-    mengeVerfuegbar?: number;
-    einheit?: string;
-    euroPreis?: number;
-    saatPflanzDatum?: string;
-    ernteProjektion?: string[];
-    mengeAbgeholt?: number;
-    beschreibung?: string;
-    meta?: Record<string, unknown>;
-};
-
-function ok(res: any, data: unknown, status = 200) {
+function ok(res, data, status = 200) {
     return res.json(data, status);
 }
 
-function fail(res: any, msg: string, status = 400, extra: Record<string, unknown> = {}) {
+function fail(res, msg, status = 400, extra = {}) {
     return res.json({ success: false, error: msg, ...extra }, status);
 }
 
-const readEnv = (key: string): string => {
-    const deno = (globalThis as any)?.Deno;
-    if (deno?.env?.get) {
-        const fromDeno = deno.env.get(key);
-        if (fromDeno) return fromDeno;
-    }
-    if (typeof process !== "undefined" && process.env) {
-        const fromProcess = process.env[key];
-        if (fromProcess) return fromProcess;
+function readEnv(...keys) {
+    for (const key of keys) {
+        const value = process.env[key];
+        if (typeof value === "string" && value.length > 0) {
+            return value;
+        }
     }
     return "";
-};
+}
 
-async function extractBody(req: any): Promise<Record<string, unknown>> {
-    const tryParse = async (source: any) => {
+function readHeader(req, key) {
+    const headers = req?.headers ?? {};
+    if (typeof headers.get === "function") {
+        return headers.get(key) ?? headers.get(key.toLowerCase()) ?? "";
+    }
+    return headers[key] ?? headers[key.toLowerCase()] ?? headers[key.toUpperCase()] ?? "";
+}
+
+async function extractBody(req) {
+    const tryParse = (source) => {
         if (typeof source === "string" && source.length > 0) {
             try {
                 return JSON.parse(source);
@@ -53,61 +43,73 @@ async function extractBody(req: any): Promise<Record<string, unknown>> {
 
     try {
         const body = await req.json();
-        if (body && typeof body === "object") return body;
+        if (body && typeof body === "object") {
+            return body;
+        }
     } catch {
         // ignore
     }
 
-    const candidates = [req.bodyJson, req.bodyText, req.bodyRaw, req.payload];
+    const candidates = [req?.bodyJson, req?.bodyText, req?.bodyRaw, req?.payload];
     for (const candidate of candidates) {
-        const parsed = await tryParse(candidate);
-        if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+        const parsed = tryParse(candidate);
+        if (parsed && typeof parsed === "object") {
+            return parsed;
+        }
     }
 
     return {};
 }
 
-async function ensureAdmin(users: Users, callerId: string) {
+async function ensureAdmin(users, callerId) {
     const caller = await users.get(callerId);
-    const labels = Array.isArray(caller.labels) ? (caller.labels as string[]) : [];
-    const isAdmin = labels.some((label) => label.toLowerCase() === "admin");
+    const labels = Array.isArray(caller.labels) ? caller.labels : [];
+    const isAdmin = labels.some((label) => String(label).toLowerCase() === "admin");
     if (!isAdmin) {
         throw new Error("Caller must be an admin");
     }
     return caller;
 }
 
-export default async ({ req, res, log, error }: any) => {
+export default async ({ req, res, log, error }) => {
     try {
-        const callerId: string | undefined =
-            req.headers["x-appwrite-user-id"] ?? req.headers["X-Appwrite-User-Id"];
-        log(`[addAngebot] Incoming execution. Caller present: ${Boolean(callerId)} ✅`);
-        if (!callerId) return fail(res, "Unauthenticated: missing x-appwrite-user-id header", 401);
+        const callerId = readHeader(req, "x-appwrite-user-id");
+        log(`[addAngebot] Incoming execution. Caller present: ${Boolean(callerId)}`);
+        if (!callerId) {
+            return fail(res, "Unauthenticated: missing x-appwrite-user-id header", 401);
+        }
 
-        const body = (await extractBody(req)) as Body;
-        const produktID = (body.produktID ?? "").toString().trim();
+        const body = await extractBody(req);
+        const produktID = String(body.produktID ?? "").trim();
         const menge = Number(body.menge ?? 0);
-        const einheit = (body.einheit ?? "").toString().trim();
+        const einheit = String(body.einheit ?? "").trim();
         const euroPreis = Number(body.euroPreis ?? 0);
 
-        if (!produktID) return fail(res, "produktID is required", 400);
-        if (!einheit) return fail(res, "einheit is required", 400);
-        if (!Number.isFinite(menge) || menge <= 0) return fail(res, "menge must be a positive number", 400);
+        if (!produktID) {
+            return fail(res, "produktID is required", 400);
+        }
+        if (!einheit) {
+            return fail(res, "einheit is required", 400);
+        }
+        if (!Number.isFinite(menge) || menge <= 0) {
+            return fail(res, "menge must be a positive number", 400);
+        }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
         const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
         const dbId = readEnv("APPWRITE_FUNCTION_DATABASE_ID");
         const collectionId = readEnv("APPWRITE_FUNCTION_STAFFEL_COLLECTION_ID");
         const productCollectionId = readEnv("APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID");
+        const apiKey = readEnv("APPWRITE_FUNCTION_API_KEY", "APPWRITE_API_KEY") || readHeader(req, "x-appwrite-key");
 
+        if (!endpoint || !projectId || !apiKey) {
+            return fail(res, "Function endpoint, project ID, or API key is not configured", 500);
+        }
         if (!dbId || !collectionId) {
             return fail(res, "Database or staffel collection is not configured", 500);
         }
 
-        const client = new Client()
-            .setEndpoint(endpoint)
-            .setProject(projectId)
-            .setKey(req.headers["x-appwrite-key"] ?? "");
+        const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
         const users = new Users(client);
         const databases = new Databases(client);
 
@@ -116,21 +118,19 @@ export default async ({ req, res, log, error }: any) => {
         if (productCollectionId) {
             try {
                 await databases.getDocument(dbId, productCollectionId, produktID);
-            } catch (_e) {
+            } catch {
                 return fail(res, "Referenced produktID does not exist", 404);
             }
         }
 
         const nowIso = new Date().toISOString();
-        const data: Record<string, unknown> = {
+        const data = {
             produktID,
             menge,
             mengeVerfuegbar: Number(body.mengeVerfuegbar ?? menge),
             einheit,
             euroPreis,
-            saatPflanzDatum: body.saatPflanzDatum
-                ? new Date(body.saatPflanzDatum).toISOString()
-                : nowIso,
+            saatPflanzDatum: body.saatPflanzDatum ? new Date(body.saatPflanzDatum).toISOString() : nowIso,
             ernteProjektion: Array.isArray(body.ernteProjektion)
                 ? body.ernteProjektion.map((date) => new Date(date).toISOString())
                 : [],
@@ -141,13 +141,14 @@ export default async ({ req, res, log, error }: any) => {
             createdAt: nowIso,
         };
 
-        const targetId = (body.angebotId ?? body.id ?? "").toString().trim() || ID.unique();
+        const targetId = String(body.angebotId ?? body.id ?? "").trim() || ID.unique();
         let result;
+
         try {
             result = await databases.createDocument(dbId, collectionId, targetId, data);
             log(`[addAngebot] Created new offer ${result.$id}`);
-        } catch (e: any) {
-            if (e?.code === 409) {
+        } catch (appwriteError) {
+            if (appwriteError?.code === 409) {
                 result = await databases.updateDocument(dbId, collectionId, targetId, {
                     ...data,
                     updatedBy: callerId,
@@ -155,14 +156,14 @@ export default async ({ req, res, log, error }: any) => {
                 });
                 log(`[addAngebot] Updated existing offer ${result.$id}`);
             } else {
-                error(`[addAngebot] Failed storing offer: ${e?.message ?? e}`);
+                error(`[addAngebot] Failed storing offer: ${appwriteError?.message ?? appwriteError}`);
                 return fail(res, "Failed to store offer", 500);
             }
         }
 
         return ok(res, { success: true, offer: result });
-    } catch (e: any) {
-        const msg = String(e?.message ?? e ?? "Unknown error");
+    } catch (caughtError) {
+        const msg = String(caughtError?.message ?? caughtError ?? "Unknown error");
         error(`[addAngebot] Uncaught error: ${msg}`);
         return fail(res, "Internal error", 500, { details: msg });
     }

@@ -13,6 +13,7 @@ user_id="${2:-local-dev-user}"
 port="${3:-8091}"
 project_env_file="$repo_root/.env"
 workspace="$repo_root/.appwrite-local"
+manifest_file="$repo_root/functions/local-manifest.json"
 
 case "$requested_function_id" in
     placeOrder)
@@ -65,7 +66,18 @@ appwrite client \
     --project-id "$appwrite_cli_project_id" \
     --key "$appwrite_cli_key" >/dev/null
 
-if [ ! -d "$workspace/functions/$function_id" ] || [ "${APPWRITE_LOCAL_REFRESH:-0}" = "1" ]; then
+needs_sync=0
+if [ ! -d "$workspace/functions/$function_id" ]; then
+    needs_sync=1
+fi
+if [ "${APPWRITE_LOCAL_REFRESH:-0}" = "1" ]; then
+    needs_sync=1
+fi
+if ! grep -q '"functions"' "$workspace/appwrite.config.json" 2>/dev/null; then
+    needs_sync=1
+fi
+
+if [ "$needs_sync" = "1" ]; then
     echo "Syncing Appwrite functions into $workspace"
     python3 - "$workspace" <<'PY'
 import os
@@ -118,6 +130,11 @@ os.close(master)
 sys.exit(proc.wait())
 PY
 fi
+
+python3 "$repo_root/scripts/prepare-local-functions.py" \
+    "$repo_root" \
+    "$workspace" \
+    "$manifest_file"
 
 if [ ! -d "$workspace/functions/$function_id" ]; then
     echo "Function '$function_id' not found after sync." >&2

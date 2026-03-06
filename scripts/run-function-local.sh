@@ -109,9 +109,6 @@ emit_defaults() {
             printf 'COLL_NOTIFICATIONS=nachrichten\n'
             printf 'ADMIN_EMAIL=\n'
             ;;
-        syncAVP)
-            printf 'NEXTCLOUD_CSV_URL=%s\n' "${NEXTCLOUD_CSV_URL:-}"
-            ;;
     esac
 }
 
