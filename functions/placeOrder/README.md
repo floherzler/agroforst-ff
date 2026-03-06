@@ -1,6 +1,6 @@
 # Bestellungen anlegen (Mitgliedschaft × Angebot)
 
-> Cloud Function (Deno, Appwrite) zum Platzieren einer Bestellung.  
+> Cloud Function (Node, Appwrite) zum Platzieren einer Bestellung.  
 > Verknüpft eine **aktive Mitgliedschaft** mit einem **Angebot**, prüft Verfügbarkeit, reserviert Menge und legt eine **Bestellung** als Snapshot an.
 
 ---
@@ -19,13 +19,12 @@ In der Funktions-Konfiguration setzen:
 
 - `APPWRITE_FUNCTION_API_ENDPOINT`
 - `APPWRITE_FUNCTION_PROJECT_ID`
-- `DB_ID`
-- `COLL_ANGEBOTE`
-- `COLL_BESTELLUNG`
-- `COLL_MITGLIEDSCHAFT`
-- `COLL_PRODUKTE` *(optional, um Produktnamen aus `produktID` aufzulösen)*
-- `COLL_NOTIFICATIONS` *(optional, „Postfach“ für Admin-Benachrichtigungen)*
-- `ADMIN_EMAIL` *(optional)*
+- `APPWRITE_DATABASE_ID`
+- `APPWRITE_TABLE_OFFERS_ID`
+- `APPWRITE_TABLE_ORDERS_ID`
+- `APPWRITE_TABLE_MEMBERSHIPS_ID`
+- `APPWRITE_TABLE_PRODUCTS_ID`
+- `APPWRITE_TABLE_BACKOFFICE_EVENTS_ID`
 
 ---
 
@@ -33,13 +32,13 @@ In der Funktions-Konfiguration setzen:
 
 Die Funktion akzeptiert JSON **und** Query-Parameter:
 
-- `angebotID` *(String, Pflicht)* – ID des Angebots
-- `mitgliedschaftID` *(String, Pflicht)* – ID der Mitgliedschaft des Nutzers
-- `menge` *(Number, Pflicht, > 0)* – angefragte Menge
+- `offer_id` *(String, Pflicht)* – ID des Angebots
+- `membership_id` *(String, optional)* – ID der Mitgliedschaft des Nutzers
+- `quantity` *(Number, Pflicht, > 0)* – angefragte Menge
 
 > **User-ID** kommt aus dem Header `x-appwrite-user-id` (kein Body-Feld nötig).  
 > Optional kannst du später ein `idempotencyKey` ergänzen (siehe „Idempotenz“).
 
 **Beispiel (JSON):**
 ```json
-{ "angebotID": "ang_123", "mitgliedschaftID": "mb2025-007", "menge": 250 }
+{ "offer_id": "offer_123", "membership_id": "membership_123", "quantity": 250 }

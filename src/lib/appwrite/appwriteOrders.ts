@@ -14,14 +14,23 @@ import {
 } from "@/lib/appwrite/shared";
 
 const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
+  offer_id: z.string().optional().default(""),
   angebotID: z.string().optional().default(""),
+  user_id: z.string().optional().default(""),
   userID: z.string().optional().default(""),
+  membership_id: z.string().optional(),
   mitgliedschaftID: z.string().optional(),
+  quantity: z.unknown().optional(),
   menge: z.unknown().optional(),
+  unit: z.string().optional().default(""),
   einheit: z.string().optional().default(""),
+  pickup_at: z.string().optional(),
   abholung: z.boolean().optional(),
+  product_name: z.string().optional(),
   produkt_name: z.string().optional(),
+  total_price_eur: z.unknown().optional(),
   preis_gesamt: z.unknown().optional(),
+  unit_price_eur: z.unknown().optional(),
   preis_einheit: z.unknown().optional(),
   status: z.string().optional(),
 });
@@ -31,22 +40,56 @@ const orderListInputSchema = z.object({
   limit: z.number().int().positive().max(500).optional(),
 });
 
+function normalizeUnit(value: string): string {
+  switch (value.trim().toLowerCase()) {
+    case "piece":
+      return "Stück";
+    case "gram":
+      return "Gramm";
+    case "bundle":
+      return "Bund";
+    case "kilogram":
+      return "kg";
+    case "liter":
+      return "Liter";
+    default:
+      return value;
+  }
+}
+
+function normalizeOrderStatus(value: string | undefined): string | undefined {
+  switch ((value ?? "").trim().toLowerCase()) {
+    case "requested":
+      return "angefragt";
+    case "confirmed":
+      return "bestaetigt";
+    case "fulfilled":
+      return "erfuellt";
+    case "cancelled":
+      return "storniert";
+    default:
+      return parseOptionalString(value);
+  }
+}
+
 export function normalizeBestellung(raw: unknown): Bestellung {
   const parsed = orderDocumentSchema.parse(raw);
 
   return {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
-    angebotId: parsed.angebotID || "",
-    userId: parsed.userID || "",
-    mitgliedschaftId: parseOptionalString(parsed.mitgliedschaftID),
-    menge: parseNumber(parsed.menge),
-    einheit: parsed.einheit || "",
-    abholung: parsed.abholung ?? false,
-    produktName: parseOptionalString(parsed.produkt_name),
-    preisGesamt: parseNumber(parsed.preis_gesamt),
-    preisEinheit: parseNumber(parsed.preis_einheit),
-    status: parseOptionalString(parsed.status) ?? "",
+    angebotId: parsed.offer_id || parsed.angebotID || "",
+    userId: parsed.user_id || parsed.userID || "",
+    mitgliedschaftId: parseOptionalString(
+      parsed.membership_id ?? parsed.mitgliedschaftID,
+    ),
+    menge: parseNumber(parsed.quantity ?? parsed.menge),
+    einheit: normalizeUnit(parsed.unit || parsed.einheit || ""),
+    abholung: Boolean(parsed.pickup_at ?? parsed.abholung),
+    produktName: parseOptionalString(parsed.product_name ?? parsed.produkt_name),
+    preisGesamt: parseNumber(parsed.total_price_eur ?? parsed.preis_gesamt),
+    preisEinheit: parseNumber(parsed.unit_price_eur ?? parsed.preis_einheit),
+    status: normalizeOrderStatus(parsed.status) ?? "",
   };
 }
 
@@ -63,7 +106,7 @@ export async function listBestellungen(
   ];
 
   if (parsedInput.userId) {
-    queries.push(Query.equal("userID", parsedInput.userId));
+    queries.push(Query.equal("user_id", parsedInput.userId));
   }
 
   const response = await databases.listDocuments(

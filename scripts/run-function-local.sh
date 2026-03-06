@@ -82,34 +82,24 @@ $0 ~ "^# \\[" section "\\][[:space:]]*$" {
 }
 
 emit_defaults() {
-    case "$function_id" in
-        addProdukt)
-            printf 'APPWRITE_FUNCTION_DATABASE_ID=%s\n' "${VITE_DATABASE_ID:-}"
-            printf 'APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID=%s\n' "${VITE_PRODUCE_COLLECTION_ID:-}"
-            ;;
-        addAngebot)
-            printf 'APPWRITE_FUNCTION_DATABASE_ID=%s\n' "${VITE_DATABASE_ID:-}"
-            printf 'APPWRITE_FUNCTION_STAFFEL_COLLECTION_ID=%s\n' "${VITE_STAFFEL_COLLECTION_ID:-}"
-            printf 'APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID=%s\n' "${VITE_PRODUCE_COLLECTION_ID:-}"
-            ;;
-        createMembership)
-            printf 'APPWRITE_FUNCTION_DATABASE_ID=%s\n' "${VITE_DATABASE_ID:-}"
-            ;;
-        verifyPayment)
-            printf 'APPWRITE_FUNCTION_DATABASE_ID=%s\n' "${VITE_DATABASE_ID:-}"
-            printf 'APPWRITE_FUNCTION_PAYMENT_COLLECTION_ID=%s\n' "${VITE_PAYMENT_COLLECTION_ID:-}"
-            printf 'APPWRITE_FUNCTION_MEMBERSHIP_COLLECTION_ID=%s\n' "${VITE_MEMBERSHIP_COLLECTION_ID:-}"
-            ;;
-        createOrder)
-            printf 'DB_ID=%s\n' "${VITE_DATABASE_ID:-}"
-            printf 'COLL_ANGEBOTE=%s\n' "${VITE_STAFFEL_COLLECTION_ID:-}"
-            printf 'COLL_BESTELLUNG=%s\n' "${VITE_ORDER_COLLECTION_ID:-}"
-            printf 'COLL_MITGLIEDSCHAFT=%s\n' "${VITE_MEMBERSHIP_COLLECTION_ID:-}"
-            printf 'COLL_PRODUKTE=%s\n' "${VITE_PRODUCE_COLLECTION_ID:-}"
-            printf 'COLL_NOTIFICATIONS=nachrichten\n'
-            printf 'ADMIN_EMAIL=\n'
-            ;;
-    esac
+    node --input-type=module <<'NODE'
+import resources from "./appwrite/resources.json" with { type: "json" };
+
+const lines = [
+  `APPWRITE_DATABASE_ID=${resources.database.id}`,
+  `APPWRITE_BUCKET_PRODUCT_IMAGES_ID=${resources.bucket.id}`,
+  `APPWRITE_TABLE_PRODUCTS_ID=${resources.tables.products.id}`,
+  `APPWRITE_TABLE_OFFERS_ID=${resources.tables.offers.id}`,
+  `APPWRITE_TABLE_MEMBERSHIPS_ID=${resources.tables.memberships.id}`,
+  `APPWRITE_TABLE_PAYMENTS_ID=${resources.tables.membership_payments.id}`,
+  `APPWRITE_TABLE_ORDERS_ID=${resources.tables.orders.id}`,
+  `APPWRITE_TABLE_BLOG_POSTS_ID=${resources.tables.blog_posts.id}`,
+  `APPWRITE_TABLE_CUSTOMER_MESSAGES_ID=${resources.tables.customer_messages.id}`,
+  `APPWRITE_TABLE_BACKOFFICE_EVENTS_ID=${resources.tables.backoffice_events.id}`,
+];
+
+process.stdout.write(`${lines.join("\n")}\n`);
+NODE
 }
 
 {

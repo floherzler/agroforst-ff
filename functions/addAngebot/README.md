@@ -6,21 +6,21 @@ Cloud Function that lets admins create new offer documents that are shown on the
 
 - `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` in root `.env`
 - `APPWRITE_API_KEY` in root `.env` for local testing
-- `APPWRITE_FUNCTION_DATABASE_ID`
-- `APPWRITE_FUNCTION_STAFFEL_COLLECTION_ID`
-- `APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID` (optional, used for sanity checks)
+- `APPWRITE_DATABASE_ID`
+- `APPWRITE_TABLE_OFFERS_ID`
+- `APPWRITE_TABLE_PRODUCTS_ID`
 
 **Payload example**
 
 ```json
 {
-  "produktID": "tomate-san-marzano",
-  "menge": 120,
-  "mengeVerfuegbar": 120,
-  "einheit": "Stück",
-  "euroPreis": 6.5,
-  "saatPflanzDatum": "2025-05-01",
-  "ernteProjektion": ["2025-05-15", "2025-05-30"],
-  "mengeAbgeholt": 0
+  "product_id": "tomate-san-marzano",
+  "projected_quantity": 120,
+  "available_quantity": 120,
+  "unit": "piece",
+  "unit_price_eur": 6.5,
+  "sowing_date": "2026-05-01",
+  "harvest_projection": ["2026-05-15", "2026-05-30"],
+  "allocated_quantity": 0
 }
 ```

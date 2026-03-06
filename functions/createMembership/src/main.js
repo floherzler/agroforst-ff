@@ -8,6 +8,11 @@ import {
     Users,
 } from "node-appwrite";
 
+const DEFAULT_DATABASE_ID = "agroforst";
+const DEFAULT_MEMBERSHIPS_TABLE_ID = "memberships";
+const DEFAULT_PAYMENTS_TABLE_ID = "membership_payments";
+const ADMIN_LABEL = "admin";
+
 function ok(res, data, status = 200) {
     return res.json(data, status);
 }
@@ -39,14 +44,13 @@ async function extractBody(req, log) {
 
     try {
         body = await req.json();
-        log(`[requestMembership] Parsed JSON body keys: ${Object.keys(body).join(",")}`);
+        log(`[createMembership] Parsed JSON body keys: ${Object.keys(body).join(",")}`);
     } catch {
-        log("[requestMembership] No JSON body provided (or parse failed)");
+        log("[createMembership] No JSON body provided");
     }
 
     if (!Object.keys(body).length && req?.bodyJson && typeof req.bodyJson === "object") {
         body = req.bodyJson;
-        log(`[requestMembership] Parsed req.bodyJson keys: ${Object.keys(body).join(",")}`);
     }
 
     const raw = !Object.keys(body).length
@@ -57,56 +61,85 @@ async function extractBody(req, log) {
             const parsed = JSON.parse(raw);
             if (parsed && typeof parsed === "object") {
                 body = parsed;
-                log(`[requestMembership] Parsed raw payload keys: ${Object.keys(body).join(",")}`);
             }
         } catch {
-            log("[requestMembership] Raw payload is not valid JSON");
+            // ignore
         }
     }
 
     return body;
 }
 
+function normalizeMembershipType(value) {
+    const raw = String(value ?? "").trim().toLowerCase();
+    if (raw === "privat" || raw === "private") {
+        return "private";
+    }
+    if (raw === "business") {
+        return "business";
+    }
+    return "";
+}
+
+function buildUserPermissions(userId) {
+    return [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.read(Role.label(ADMIN_LABEL)),
+        Permission.update(Role.label(ADMIN_LABEL)),
+        Permission.delete(Role.label(ADMIN_LABEL)),
+    ];
+}
+
+function compactObject(value) {
+    return Object.fromEntries(
+        Object.entries(value).filter(([, entry]) => entry !== undefined)
+    );
+}
+
 export default async ({ req, res, log, error }) => {
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
-        log(`[requestMembership] Incoming request. Caller present: ${Boolean(callerId)}`);
         if (!callerId) {
             return fail(res, "Unauthenticated: missing x-appwrite-user-id header", 401);
         }
 
         const body = await extractBody(req, log);
-        if (!body?.type) {
-            return fail(res, "Missing required field: type");
+        const membershipType = normalizeMembershipType(body.membership_type ?? body.type);
+        if (!membershipType) {
+            return fail(res, "Missing or invalid membership_type", 400);
         }
 
-        const type = String(body.type).trim();
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
         const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
-        const apiKey = readEnv("APPWRITE_FUNCTION_API_KEY", "APPWRITE_API_KEY") || readHeader(req, "x-appwrite-key");
-        const databaseId = readEnv("APPWRITE_FUNCTION_DATABASE_ID");
-        const membershipTableId = "mitgliedschaft";
+        const apiKey =
+            readEnv("APPWRITE_FUNCTION_API_KEY", "APPWRITE_API_KEY") || readHeader(req, "x-appwrite-key");
+        const databaseId = readEnv("APPWRITE_DATABASE_ID") || DEFAULT_DATABASE_ID;
+        const membershipsTableId =
+            readEnv("APPWRITE_TABLE_MEMBERSHIPS_ID") || DEFAULT_MEMBERSHIPS_TABLE_ID;
+        const paymentsTableId = readEnv("APPWRITE_TABLE_PAYMENTS_ID") || DEFAULT_PAYMENTS_TABLE_ID;
 
-        if (!endpoint || !projectId || !apiKey || !databaseId) {
-            return fail(res, "Function endpoint, project ID, API key, or database ID is not configured", 500);
+        if (!endpoint || !projectId || !apiKey) {
+            return fail(res, "Function endpoint, project ID, or API key is not configured", 500);
         }
 
         const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
         const users = new Users(client);
-        const tablesDB = new TablesDB(client);
+        const tables = new TablesDB(client);
 
         const caller = await users.get(callerId);
         if (!caller.email || !caller.emailVerification) {
             return fail(res, "Forbidden: caller email not verified", 403);
         }
 
-        const existing = await tablesDB.listRows({
+        const existing = await tables.listRows({
             databaseId,
-            tableId: membershipTableId,
+            tableId: membershipsTableId,
             queries: [
-                Query.equal("userID", callerId),
-                Query.equal("typ", type),
-                Query.equal("status", ["aktiv", "beantragt"]),
+                Query.equal("user_id", callerId),
+                Query.equal("membership_type", membershipType),
+                Query.equal("status", ["pending", "active"]),
+                Query.limit(1),
             ],
         });
 
@@ -114,62 +147,70 @@ export default async ({ req, res, log, error }) => {
             return fail(res, "You already have an active or pending membership", 400);
         }
 
-        const membershipData = {
-            userID: callerId,
-            typ: type,
-            status: "beantragt",
-            beantragungs_datum: new Date().toISOString(),
-            ...(type === "privat" ? { dauer_jahre: 1 } : {}),
-        };
-
-        const newMembership = await tablesDB.createRow({
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const durationYears = Number(body.duration_years ?? (membershipType === "private" ? 1 : 1));
+        const requestedMembership = await tables.createRow({
             databaseId,
-            tableId: membershipTableId,
+            tableId: membershipsTableId,
             rowId: ID.unique(),
-            data: membershipData,
-            permissions: [
-                Permission.read(Role.user(callerId)),
-                Permission.read(Role.team("admin")),
-            ],
+            data: compactObject({
+                user_id: callerId,
+                membership_type: membershipType,
+                duration_years: durationYears,
+                requested_at: nowIso,
+                status: "pending",
+                payment_status: "pending",
+                credit_start_eur: Number(body.credit_start_eur ?? 0) || 0,
+                credit_balance_eur: Number(body.credit_balance_eur ?? 0) || 0,
+                billing_address: typeof body.billing_address === "string" ? body.billing_address : undefined,
+            }),
+            permissions: buildUserPermissions(callerId),
         });
 
-        if (type === "privat") {
-            const paymentTableId = "zahlungen";
-            const newPayment = await tablesDB.createRow({
+        const membershipNumber = `MB${now.getFullYear()}-${String(requestedMembership.$sequence ?? "").padStart(3, "0")}`;
+        const membership = await tables.updateRow({
+            databaseId,
+            tableId: membershipsTableId,
+            rowId: requestedMembership.$id,
+            data: {
+                membership_number: membershipNumber,
+            },
+        });
+
+        if (membershipType === "private") {
+            const payment = await tables.createRow({
                 databaseId,
-                tableId: paymentTableId,
+                tableId: paymentsTableId,
                 rowId: ID.unique(),
-                data: {
-                    mitgliedschaft: newMembership.$id,
-                    betrag_eur: 100.0,
-                    status: "offen",
-                    typ: "mitgliedschaft",
-                    kunde_typ: type,
-                },
-                permissions: [
-                    Permission.read(Role.user(callerId)),
-                    Permission.read(Role.team("admin")),
-                ],
+                data: compactObject({
+                    membership_id: membership.$id,
+                    payment_type: "membership",
+                    customer_type: membershipType,
+                    amount_eur: Number(body.amount_eur ?? 100),
+                    status: "open",
+                    reference: membershipNumber,
+                    due_at: nowIso,
+                }),
+                permissions: buildUserPermissions(callerId),
             });
 
-            const seqStr = String(newPayment.$sequence ?? "").padStart(3, "0");
-            const ref = `MB${new Date().getFullYear()}-${seqStr}`;
-            await tablesDB.updateRow({
+            await tables.updateRow({
                 databaseId,
-                tableId: paymentTableId,
-                rowId: newPayment.$id,
-                data: { ref },
+                tableId: membershipsTableId,
+                rowId: membership.$id,
+                data: {
+                    last_payment_id: payment.$id,
+                    last_payment_at: payment.$createdAt ?? nowIso,
+                },
             });
         }
 
-        return ok(res, { success: true, membership: newMembership });
+        return ok(res, { success: true, membership });
     } catch (caughtError) {
         const msg = String(caughtError?.message ?? caughtError ?? "Unknown error");
         const stack = String(caughtError?.stack ?? "");
-        error(`[requestMembership] Uncaught error: ${msg}`);
-        if (stack) {
-            error(`[requestMembership] Stack trace: ${stack.split("\n").slice(0, 5).join(" | ")} ...`);
-        }
+        error(`[createMembership] ${msg}`);
 
         const debugOn = readEnv("APPWRITE_FUNCTION_DEBUG", "APP_DEBUG") === "1";
         if (debugOn) {

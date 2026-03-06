@@ -1,5 +1,11 @@
 # Local Function Testing
 
+The canonical Appwrite resource IDs are now defined in
+[`/home/flo178/projects/agroforst-ff/appwrite/resources.json`](/home/flo178/projects/agroforst-ff/appwrite/resources.json).
+Local function runs no longer need per-function table ID env blocks in
+`.env`; [`/home/flo178/projects/agroforst-ff/scripts/run-function-local.sh`](/home/flo178/projects/agroforst-ff/scripts/run-function-local.sh)
+injects them from the repo-owned schema contract.
+
 See the full authoring guide in
 [`/home/flo178/projects/agroforst-ff/functions/FUNCTIONS_GUIDE.md`](/home/flo178/projects/agroforst-ff/functions/FUNCTIONS_GUIDE.md)
 for the repository template and workflow for new functions.
