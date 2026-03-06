@@ -1,0 +1,65 @@
+direction: right
+
+User→Server Flows: {
+  Sign-up (Account erstellen): {
+    shape: sequence_diagram
+    user: Benutzer
+    web: Website (Next.js)
+    auth: Appwrite Auth
+
+    user -> web: Öffnet /signup
+    web -> auth: POST account.create(email, password)
+    auth -> web: OK (userId, session)
+    web -> user: Eingeloggt
+
+    web -> auth: (optional) account.createVerification()
+    auth -> user: E-Mail mit Verifizierungslink
+  }
+
+  Mitgliedschaft beantragen: {
+    shape: sequence_diagram
+    user: Benutzer
+    web: Website (Next.js)
+    db: Appwrite Databases
+    msg: Appwrite Messaging
+
+    user -> web: Klickt Mitgliedschaft beantragen
+    web -> db: createDocument(mitgliedschaft, status: beantragt, userID)
+    db -> web: Mitgliedschaft angelegt
+    web -> user: Bestätigung "beantragt"
+    db -> msg: (optional) Notify Admin-Team
+  }
+
+  Angebot bestellen: {
+    shape: sequence_diagram
+    user: Benutzer
+    web: Website (Next.js)
+    fn: Cloud Function createOrder
+    db: Appwrite Databases
+    msg: Appwrite Messaging
+    storage: Appwrite Storage
+    inv: (optional) Cloud Function generateInvoice
+
+    user -> web: Wählt Angebot & klickt Bestellen
+    web -> fn: POST createOrder(angebotID, mitgliedschaftID, menge) + userId Header
+    fn -> db: getDocument(mitgliedschaft)
+    db -> fn: Mitgliedschaft (Status/Guthaben)
+    fn -> db: getDocument(angebot)
+    db -> fn: Angebot (Preis/Einheit/Menge)
+
+    fn -> db: Prüfe Verfügbarkeit & Guthaben
+    fn -> db: updateDocument(angebot, mengeVerfuegbar -= menge, mengeAbgeholt += menge)
+    fn -> db: createDocument(bestellung, Snapshot menge, einheit, preis_einheit, preis_gesamt, produkt_name, status:"offen")
+
+    fn -> web: 201 orderId, preis_gesamt
+    web -> user: Erfolgsanzeige & Zusammenfassung
+
+    fn -> msg: (optional) Bestellbestätigung an Nutzer/Admin
+    fn -> inv: (optional) Trigger generateInvoice(orderId)
+    inv -> storage: (optional) PDF speichern
+    inv -> msg: (optional) E-Mail mit PDF/Link
+  }
+
+  "Sign-up (Account erstellen)" -> "Mitgliedschaft beantragen": Nutzer eingeloggt
+  "Mitgliedschaft beantragen" -> "Angebot bestellen": Mitgliedschaft aktiv
+}

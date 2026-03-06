@@ -7,15 +7,12 @@
 _TODO(@floherzler): wie müssen wir den AGB-Timestamp speichern?_
 
 ## Funktion erhält:
-- `membership_id`: welcher Verwendungszweck wird für die Überweisung angegeben?
-- `user_id`: für wen wird die Mitgliedschaft beantragt?
+- `user_id`: für wen wird die Mitgliedschaft beantragt (wer ruft die Funktion auf)?
 - `typ`: `privat` oder `business`
 - `dauer`: in Jahren, default ist 1 Jahr
-- `preis`: den fälligen Gesamtpreis
 
 ## Aktionen:
 ### Datenbank (`mitgliedschaft`-Collection)
-- alle erhaltenen Informationen
 - `beantragungs_datum`: auf den aktuellen Zeitstempel
 - `status`: auf `beantragt`
 - `bezahl_status`: auf `warten` gesetzt

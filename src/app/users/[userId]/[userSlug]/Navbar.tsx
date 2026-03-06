@@ -1,17 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { Link, useLocation, useParams } from "@tanstack/react-router";
 import React from "react";
 
 const Navbar = () => {
-    const { userId, userSlug } = useParams();
-    const pathname = usePathname();
+    const { userId, userSlug } = useParams({ from: "/users/$userId/$userSlug" });
+    const location = useLocation();
 
     const items = [
         {
             name: "Profil",
-            href: `/users/${userId}/${userSlug}`,
+            to: "/users/$userId/$userSlug" as const,
+            params: { userId, userSlug },
         },
     ];
 
@@ -20,8 +20,9 @@ const Navbar = () => {
             {items.map(item => (
                 <li key={item.name}>
                     <Link
-                        href={item.href}
-                        className={`block w-full rounded-full px-3 py-0.5 duration-200 ${pathname === item.href ? "bg-white/20" : "hover:bg-white/20"
+                        to={item.to}
+                        params={item.params}
+                        className={`block w-full rounded-full px-3 py-0.5 duration-200 ${location.pathname === `/users/${userId}/${userSlug}` ? "bg-white/20" : "hover:bg-white/20"
                             }`}
                     >
                         {item.name}

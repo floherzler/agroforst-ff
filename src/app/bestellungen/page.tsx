@@ -21,10 +21,15 @@ export default function Page() {
           $id: doc.$id,
           $createdAt: doc.$createdAt,
           userID: doc.userID,
-          staffelID: doc.staffelID,
-          quantity: doc.quantity,
-          pickup: doc.pickup,
-          price: doc.price,
+          angebotID: doc.angebotID,
+          menge: doc.menge,
+          abholung: doc.abholung,
+          preis_einheit: doc.preis_einheit,
+          preis_gesamt: doc.preis_gesamt,
+          einheit: doc.einheit,
+          mitgliedschaftID: doc.mitgliedschaftID,
+          produkt_name: doc.produkt_name,
+          status: doc.status,
         }))
       );
     }

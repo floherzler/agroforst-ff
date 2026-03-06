@@ -1,99 +1,48 @@
+"use client";
+
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
-  NavigationMenuList
+  NavigationMenuList,
 } from "@/components/ui/navigation-menu";
+import { Link } from "@tanstack/react-router";
 
-import Image from "next/image";
-
-import { useAuthStore } from '@/store/Auth';
+import { useAuthStore } from "@/store/Auth";
 
 export default function Navbar() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   return (
-    <header className="bg-green-800">
-      <div className="container mx-auto p-4 flex justify-center">
-        <NavigationMenu className="flex items-center space-x-6">
-          <NavigationMenuList className="flex space-x-4">
-            {/* Startseite */}
+    <header className="sticky top-0 z-50 border-b border-permdal-200/60 bg-[#f9f5ee]/90 backdrop-blur">
+      <div className="mx-auto max-w-5xl px-4">
+        <NavigationMenu className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center py-3">
+          <NavigationMenuList className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 md:gap-4">
             <NavigationMenuItem>
-              <div className="bg-white rounded-full p-2 flex items-center justify-center">
-                <Image
-                  src="/img/agroforst_ff_blume.png"
-                  height={80}
-                  width={80}
-                  className="h-[80px] w-[80px] object-cover"
-                  alt="Permdal Logo"
-                />
-              </div>
+              <Link to="/" className="flex items-center gap-2 rounded-full border border-permdal-200/70 bg-white/90 px-3 py-1 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:px-4 sm:py-1.5">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-permdal-100/80">
+                  <img src="/img/agroforst_ff_blume.png" className="h-7 w-7 object-contain" alt="Agroforst Logo" />
+                </span>
+                <span className="text-sm font-semibold text-earth-500 sm:text-base">Agroforst</span>
+              </Link>
             </NavigationMenuItem>
-
-            {/* Produkte */}
             <NavigationMenuItem>
-              <NavigationMenuLink
-                href="/produkte"
-                className="px-4 py-2 text-sm font-medium text-gray-800 bg-emerald-50 rounded-lg hover:bg-gray-300 transition-all"
-              >
-                Produkte
+              <NavigationMenuLink asChild>
+                <Link to="/marktplatz" className="rounded-full border border-permdal-200 bg-white/90 px-3 py-1 text-xs font-medium text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-50/80 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm">Marktplatz</Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
-
-            {/* Blog */}
             <NavigationMenuItem>
-              <NavigationMenuLink
-                href="/blog"
-                className="px-4 py-2 text-sm font-medium text-gray-800 bg-emerald-50 rounded-lg hover:bg-gray-300 transition-all"
-              >
-                Blog
+              <NavigationMenuLink asChild>
+                <Link to="/blog" className="rounded-full border border-permdal-200 bg-white/90 px-3 py-1 text-xs font-medium text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-50/80 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm">Blog</Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
-
-            {/* "Bestellungen" if user has "admin" label else "Upgrade" */}
-            {user && (
-              <NavigationMenuItem>
-                {user.labels?.includes("admin") ? (
-                  <NavigationMenuLink
-                    href="/bestellungen"
-                    className="px-4 py-2 text-sm font-medium text-gray-800 bg-emerald-50 rounded-lg hover:bg-gray-300 transition-all"
-                  >
-                    Bestellungen
-                  </NavigationMenuLink>
-                ) : (
-                  <NavigationMenuLink
-                    href="/mitglied-werden"
-                    className="px-4 py-2 text-sm font-medium text-gray-800 bg-emerald-50 rounded-lg hover:bg-gray-300 transition-all"
-                  >
-                    Upgrade
-                  </NavigationMenuLink>
-                )}
-              </NavigationMenuItem>
-            )}
-
-            {/* Anmelden */}
-            {user ? (
-              <NavigationMenuItem>
-                <button
-                  onClick={logout}
-                  className="px-4 py-2 text-sm font-medium text-gray-800 bg-emerald-50 rounded-lg hover:bg-gray-300 transition-all"
-                >
-                  {user.name} abmelden
-                </button>
-              </NavigationMenuItem>
-            ) : (
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  href="/login"
-                  className="px-4 py-2 text-sm font-medium text-gray-800 bg-emerald-50 rounded-lg hover:bg-gray-300 transition-all"
-                >
-                  Anmelden
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            )}
-
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link to={user ? "/konto" : "/login"} className="max-w-[160px] truncate rounded-full border border-permdal-300 bg-permdal-600/10 px-3 py-1 text-xs font-semibold text-earth-500 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-permdal-600/15 hover:shadow-md sm:px-4 sm:py-1.5 sm:text-sm">{user ? "Mein Konto" : "Anmelden"}</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
       </div>
     </header>
-  )
+  );
 }

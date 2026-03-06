@@ -45,9 +45,9 @@ export default function BestellungsList({ initialBestellungen }: { initialBestel
                         <TableRow key={bestellung.$id} className="hover:bg-gray-100 cursor-pointer">
                             <TableCell>{bestellung.$id}</TableCell>
                             <TableCell>{bestellung.userID}</TableCell>
-                            <TableCell>{bestellung.staffelID}</TableCell>
-                            <TableCell>{bestellung.quantity}</TableCell>
-                            <TableCell>{new Date(bestellung.pickup).toDateString()}</TableCell>
+                            <TableCell>{bestellung.angebotID}</TableCell>
+                            <TableCell>{bestellung.menge}</TableCell>
+                            <TableCell>{bestellung.abholung}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

@@ -139,6 +139,10 @@ export const useAuthStore = create<AuthState>()(
                         state.jwt = null;
                         state.user = null;
                     });
+                    // Redirect to home after logout
+                    if (typeof window !== 'undefined') {
+                        window.location.href = '/';
+                    }
                 } catch (error) {
                     console.log(error);
                     set((state) => {
@@ -146,6 +150,10 @@ export const useAuthStore = create<AuthState>()(
                         state.jwt = null;
                         state.user = null;
                     });
+                    // Redirect even on error
+                    if (typeof window !== 'undefined') {
+                        window.location.href = '/';
+                    }
                 }
             },
 
@@ -169,4 +177,3 @@ export const useAuthStore = create<AuthState>()(
         }
     )
 );
-

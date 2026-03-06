@@ -1,0 +1,14 @@
+Mitgliedschaft beantragen: {
+    shape: sequence_diagram
+    user: Nutzer auf Website
+    func: Appwrite Funktionen
+    db: Appwrite Datenbank
+
+    user -> func.1: mitgliedWerden\n(typ privat/business)
+    func.1 -> db: createRow(userID, beantragt, typ)\nstatus="beantragt"
+    func.1 -> user: Mitgliedschaft beantragt!\nerwarte Guthaben (Privat)\n / Rechnungsadresse (Business)
+
+    user -> func.2: guthabenAufladen()
+    func.2 -> db: getRow(mitgliedschaft)\nstatus="aktiv", typ="privat"
+    func.2 -> user: Überweisungsbetreff
+  }

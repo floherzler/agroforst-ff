@@ -40,9 +40,14 @@ interface BlogPost {
 interface Bestellung {
     $id: string;
     $createdAt: string;
-    staffelID: string;
-    quantity: string;
-    price: number;
-    pickup: Date;
+    angebotID: string;
     userID: string;
+    mitgliedschaftID: string;
+    menge: string;
+    einheit: string;
+    abholung: boolean;
+    produkt_name: string;
+    preis_gesamt: number;
+    preis_einheit: number;
+    status: string;
 }
