@@ -5,11 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { account } from "@/models/client/config";
-import { UserPrefs } from "@/store/Auth";
+import { getCurrentUser, type AuthUser } from "@/lib/appwrite/appwriteAuth";
 
 const Page = () => {
-  const [user, setUser] = React.useState<UserPrefs | null>(null);
+  const [user, setUser] = React.useState<AuthUser | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const productIds = ['67101ee80002ac89b9f9', '67101ef300253ca391c2', '67101efe003dd6525840', '67101f08000502784a8d'];
@@ -26,7 +25,7 @@ const Page = () => {
 
     async function loadUser() {
       try {
-        const currentUser = await account.get<UserPrefs>();
+        const currentUser = await getCurrentUser();
         if (!cancelled) {
           setUser(currentUser);
           setError(null);

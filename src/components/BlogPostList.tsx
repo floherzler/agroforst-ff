@@ -1,37 +1,29 @@
 'use client'
 
-import env from "@/app/env";
-import { client } from '@/models/client/config';
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { subscribeToBlogPosts } from "@/lib/appwrite/appwriteProducts";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { CalendarIcon, UserIcon } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 
 export default function BlogPostList({ initialBlogPosts }: { initialBlogPosts: BlogPost[] }) {
     const [posts, setBlogPost] = useState<BlogPost[]>(initialBlogPosts);
-    const db = env.appwrite.db;
-    const blogPostCollection = env.appwrite.post_collection_id;
-    const channel = `databases.${db}.collections.${blogPostCollection}.documents`;
 
     useEffect(() => {
-        const unsubscribe = client.subscribe(channel, (response) => {
-            const eventType = response.events[0];
-            console.log(response.events)
-            const changedBlogPost = response.payload as BlogPost
-
-            if (eventType.includes('create')) {
-                setBlogPost((prevBlogPost) => [...prevBlogPost, changedBlogPost])
-            } else if (eventType.includes('delete')) {
-                setBlogPost((prevBlogPost) => prevBlogPost.filter((post) => post.$id !== changedBlogPost.$id))
-            } else if (eventType.includes('update')) {
-                setBlogPost((prevBlogPost) => prevBlogPost.map((post) => post.$id === changedBlogPost.$id ? changedBlogPost : post))
+        const unsubscribe = subscribeToBlogPosts(({ type, record }) => {
+            if (type === 'create') {
+                setBlogPost((prevBlogPost) => [...prevBlogPost, record])
+            } else if (type === 'delete') {
+                setBlogPost((prevBlogPost) => prevBlogPost.filter((post) => post.id !== record.id))
+            } else if (type === 'update') {
+                setBlogPost((prevBlogPost) => prevBlogPost.map((post) => post.id === record.id ? record : post))
             }
         });
         return () => unsubscribe()
-    }, [channel])
+    }, [])
 
-    const formatDate = (date: Date) => {
+    const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('de-DE', {
             year: 'numeric',
             month: 'long',
@@ -52,7 +44,7 @@ export default function BlogPostList({ initialBlogPosts }: { initialBlogPosts: B
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {posts.map((post) => (
                 <Card
-                    key={post.$id}
+                    key={post.id}
                     className="flex flex-col bg-white border-2 shadow-md hover:shadow-2xl hover:scale-[1.02] hover:border-primary/50 transition-all duration-300 cursor-pointer overflow-hidden group"
                 >
                     <CardHeader className="space-y-3 pb-4">

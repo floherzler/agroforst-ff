@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Team() {
   return (
     <div className="container mx-auto p-6 min-h-screen bg-gray-50 dark:bg-black text-gray-800 dark:text-gray-100">
@@ -17,6 +15,5 @@ export default function Team() {
 }
         
         
-
 
 

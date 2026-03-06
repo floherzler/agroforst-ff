@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
+import { listAlleProdukte } from "@/lib/appwrite/appwriteProducts";
 import ProduktListe from "@/components/ProductList";
 
 export default function Page() {
@@ -11,25 +10,7 @@ export default function Page() {
   useEffect(() => {
     async function load() {
       console.log("Fetching staffeln on the client…");
-      const resp = await databases.listDocuments(
-        env.appwrite.db,
-        env.appwrite.produce_collection_id
-      );
-      setProdukte(
-        resp.documents.map((doc) => ({
-          $id: doc.$id,
-          $createdAt: doc.$createdAt,
-          name: doc.name,
-          sorte: doc.sorte,
-          hauptkategorie: doc.hauptkategorie,
-          unterkategorie: doc.unterkategorie,
-          lebensdauer: doc.lebensdauer,
-          fruchtfolge_vor: doc.fruchtfolge_vor,
-          fruchtfolge_nach: doc.fruchtfolge_nach,
-          bodenansprueche: doc.bodenansprueche,
-          begleitpflanzen: doc.begleitpflanzen,
-        }))
-      );
+      setProdukte(await listAlleProdukte());
     }
     load();
   }, []);

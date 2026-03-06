@@ -2,8 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { databases } from "@/models/client/config";
-import env from "@/app/env";
+import { listStaffeln } from "@/lib/appwrite/appwriteProducts";
 import StaffelAdmin from "@/components/StaffelAdmin";
 
 export default function Page() {
@@ -12,24 +11,7 @@ export default function Page() {
   useEffect(() => {
     async function load() {
       console.log("Fetching staffeln on the client…");
-      const resp = await databases.listDocuments(
-        env.appwrite.db,
-        env.appwrite.angebote_collection_id
-      );
-      setStaffeln(
-        resp.documents.map((doc) => ({
-          $id: doc.$id,
-          $createdAt: doc.$createdAt,
-          produktID: doc.produktID,
-          saatPflanzDatum: doc.saatPflanzDatum,
-          ernteProjektion: doc.ernteProjektion,
-          einheit: doc.einheit,
-          euroPreis: doc.euroPreis,
-          menge: doc.menge,
-          mengeVerfuegbar: doc.mengeVerfuegbar,
-          mengeAbgeholt: doc.mengeAbgeholt,
-        }))
-      );
+      setStaffeln(await listStaffeln());
     }
     load();
   }, []);

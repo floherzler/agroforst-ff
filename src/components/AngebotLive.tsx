@@ -1,36 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { client } from "@/models/client/config";
-import env from "@/app/env";
 
-type Angebot = {
-    $id: string;
-    mengeVerfuegbar: number;
-    einheit: string;
-    menge: number;
-    euroPreis: number;
-};
+import { subscribeToStaffel } from "@/lib/appwrite/appwriteProducts";
 
-export default function AngebotLive({ initial }: { initial: Angebot }) {
-    const [angebot, setAngebot] = useState<Angebot>(initial);
+export default function AngebotLive({ initial }: { initial: Staffel }) {
+    const [angebot, setAngebot] = useState<Staffel>(initial);
 
     useEffect(() => {
-        const db = env.appwrite.db;
-        const coll = env.appwrite.angebote_collection_id;
-        const channel = `databases.${db}.collections.${coll}.documents.${initial.$id}`;
-
-        const unsubscribe = client.subscribe(channel, (response) => {
-            const eventType = response.events[0];
-            const changed = response.payload as Angebot;
-
-            if (eventType.includes("update")) {
-                setAngebot((prev) => ({ ...prev, ...changed }));
+        const unsubscribe = subscribeToStaffel(initial.id, ({ type, record }) => {
+            if (type === "update") {
+                setAngebot((prev) => ({ ...prev, ...record }));
             }
         });
 
         return () => unsubscribe();
-    }, [initial.$id]);
+    }, [initial.id]);
 
     return (
         <div className="space-y-2">

@@ -1,8 +1,7 @@
 'use client'
 
-import env from "@/app/env";
-import { client } from '@/models/client/config';
 import { useEffect, useState } from 'react';
+import { subscribeToProdukte } from "@/lib/appwrite/appwriteProducts";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
 
 
@@ -11,8 +10,8 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
 // import { z } from "zod";
 
 // const formSchema = z.object({
-//     produktID: z.string().min(2, {
-//         message: "produktID must be at least 2 characters.",
+//     produktId: z.string().min(2, {
+//         message: "produktId must be at least 2 characters.",
 //     }),
 //     saatDatum: z.date(),
 //     euroPreis: z.preprocess((val) => parseFloat(String(val).replace(',', '.')), z.number().min(0.01, {
@@ -23,25 +22,18 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
 
 export default function ProduktListe({ initialProdukte }: { initialProdukte: Produkt[] }) {
     const [produkte, setProdukte] = useState<Produkt[]>(initialProdukte);
-    const db = env.appwrite.db;
-    const produktCollection = env.appwrite.produce_collection_id;
-    const channel = `databases.${db}.collections.${produktCollection}.documents`;
     useEffect(() => {
-        const unsubscribe = client.subscribe(channel, (response) => {
-            const eventType = response.events[0];
-            console.log(response.events)
-            const changedProdukt = response.payload as Produkt
-
-            if (eventType.includes('create')) {
-                setProdukte((prevProdukte) => [...prevProdukte, changedProdukt])
-            } else if (eventType.includes('delete')) {
-                setProdukte((prevProdukte) => prevProdukte.filter((produkt) => produkt.$id !== changedProdukt.$id))
-            } else if (eventType.includes('update')) {
-                setProdukte((prevProdukte) => prevProdukte.map((produkt) => produkt.$id === changedProdukt.$id ? changedProdukt : produkt))
+        const unsubscribe = subscribeToProdukte(({ type, record }) => {
+            if (type === 'create') {
+                setProdukte((prevProdukte) => [...prevProdukte, record])
+            } else if (type === 'delete') {
+                setProdukte((prevProdukte) => prevProdukte.filter((produkt) => produkt.id !== record.id))
+            } else if (type === 'update') {
+                setProdukte((prevProdukte) => prevProdukte.map((produkt) => produkt.id === record.id ? record : produkt))
             }
         });
         return () => unsubscribe()
-    }, [channel])
+    }, [])
 
     return (
         <div className="flex flex-wrap gap-4 justify-center pt-8">
@@ -63,17 +55,17 @@ export default function ProduktListe({ initialProdukte }: { initialProdukte: Pro
                 </TableHeader>
                 <TableBody>
                     {produkte.map((produkt) => (
-                        <TableRow key={produkt.$id} className="hover:bg-gray-100 cursor-pointer">
-                            <TableCell>{produkt.$id}</TableCell>
+                        <TableRow key={produkt.id} className="hover:bg-gray-100 cursor-pointer">
+                            <TableCell>{produkt.id}</TableCell>
                             <TableCell>{produkt.name}</TableCell>
                             <TableCell>{produkt.sorte}</TableCell>
                             <TableCell>{produkt.hauptkategorie}</TableCell>
                             <TableCell>{produkt.unterkategorie}</TableCell>
                             <TableCell>{produkt.lebensdauer}</TableCell>
-                            <TableCell>{produkt.fruchtfolge_vor}</TableCell>
-                            <TableCell>{produkt.fruchtfolge_nach}</TableCell>
+                            <TableCell>{produkt.fruchtfolgeVor.join(", ")}</TableCell>
+                            <TableCell>{produkt.fruchtfolgeNach.join(", ")}</TableCell>
                             <TableCell>{produkt.bodenansprueche}</TableCell>
-                            <TableCell>{produkt.begleitpflanzen}</TableCell>
+                            <TableCell>{produkt.begleitpflanzen.join(", ")}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

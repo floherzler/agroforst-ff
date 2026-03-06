@@ -1,31 +1,23 @@
 'use client'
 
-import env from "@/app/env";
-import { client } from '@/models/client/config';
 import { useEffect, useState } from 'react';
+import { subscribeToBestellungen } from "@/lib/appwrite/appwriteOrders";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
 
 export default function BestellungsList({ initialBestellungen }: { initialBestellungen: Bestellung[] }) {
     const [bestellungen, setBestellung] = useState<Bestellung[]>(initialBestellungen);
-    const db = env.appwrite.db;
-    const bestellungCollection = env.appwrite.order_collection_id;
-    const channel = `databases.${db}.collections.${bestellungCollection}.documents`;
     useEffect(() => {
-        const unsubscribe = client.subscribe(channel, (response) => {
-            const eventType = response.events[0];
-            console.log(response.events)
-            const changedBestellung = response.payload as Bestellung
-
-            if (eventType.includes('create')) {
-                setBestellung((prevBestellung) => [...prevBestellung, changedBestellung])
-            } else if (eventType.includes('delete')) {
-                setBestellung((prevBestellung) => prevBestellung.filter((bestellung) => bestellung.$id !== changedBestellung.$id))
-            } else if (eventType.includes('update')) {
-                setBestellung((prevBestellung) => prevBestellung.map((bestellung) => bestellung.$id === changedBestellung.$id ? changedBestellung : bestellung))
+        const unsubscribe = subscribeToBestellungen(({ type, record }) => {
+            if (type === 'create') {
+                setBestellung((prevBestellung) => [...prevBestellung, record])
+            } else if (type === 'delete') {
+                setBestellung((prevBestellung) => prevBestellung.filter((bestellung) => bestellung.id !== record.id))
+            } else if (type === 'update') {
+                setBestellung((prevBestellung) => prevBestellung.map((bestellung) => bestellung.id === record.id ? record : bestellung))
             }
         });
         return () => unsubscribe()
-    }, [channel])
+    }, [])
 
     return (
         <div className="flex flex-wrap gap-4 justify-center pt-8">
@@ -42,10 +34,10 @@ export default function BestellungsList({ initialBestellungen }: { initialBestel
                 </TableHeader>
                 <TableBody>
                     {bestellungen.map((bestellung) => (
-                        <TableRow key={bestellung.$id} className="hover:bg-gray-100 cursor-pointer">
-                            <TableCell>{bestellung.$id}</TableCell>
-                            <TableCell>{bestellung.userID}</TableCell>
-                            <TableCell>{bestellung.angebotID}</TableCell>
+                        <TableRow key={bestellung.id} className="hover:bg-gray-100 cursor-pointer">
+                            <TableCell>{bestellung.id}</TableCell>
+                            <TableCell>{bestellung.userId}</TableCell>
+                            <TableCell>{bestellung.angebotId}</TableCell>
                             <TableCell>{bestellung.menge}</TableCell>
                             <TableCell>{bestellung.abholung}</TableCell>
                         </TableRow>
