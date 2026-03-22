@@ -25,6 +25,10 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BestellungenRouteImport } from './routes/bestellungen'
 import { Route as AgbsRouteImport } from './routes/agbs'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ZentraleIndexRouteImport } from './routes/zentrale.index'
+import { Route as ZentraleOperationsRouteImport } from './routes/zentrale.operations'
+import { Route as ZentraleCompactRouteImport } from './routes/zentrale.compact'
+import { Route as ZentraleClassicRouteImport } from './routes/zentrale.classic'
 import { Route as AngeboteIdRouteImport } from './routes/angebote.$id'
 import { Route as UsersUserIdUserSlugRouteImport } from './routes/users.$userId.$userSlug'
 
@@ -108,6 +112,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZentraleIndexRoute = ZentraleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ZentraleRoute,
+} as any)
+const ZentraleOperationsRoute = ZentraleOperationsRouteImport.update({
+  id: '/operations',
+  path: '/operations',
+  getParentRoute: () => ZentraleRoute,
+} as any)
+const ZentraleCompactRoute = ZentraleCompactRouteImport.update({
+  id: '/compact',
+  path: '/compact',
+  getParentRoute: () => ZentraleRoute,
+} as any)
+const ZentraleClassicRoute = ZentraleClassicRouteImport.update({
+  id: '/classic',
+  path: '/classic',
+  getParentRoute: () => ZentraleRoute,
+} as any)
 const AngeboteIdRoute = AngeboteIdRouteImport.update({
   id: '/angebote/$id',
   path: '/angebote/$id',
@@ -135,8 +159,12 @@ export interface FileRoutesByFullPath {
   '/staffeln': typeof StaffelnRoute
   '/team': typeof TeamRoute
   '/verify-email': typeof VerifyEmailRoute
-  '/zentrale': typeof ZentraleRoute
+  '/zentrale': typeof ZentraleRouteWithChildren
   '/angebote/$id': typeof AngeboteIdRoute
+  '/zentrale/classic': typeof ZentraleClassicRoute
+  '/zentrale/compact': typeof ZentraleCompactRoute
+  '/zentrale/operations': typeof ZentraleOperationsRoute
+  '/zentrale/': typeof ZentraleIndexRoute
   '/users/$userId/$userSlug': typeof UsersUserIdUserSlugRoute
 }
 export interface FileRoutesByTo {
@@ -155,8 +183,11 @@ export interface FileRoutesByTo {
   '/staffeln': typeof StaffelnRoute
   '/team': typeof TeamRoute
   '/verify-email': typeof VerifyEmailRoute
-  '/zentrale': typeof ZentraleRoute
   '/angebote/$id': typeof AngeboteIdRoute
+  '/zentrale/classic': typeof ZentraleClassicRoute
+  '/zentrale/compact': typeof ZentraleCompactRoute
+  '/zentrale/operations': typeof ZentraleOperationsRoute
+  '/zentrale': typeof ZentraleIndexRoute
   '/users/$userId/$userSlug': typeof UsersUserIdUserSlugRoute
 }
 export interface FileRoutesById {
@@ -176,8 +207,12 @@ export interface FileRoutesById {
   '/staffeln': typeof StaffelnRoute
   '/team': typeof TeamRoute
   '/verify-email': typeof VerifyEmailRoute
-  '/zentrale': typeof ZentraleRoute
+  '/zentrale': typeof ZentraleRouteWithChildren
   '/angebote/$id': typeof AngeboteIdRoute
+  '/zentrale/classic': typeof ZentraleClassicRoute
+  '/zentrale/compact': typeof ZentraleCompactRoute
+  '/zentrale/operations': typeof ZentraleOperationsRoute
+  '/zentrale/': typeof ZentraleIndexRoute
   '/users/$userId/$userSlug': typeof UsersUserIdUserSlugRoute
 }
 export interface FileRouteTypes {
@@ -200,6 +235,10 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/zentrale'
     | '/angebote/$id'
+    | '/zentrale/classic'
+    | '/zentrale/compact'
+    | '/zentrale/operations'
+    | '/zentrale/'
     | '/users/$userId/$userSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -218,8 +257,11 @@ export interface FileRouteTypes {
     | '/staffeln'
     | '/team'
     | '/verify-email'
-    | '/zentrale'
     | '/angebote/$id'
+    | '/zentrale/classic'
+    | '/zentrale/compact'
+    | '/zentrale/operations'
+    | '/zentrale'
     | '/users/$userId/$userSlug'
   id:
     | '__root__'
@@ -240,6 +282,10 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/zentrale'
     | '/angebote/$id'
+    | '/zentrale/classic'
+    | '/zentrale/compact'
+    | '/zentrale/operations'
+    | '/zentrale/'
     | '/users/$userId/$userSlug'
   fileRoutesById: FileRoutesById
 }
@@ -259,7 +305,7 @@ export interface RootRouteChildren {
   StaffelnRoute: typeof StaffelnRoute
   TeamRoute: typeof TeamRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
-  ZentraleRoute: typeof ZentraleRoute
+  ZentraleRoute: typeof ZentraleRouteWithChildren
   AngeboteIdRoute: typeof AngeboteIdRoute
   UsersUserIdUserSlugRoute: typeof UsersUserIdUserSlugRoute
 }
@@ -378,6 +424,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zentrale/': {
+      id: '/zentrale/'
+      path: '/'
+      fullPath: '/zentrale/'
+      preLoaderRoute: typeof ZentraleIndexRouteImport
+      parentRoute: typeof ZentraleRoute
+    }
+    '/zentrale/operations': {
+      id: '/zentrale/operations'
+      path: '/operations'
+      fullPath: '/zentrale/operations'
+      preLoaderRoute: typeof ZentraleOperationsRouteImport
+      parentRoute: typeof ZentraleRoute
+    }
+    '/zentrale/compact': {
+      id: '/zentrale/compact'
+      path: '/compact'
+      fullPath: '/zentrale/compact'
+      preLoaderRoute: typeof ZentraleCompactRouteImport
+      parentRoute: typeof ZentraleRoute
+    }
+    '/zentrale/classic': {
+      id: '/zentrale/classic'
+      path: '/classic'
+      fullPath: '/zentrale/classic'
+      preLoaderRoute: typeof ZentraleClassicRouteImport
+      parentRoute: typeof ZentraleRoute
+    }
     '/angebote/$id': {
       id: '/angebote/$id'
       path: '/angebote/$id'
@@ -395,6 +469,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ZentraleRouteChildren {
+  ZentraleClassicRoute: typeof ZentraleClassicRoute
+  ZentraleCompactRoute: typeof ZentraleCompactRoute
+  ZentraleOperationsRoute: typeof ZentraleOperationsRoute
+  ZentraleIndexRoute: typeof ZentraleIndexRoute
+}
+
+const ZentraleRouteChildren: ZentraleRouteChildren = {
+  ZentraleClassicRoute: ZentraleClassicRoute,
+  ZentraleCompactRoute: ZentraleCompactRoute,
+  ZentraleOperationsRoute: ZentraleOperationsRoute,
+  ZentraleIndexRoute: ZentraleIndexRoute,
+}
+
+const ZentraleRouteWithChildren = ZentraleRoute._addFileChildren(
+  ZentraleRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgbsRoute: AgbsRoute,
@@ -411,7 +503,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffelnRoute: StaffelnRoute,
   TeamRoute: TeamRoute,
   VerifyEmailRoute: VerifyEmailRoute,
-  ZentraleRoute: ZentraleRoute,
+  ZentraleRoute: ZentraleRouteWithChildren,
   AngeboteIdRoute: AngeboteIdRoute,
   UsersUserIdUserSlugRoute: UsersUserIdUserSlugRoute,
 }

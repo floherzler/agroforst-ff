@@ -1,13 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import Page from "@/app/zentrale/page";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/zentrale")({ component: RouteComponent });
+import ProtectedRoute from "@/components/ProtectedRoute";
+
+export const Route = createFileRoute("/zentrale")({
+  component: RouteComponent,
+});
 
 function RouteComponent() {
   return (
     <ProtectedRoute requireAuth requireAdmin>
-      <Page />
+      <Outlet />
     </ProtectedRoute>
   );
 }
