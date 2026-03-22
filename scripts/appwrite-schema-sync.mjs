@@ -288,6 +288,10 @@ function ensureTable(databaseId, table) {
 
 function buildCreateColumnArgs(tableId, column, databaseId) {
   const isRelationshipColumn = column.type === "relationship";
+  const normalizedRelationType =
+    typeof column.relationType === "string" && column.relationType.length > 0
+      ? column.relationType.replace(/-([a-z])/g, (_, char) => char.toUpperCase())
+      : "";
   const args = [
     "tables-db",
     `create-${column.type}-column`,
@@ -305,8 +309,8 @@ function buildCreateColumnArgs(tableId, column, databaseId) {
   if (typeof column.relatedTableId === "string" && column.relatedTableId.length > 0) {
     args.push("--related-table-id", column.relatedTableId);
   }
-  if (typeof column.relationType === "string" && column.relationType.length > 0) {
-    args.push("--type", column.relationType);
+  if (normalizedRelationType) {
+    args.push("--type", normalizedRelationType);
   }
   if (typeof column.twoWay === "boolean") {
     args.push("--two-way", String(column.twoWay));
