@@ -287,6 +287,7 @@ function ensureTable(databaseId, table) {
 }
 
 function buildCreateColumnArgs(tableId, column, databaseId) {
+  const isRelationshipColumn = column.type === "relationship";
   const args = [
     "tables-db",
     `create-${column.type}-column`,
@@ -319,10 +320,10 @@ function buildCreateColumnArgs(tableId, column, databaseId) {
   if (typeof column.size === "number") {
     args.push("--size", String(column.size));
   }
-  if (typeof column.required === "boolean") {
+  if (!isRelationshipColumn && typeof column.required === "boolean") {
     args.push("--required", String(column.required));
   }
-  if (typeof column.array === "boolean") {
+  if (!isRelationshipColumn && typeof column.array === "boolean") {
     args.push("--array", String(column.array));
   }
   if (typeof column.min === "number") {
