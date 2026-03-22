@@ -9,8 +9,8 @@ import {
 } from "node-appwrite";
 
 const DEFAULT_DATABASE_ID = "agroforst";
-const DEFAULT_MEMBERSHIPS_TABLE_ID = "memberships";
-const DEFAULT_PAYMENTS_TABLE_ID = "membership_payments";
+const DEFAULT_MEMBERSHIPS_TABLE_ID = "mitgliedschaften";
+const DEFAULT_PAYMENTS_TABLE_ID = "mitgliedschaftszahlungen";
 const ADMIN_LABEL = "admin";
 
 function ok(res, data, status = 200) {
@@ -73,10 +73,10 @@ async function extractBody(req, log) {
 function normalizeMembershipType(value) {
     const raw = String(value ?? "").trim().toLowerCase();
     if (raw === "privat" || raw === "private") {
-        return "private";
+        return "privat";
     }
-    if (raw === "business") {
-        return "business";
+    if (raw === "business" || raw === "betrieb") {
+        return "betrieb";
     }
     return "";
 }
@@ -105,9 +105,9 @@ export default async ({ req, res, log, error }) => {
         }
 
         const body = await extractBody(req, log);
-        const membershipType = normalizeMembershipType(body.membership_type ?? body.type);
+        const membershipType = normalizeMembershipType(body.mitgliedschaftstyp ?? body.membership_type ?? body.type);
         if (!membershipType) {
-            return fail(res, "Missing or invalid membership_type", 400);
+            return fail(res, "Missing or invalid mitgliedschaftstyp", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
@@ -136,9 +136,9 @@ export default async ({ req, res, log, error }) => {
             databaseId,
             tableId: membershipsTableId,
             queries: [
-                Query.equal("user_id", callerId),
-                Query.equal("membership_type", membershipType),
-                Query.equal("status", ["pending", "active"]),
+                Query.equal("benutzer_id", callerId),
+                Query.equal("mitgliedschaftstyp", membershipType),
+                Query.equal("status", ["beantragt", "aktiv"]),
                 Query.limit(1),
             ],
         });
@@ -149,21 +149,21 @@ export default async ({ req, res, log, error }) => {
 
         const now = new Date();
         const nowIso = now.toISOString();
-        const durationYears = Number(body.duration_years ?? (membershipType === "private" ? 1 : 1));
+        const durationYears = Number(body.dauer_jahre ?? body.duration_years ?? 1);
         const requestedMembership = await tables.createRow({
             databaseId,
             tableId: membershipsTableId,
             rowId: ID.unique(),
             data: compactObject({
-                user_id: callerId,
-                membership_type: membershipType,
-                duration_years: durationYears,
-                requested_at: nowIso,
-                status: "pending",
-                payment_status: "pending",
-                credit_start_eur: Number(body.credit_start_eur ?? 0) || 0,
-                credit_balance_eur: Number(body.credit_balance_eur ?? 0) || 0,
-                billing_address: typeof body.billing_address === "string" ? body.billing_address : undefined,
+                benutzer_id: callerId,
+                mitgliedschaftstyp: membershipType,
+                dauer_jahre: durationYears,
+                beantragt_am: nowIso,
+                status: "beantragt",
+                bezahl_status: "warten",
+                guthaben_start_eur: Number(body.guthaben_start_eur ?? body.credit_start_eur ?? 0) || 0,
+                guthaben_aktuell_eur: Number(body.guthaben_aktuell_eur ?? body.credit_balance_eur ?? 0) || 0,
+                rechnungsadresse: typeof (body.rechnungsadresse ?? body.billing_address) === "string" ? (body.rechnungsadresse ?? body.billing_address) : undefined,
             }),
             permissions: buildUserPermissions(callerId),
         });
@@ -174,23 +174,23 @@ export default async ({ req, res, log, error }) => {
             tableId: membershipsTableId,
             rowId: requestedMembership.$id,
             data: {
-                membership_number: membershipNumber,
+                mitgliedsnummer: membershipNumber,
             },
         });
 
-        if (membershipType === "private") {
+        if (membershipType === "privat") {
             const payment = await tables.createRow({
                 databaseId,
                 tableId: paymentsTableId,
                 rowId: ID.unique(),
                 data: compactObject({
-                    membership: membership.$id,
-                    payment_type: "membership",
-                    customer_type: membershipType,
-                    amount_eur: Number(body.amount_eur ?? 100),
-                    status: "open",
-                    reference: membershipNumber,
-                    due_at: nowIso,
+                    mitgliedschaft: membership.$id,
+                    zahlungsart: "mitgliedschaft",
+                    kundentyp: membershipType,
+                    betrag_eur: Number(body.betrag_eur ?? body.amount_eur ?? 100),
+                    status: "offen",
+                    referenz: membershipNumber,
+                    faellig_am: nowIso,
                 }),
                 permissions: buildUserPermissions(callerId),
             });
@@ -200,8 +200,8 @@ export default async ({ req, res, log, error }) => {
                 tableId: membershipsTableId,
                 rowId: membership.$id,
                 data: {
-                    last_payment_id: payment.$id,
-                    last_payment_at: payment.$createdAt ?? nowIso,
+                    letzte_zahlung_id: payment.$id,
+                    letzte_zahlung_am: payment.$createdAt ?? nowIso,
                 },
             });
         }

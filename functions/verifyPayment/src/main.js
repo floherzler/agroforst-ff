@@ -1,8 +1,8 @@
 import { Client, TablesDB, Users } from "node-appwrite";
 
 const DEFAULT_DATABASE_ID = "agroforst";
-const DEFAULT_MEMBERSHIPS_TABLE_ID = "memberships";
-const DEFAULT_PAYMENTS_TABLE_ID = "membership_payments";
+const DEFAULT_MEMBERSHIPS_TABLE_ID = "mitgliedschaften";
+const DEFAULT_PAYMENTS_TABLE_ID = "mitgliedschaftszahlungen";
 
 function ok(res, data, status = 200) {
     return res.json(data, status);
@@ -67,29 +67,37 @@ async function extractBody(req) {
 function normalizePaymentStatus(status) {
     const raw = String(status ?? "").trim().toLowerCase();
     switch (raw) {
+        case "paid":
         case "bezahlt":
-            return "paid";
+            return "bezahlt";
+        case "pending":
         case "warten":
-            return "pending";
+            return "warten";
+        case "partial":
         case "teilbezahlt":
-            return "partial";
+            return "teilbezahlt";
+        case "open":
         case "offen":
-            return "open";
+            return "offen";
+        case "failed":
+        case "fehlgeschlagen":
+            return "fehlgeschlagen";
+        case "cancelled":
         case "storniert":
-            return "cancelled";
+            return "storniert";
         default:
-            return raw || "paid";
+            return raw || "bezahlt";
     }
 }
 
 function paymentStatusToMembershipStatus(status) {
     switch (status) {
-        case "paid":
-            return "paid";
-        case "partial":
-            return "partial";
+        case "bezahlt":
+            return "bezahlt";
+        case "teilbezahlt":
+            return "teilbezahlt";
         default:
-            return "pending";
+            return "warten";
     }
 }
 
@@ -129,14 +137,14 @@ export default async ({ req, res, log, error }) => {
         }
 
         const body = await extractBody(req);
-        const paymentId = String(body.payment_id ?? body.paymentId ?? "").trim();
-        const membershipId = String(body.membership ?? body.membership_id ?? body.membershipId ?? "").trim() || undefined;
-        const note = typeof body.note === "string" ? body.note : undefined;
+        const paymentId = String(body.zahlung_id ?? body.payment_id ?? body.paymentId ?? "").trim();
+        const membershipId = String(body.mitgliedschaft ?? body.mitgliedschaft_id ?? body.membership ?? body.membership_id ?? body.membershipId ?? "").trim() || undefined;
+        const note = typeof (body.notiz ?? body.note) === "string" ? (body.notiz ?? body.note) : undefined;
         const force = Boolean(body.force);
         const status = normalizePaymentStatus(body.status);
 
         if (!paymentId) {
-            return fail(res, "Missing payment_id", 400);
+            return fail(res, "Missing zahlung_id", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
@@ -180,13 +188,13 @@ export default async ({ req, res, log, error }) => {
             rowId: paymentId,
             data: compactObject({
                 status,
-                verified_at: nowIso,
-                note,
+                verifiziert_am: nowIso,
+                notiz: note,
             }),
         });
 
         const targetMembershipId =
-            membershipId || parseRelationId(existing.membership) || String(existing.membership_id ?? "").trim() || undefined;
+            membershipId || parseRelationId(existing.mitgliedschaft) || undefined;
         if (targetMembershipId) {
             try {
                 const membership = await tables.getRow({
@@ -195,8 +203,8 @@ export default async ({ req, res, log, error }) => {
                     rowId: targetMembershipId,
                 });
 
-                const durationYears = Number(membership.duration_years ?? 1) || 1;
-                const startsAt = membership.starts_at ?? nowIso;
+                const durationYears = Number(membership.dauer_jahre ?? 1) || 1;
+                const startsAt = membership.startet_am ?? nowIso;
                 const endsAt = (() => {
                     const end = new Date(startsAt);
                     end.setFullYear(end.getFullYear() + durationYears);
@@ -208,15 +216,15 @@ export default async ({ req, res, log, error }) => {
                     tableId: membershipsTableId,
                     rowId: targetMembershipId,
                     data: compactObject({
-                        payment_status: paymentStatusToMembershipStatus(status),
-                        last_payment_id: paymentId,
-                        last_payment_at: nowIso,
-                        ...(status === "paid"
+                        bezahl_status: paymentStatusToMembershipStatus(status),
+                        letzte_zahlung_id: paymentId,
+                        letzte_zahlung_am: nowIso,
+                        ...(status === "bezahlt"
                             ? {
-                                  status: "active",
-                                  paid_at: nowIso,
-                                  starts_at: startsAt,
-                                  ends_at: endsAt,
+                                  status: "aktiv",
+                                  bezahlt_am: nowIso,
+                                  startet_am: startsAt,
+                                  endet_am: endsAt,
                               }
                             : {}),
                     }),

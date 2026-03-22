@@ -84,7 +84,7 @@ function getMembershipStatusStyle(
 
 function formatMembershipTypeLabel(type?: string): string {
   const value = (type ?? "").toString().toLowerCase();
-  if (value === "business" || value === "unternehmen") return "Business";
+  if (value === "business" || value === "unternehmen" || value === "betrieb") return "Betrieb";
   if (value === "privat" || value === "private") return "Privat";
   return type ?? "—";
 }
@@ -140,7 +140,7 @@ export default function AccountPage() {
   const [verificationStatus, setVerificationStatus] = React.useState<
     { state: "idle" | "loading" | "sent" | "error"; message?: string }
   >({ state: "idle" });
-  const [membershipType, setMembershipType] = React.useState<"privat" | "business">("privat");
+  const [membershipType, setMembershipType] = React.useState<"privat" | "betrieb">("privat");
   const [membershipStatus, setMembershipStatus] = React.useState<
     { state: "idle" | "loading" | "success" | "error"; message?: string }
   >({ state: "idle" });
@@ -157,7 +157,7 @@ export default function AccountPage() {
     [memberships]
   );
   const hasBusinessMembership = React.useMemo(
-    () => memberships.some((m) => (m.typ ?? "").toLowerCase() === "business"),
+    () => memberships.some((m) => ["business", "betrieb"].includes((m.typ ?? "").toLowerCase())),
     [memberships]
   );
   const canAddMoreMemberships = React.useMemo(
@@ -413,8 +413,8 @@ export default function AccountPage() {
       });
       const createdType = (createdMembership?.typ ?? membershipType).toLowerCase();
       setMembershipType((prev) => {
-        if (createdType === "privat" && !hasBusinessMembership) return "business";
-        if (createdType === "business" && !hasPrivatMembership) return "privat";
+        if (createdType === "privat" && !hasBusinessMembership) return "betrieb";
+        if (createdType === "betrieb" && !hasPrivatMembership) return "privat";
         return prev;
       });
     } catch (error) {
@@ -426,7 +426,7 @@ export default function AccountPage() {
     }
   }, [fetchMemberships, hasBusinessMembership, hasPrivatMembership, membershipType, user]);
 
-  const selectMembershipType = React.useCallback((type: "privat" | "business") => {
+  const selectMembershipType = React.useCallback((type: "privat" | "betrieb") => {
     setMembershipType(type);
     setMembershipStatus((prev) => (prev.state === "loading" ? prev : { state: "idle" }));
   }, []);
@@ -815,11 +815,11 @@ export default function AccountPage() {
                               <Button
                                 type="button"
                                 size="sm"
-                                variant={membershipType === "business" ? "default" : "outline"}
-                                onClick={() => selectMembershipType("business")}
+                                variant={membershipType === "betrieb" ? "default" : "outline"}
+                                onClick={() => selectMembershipType("betrieb")}
                                 disabled={membershipStatus.state === "loading" || hasBusinessMembership}
                               >
-                                Business
+                                Betrieb
                               </Button>
                             </div>
                             <Button
@@ -829,7 +829,7 @@ export default function AccountPage() {
                                 !user.emailVerification ||
                                 membershipStatus.state === "loading" ||
                                 (membershipType === "privat" && hasPrivatMembership) ||
-                                (membershipType === "business" && hasBusinessMembership)
+                                (membershipType === "betrieb" && hasBusinessMembership)
                               }
                             >
                               {membershipStatus.state === "loading" ? "Sende…" : "Mitgliedschaft beantragen"}

@@ -1,94 +1,94 @@
 direction: right
-products: {
+produkte: {
   shape: sql_table
 
-  product_id: String {constraint: primary_key}
+  produkt_id: String {constraint: primary_key}
   name: String
-  variety: String?
-  category: String
-  subcategory: String?
-  lifespan: String?
-  crop_rotation_before: "String[]"
-  crop_rotation_after: "String[]"
-  soil_requirements: "String[]"
-  companion_plants: "String[]"
-  seasonality_months: "int[]"
-  image_file_id: String?
-  notes: Text?
+  sorte: String?
+  hauptkategorie: String
+  unterkategorie: String?
+  lebensdauer: String?
+  fruchtfolge_vor: "String[]"
+  fruchtfolge_nach: "String[]"
+  bodenansprueche: "String[]"
+  begleitpflanzen: "String[]"
+  saisonalitaet: "int[]"
+  bild_datei_id: String?
+  notizen: Text?
 }
 
-offers: {
+angebote: {
   shape: sql_table
 
-  offer_id: String {constraint: primary_key}
-  product: products.product_id {constraint: relationship}
-  year: int
-  sowing_date: timestamp?
-  harvest_projection: "timestamp[]"
-  projected_quantity: double?
-  available_quantity: double
-  allocated_quantity: double
-  unit: Enum(piece|gram|bundle|liter)
-  unit_price_eur: double
-  producer_price_eur: double?
-  standard_price_eur: double?
-  member_price_eur: double?
-  expected_revenue_eur: double?
-  pickup_at: timestamp?
-  description: Text?
+  angebot_id: String {constraint: primary_key}
+  produkt: produkte.produkt_id {constraint: relationship}
+  jahr: int
+  saat_pflanz_datum: timestamp?
+  ernte_projektion: "timestamp[]"
+  menge: double?
+  menge_verfuegbar: double
+  menge_reserviert: double
+  einheit: Enum(stueck|kilogramm|bund|liter)
+  preis_pro_einheit_eur: double
+  erzeugerpreis_eur: double?
+  standardpreis_eur: double?
+  mitgliedspreis_eur: double?
+  erwarteter_umsatz_eur: double?
+  abholung_ab: timestamp?
+  beschreibung: Text?
 }
 
-memberships: {
+mitgliedschaften: {
   shape: sql_table
 
-  membership_id: String {constraint: primary_key}
-  user_id: String {constraint: foreign_key}
-  membership_number: String
-  membership_type: Enum(private|business)
-  duration_years: int
-  requested_at: date
-  status: Enum(pending|active|expired|cancelled)
-  payment_status: Enum(pending|partial|paid)
-  paid_at: date?
-  starts_at: date?
-  ends_at: date?
-  last_reminder_at: date?
-  credit_start_eur: double?
-  credit_balance_eur: double?
-  billing_address: Text?
-  last_payment_id: String?
+  mitgliedschaft_id: String {constraint: primary_key}
+  benutzer_id: String {constraint: foreign_key}
+  mitgliedsnummer: String
+  mitgliedschaftstyp: Enum(privat|betrieb)
+  dauer_jahre: int
+  beantragt_am: date
+  status: Enum(beantragt|aktiv|abgelaufen|storniert)
+  bezahl_status: Enum(warten|teilbezahlt|bezahlt)
+  bezahlt_am: date?
+  startet_am: date?
+  endet_am: date?
+  letzte_erinnerung_am: date?
+  guthaben_start_eur: double?
+  guthaben_aktuell_eur: double?
+  rechnungsadresse: Text?
+  letzte_zahlung_id: String?
 }
 
-membership_payments: {
+mitgliedschaftszahlungen: {
   shape: sql_table
 
-  payment_id: String {constraint: primary_key}
-  membership: memberships.membership_id {constraint: relationship}
-  payment_type: Enum(membership|order|other)
-  customer_type: Enum(private|business)?
-  amount_eur: double
-  status: Enum(open|pending|paid|failed|cancelled)
-  reference: String?
-  note: Text?
-  verified_at: timestamp?
-  due_at: timestamp?
+  zahlung_id: String {constraint: primary_key}
+  mitgliedschaft: mitgliedschaften.mitgliedschaft_id {constraint: relationship}
+  zahlungsart: Enum(mitgliedschaft|bestellung|sonstiges)
+  kundentyp: Enum(privat|betrieb)?
+  betrag_eur: double
+  status: Enum(offen|warten|bezahlt|fehlgeschlagen|storniert)
+  referenz: String?
+  notiz: Text?
+  verifiziert_am: timestamp?
+  faellig_am: timestamp?
 }
 
-orders: {
+bestellungen: {
   shape: sql_table
 
-  order_id: String {constraint: primary_key}
-  user_id: String {constraint: foreign_key}
-  user_email: String?
-  membership: memberships.membership_id {constraint: relationship}
-  offer: offers.offer_id {constraint: relationship}
-  quantity: double
-  unit: Enum(piece|gram|bundle|liter)
-  unit_price_eur: double
-  total_price_eur: double
-  pickup_at: timestamp?
-  product_name: String
-  status: Enum(requested|confirmed|fulfilled|cancelled)
+  bestellung_id: String {constraint: primary_key}
+  benutzer_id: String {constraint: foreign_key}
+  benutzer_email: String?
+  mitgliedschaft: mitgliedschaften.mitgliedschaft_id {constraint: relationship}
+  angebot: angebote.angebot_id {constraint: relationship}
+  menge: double
+  einheit: Enum(stueck|kilogramm|bund|liter)
+  preis_pro_einheit_eur: double
+  gesamtpreis_eur: double
+  abholung_ab: timestamp?
+  produkt_name: String
+  status: Enum(angefragt|bestaetigt|erfuellt|storniert)
 }
 
 user: {
@@ -99,27 +99,27 @@ user: {
   user_label: Enum(none|admin|dev|privatKunde|businessKunde)
 }
 
-products -> offers: hat {
+produkte -> angebote: hat {
   source-arrowhead: 1
   target-arrowhead: N
 }
 
-orders -> memberships: gehört zu {
+bestellungen -> mitgliedschaften: gehört zu {
   source-arrowhead: N
   target-arrowhead: 1
 }
 
-orders -> offers: besteht aus {
+bestellungen -> angebote: besteht aus {
   source-arrowhead: N
   target-arrowhead: 1
 }
 
-membership_payments -> memberships: gehört zu {
+mitgliedschaftszahlungen -> mitgliedschaften: gehört zu {
   source-arrowhead: N
   target-arrowhead: 1
 }
 
-user -> memberships: hat {
+user -> mitgliedschaften: hat {
   source-arrowhead: 1
   target-arrowhead: N
 }

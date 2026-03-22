@@ -8,11 +8,11 @@ import {
 } from "node-appwrite";
 
 const DEFAULT_DATABASE_ID = "agroforst";
-const DEFAULT_PRODUCTS_TABLE_ID = "products";
-const DEFAULT_OFFERS_TABLE_ID = "offers";
-const DEFAULT_MEMBERSHIPS_TABLE_ID = "memberships";
-const DEFAULT_ORDERS_TABLE_ID = "orders";
-const DEFAULT_BACKOFFICE_EVENTS_TABLE_ID = "backoffice_events";
+const DEFAULT_PRODUCTS_TABLE_ID = "produkte";
+const DEFAULT_OFFERS_TABLE_ID = "angebote";
+const DEFAULT_MEMBERSHIPS_TABLE_ID = "mitgliedschaften";
+const DEFAULT_ORDERS_TABLE_ID = "bestellungen";
+const DEFAULT_BACKOFFICE_EVENTS_TABLE_ID = "backoffice_ereignisse";
 const ADMIN_LABEL = "admin";
 
 function ok(res, data, status = 200) {
@@ -88,16 +88,16 @@ function isActiveMembership(status) {
 
 function normalizeWeightUnit(unit) {
     const value = String(unit ?? "").trim().toLowerCase();
-    if (value === "kilogram") {
-        return "gram";
+    if (value === "bundle") {
+        return "bund";
+    }
+    if (value === "piece") {
+        return "stueck";
     }
     return value;
 }
 
 function calculateTotalPrice(quantity, unit, unitPriceEur) {
-    if (unit === "gram") {
-        return Number(((quantity / 1000) * unitPriceEur).toFixed(2));
-    }
     return Number((quantity * unitPriceEur).toFixed(2));
 }
 
@@ -128,14 +128,14 @@ export default async ({ req, res, log, error }) => {
 
         const body = await extractBody(req, log);
         const url = new URL(req?.url ?? "http://localhost/");
-        const offerId = String(body.offer_id ?? body.angebotID ?? url.searchParams.get("angebotID") ?? "").trim();
+        const offerId = String(body.angebot_id ?? body.offer_id ?? body.angebotID ?? url.searchParams.get("angebotID") ?? "").trim();
         const membershipId = String(
-            body.membership ?? body.membership_id ?? body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? ""
+            body.mitgliedschaft ?? body.mitgliedschaft_id ?? body.membership ?? body.membership_id ?? body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? ""
         ).trim();
-        const quantity = Number(body.quantity ?? body.menge ?? url.searchParams.get("menge"));
+        const quantity = Number(body.menge ?? body.quantity ?? url.searchParams.get("menge"));
 
         if (!offerId || !membershipId || !Number.isFinite(quantity) || quantity <= 0) {
-            return fail(res, "Invalid input: require { offer_id, membership_id, quantity > 0 }", 400);
+            return fail(res, "Invalid input: require { angebot_id, mitgliedschaft_id, menge > 0 }", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
@@ -164,7 +164,7 @@ export default async ({ req, res, log, error }) => {
             tableId: membershipsTableId,
             rowId: membershipId,
         });
-        if (membership.user_id !== callerId) {
+        if (membership.benutzer_id !== callerId) {
             return fail(res, "Membership does not belong to caller", 403);
         }
         if (!isActiveMembership(membership.status)) {
@@ -177,8 +177,8 @@ export default async ({ req, res, log, error }) => {
             rowId: offerId,
         });
 
-        const canonicalUnit = normalizeWeightUnit(offer.unit);
-        const availableQuantity = Number(offer.available_quantity ?? 0);
+        const canonicalUnit = normalizeWeightUnit(offer.einheit);
+        const availableQuantity = Number(offer.menge_verfuegbar ?? 0);
         if (!Number.isFinite(availableQuantity) || availableQuantity < quantity) {
             return fail(res, "Not enough available", 409, {
                 available: availableQuantity,
@@ -188,36 +188,36 @@ export default async ({ req, res, log, error }) => {
 
         let productName = "";
         try {
-            const productId = parseRelationId(offer.product) || String(offer.product_id ?? "").trim();
+            const productId = parseRelationId(offer.produkt);
             if (productId) {
                 const product = await tables.getRow({
                     databaseId,
                     tableId: productsTableId,
                     rowId: productId,
                 });
-                productName = [product.name, product.variety].filter(Boolean).join(" - ");
+                productName = [product.name, product.sorte].filter(Boolean).join(" - ");
             }
         } catch {
             log("[placeOrder] Product lookup failed, using fallback");
         }
 
         if (!productName) {
-            const productId = parseRelationId(offer.product) || String(offer.product_id ?? "").trim();
-            productName = String(offer.product_name ?? `Produkt ${productId}`).trim();
+            const productId = parseRelationId(offer.produkt);
+            productName = String(offer.produkt_name ?? `Produkt ${productId}`).trim();
         }
 
-        const unitPriceEur = Number(offer.unit_price_eur ?? 0);
+        const unitPriceEur = Number(offer.preis_pro_einheit_eur ?? 0);
         const totalPriceEur = calculateTotalPrice(quantity, canonicalUnit, unitPriceEur);
         const nextAvailableQuantity = availableQuantity - quantity;
-        const nextAllocatedQuantity = Number(offer.allocated_quantity ?? 0) + quantity;
+        const nextAllocatedQuantity = Number(offer.menge_reserviert ?? 0) + quantity;
 
         await tables.updateRow({
             databaseId,
             tableId: offersTableId,
             rowId: offerId,
             data: {
-                available_quantity: nextAvailableQuantity,
-                allocated_quantity: nextAllocatedQuantity,
+                menge_verfuegbar: nextAvailableQuantity,
+                menge_reserviert: nextAllocatedQuantity,
             },
         });
 
@@ -227,17 +227,17 @@ export default async ({ req, res, log, error }) => {
             tableId: ordersTableId,
             rowId: ID.unique(),
             data: compactObject({
-                user_id: callerId,
-                user_email: "",
-                membership: membershipId,
-                offer: offerId,
-                quantity,
-                unit: canonicalUnit,
-                unit_price_eur: unitPriceEur,
-                total_price_eur: totalPriceEur,
-                pickup_at: offer.pickup_at ?? undefined,
-                product_name: productName,
-                status: "requested",
+                benutzer_id: callerId,
+                benutzer_email: "",
+                mitgliedschaft: membershipId,
+                angebot: offerId,
+                menge: quantity,
+                einheit: canonicalUnit,
+                preis_pro_einheit_eur: unitPriceEur,
+                gesamtpreis_eur: totalPriceEur,
+                abholung_ab: offer.abholung_ab ?? undefined,
+                produkt_name: productName,
+                status: "angefragt",
             }),
             permissions: buildUserPermissions(callerId),
         });
@@ -251,7 +251,7 @@ export default async ({ req, res, log, error }) => {
                     databaseId,
                     tableId: ordersTableId,
                     rowId: order.$id,
-                    data: { user_email: userEmail },
+                    data: { benutzer_email: userEmail },
                 });
             }
         } catch {
@@ -264,21 +264,21 @@ export default async ({ req, res, log, error }) => {
                 tableId: backofficeEventsTableId,
                 rowId: ID.unique(),
                 data: compactObject({
-                    event_type: "order_created",
-                    order_id: order.$id,
-                    offer_id: offerId,
-                    user_id: callerId,
-                    user_email: userEmail || undefined,
-                    subject: `Neue Bestellung: ${productName}`,
-                    message: [
+                    ereignistyp: "bestellung_erstellt",
+                    bestellung_id: order.$id,
+                    angebot_id: offerId,
+                    benutzer_id: callerId,
+                    benutzer_email: userEmail || undefined,
+                    betreff: `Neue Bestellung: ${productName}`,
+                    nachricht: [
                         `Bestellung ${order.$id}`,
                         `Produkt: ${productName}`,
                         `Menge: ${quantity} ${canonicalUnit}`,
                         `Preis: ${unitPriceEur.toFixed(2)} EUR`,
                         `Gesamt: ${totalPriceEur.toFixed(2)} EUR`,
                     ].join("\n"),
-                    delivered: false,
-                    created_at: nowIso,
+                    zugestellt: false,
+                    erstellt_am: nowIso,
                 }),
                 permissions: [
                     Permission.read(Role.label(ADMIN_LABEL)),
@@ -296,7 +296,7 @@ export default async ({ req, res, log, error }) => {
                 success: true,
                 orderId: order.$id,
                 offer: { before: availableQuantity, after: nextAvailableQuantity },
-                total_price_eur: totalPriceEur,
+                gesamtpreis_eur: totalPriceEur,
                 membership: membership.$id,
             },
             201,

@@ -9,32 +9,21 @@ import {
   createRealtimeChangeType,
   ensureConfigured,
   parseNumber,
-  parseRelationId,
   parseOptionalString,
+  parseRelationId,
   RealtimeChange,
 } from "@/lib/appwrite/shared";
 
 const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
-  offer: z.unknown().optional(),
-  offer_id: z.string().optional().default(""),
-  angebotID: z.string().optional().default(""),
-  user_id: z.string().optional().default(""),
-  userID: z.string().optional().default(""),
-  membership: z.unknown().optional(),
-  membership_id: z.string().optional(),
-  mitgliedschaftID: z.string().optional(),
-  quantity: z.unknown().optional(),
+  angebot: z.unknown().optional(),
+  benutzer_id: z.string().optional().default(""),
+  mitgliedschaft: z.unknown().optional(),
   menge: z.unknown().optional(),
-  unit: z.string().optional().default(""),
   einheit: z.string().optional().default(""),
-  pickup_at: z.string().optional(),
-  abholung: z.boolean().optional(),
-  product_name: z.string().optional(),
+  abholung_ab: z.string().optional(),
   produkt_name: z.string().optional(),
-  total_price_eur: z.unknown().optional(),
-  preis_gesamt: z.unknown().optional(),
-  unit_price_eur: z.unknown().optional(),
-  preis_einheit: z.unknown().optional(),
+  gesamtpreis_eur: z.unknown().optional(),
+  preis_pro_einheit_eur: z.unknown().optional(),
   status: z.string().optional(),
 });
 
@@ -45,14 +34,14 @@ const orderListInputSchema = z.object({
 
 function normalizeUnit(value: string): string {
   switch (value.trim().toLowerCase()) {
-    case "piece":
+    case "stueck":
       return "Stück";
-    case "gram":
-      return "Gramm";
-    case "bundle":
+    case "kilogramm":
+      return "Kilogramm";
+    case "gramm":
+      return "Kilogramm";
+    case "bund":
       return "Bund";
-    case "kilogram":
-      return "kg";
     case "liter":
       return "Liter";
     default:
@@ -62,12 +51,16 @@ function normalizeUnit(value: string): string {
 
 function normalizeOrderStatus(value: string | undefined): string | undefined {
   switch ((value ?? "").trim().toLowerCase()) {
+    case "angefragt":
     case "requested":
       return "angefragt";
+    case "bestaetigt":
     case "confirmed":
       return "bestaetigt";
+    case "erfuellt":
     case "fulfilled":
       return "erfuellt";
+    case "storniert":
     case "cancelled":
       return "storniert";
     default:
@@ -81,20 +74,15 @@ export function normalizeBestellung(raw: unknown): Bestellung {
   return {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
-    angebotId:
-      parseRelationId(parsed.offer) || parsed.offer_id || parsed.angebotID || "",
-    userId: parsed.user_id || parsed.userID || "",
-    mitgliedschaftId: parseOptionalString(
-      parseRelationId(parsed.membership) ??
-        parsed.membership_id ??
-        parsed.mitgliedschaftID,
-    ),
-    menge: parseNumber(parsed.quantity ?? parsed.menge),
-    einheit: normalizeUnit(parsed.unit || parsed.einheit || ""),
-    abholung: Boolean(parsed.pickup_at ?? parsed.abholung),
-    produktName: parseOptionalString(parsed.product_name ?? parsed.produkt_name),
-    preisGesamt: parseNumber(parsed.total_price_eur ?? parsed.preis_gesamt),
-    preisEinheit: parseNumber(parsed.unit_price_eur ?? parsed.preis_einheit),
+    angebotId: parseRelationId(parsed.angebot) || "",
+    userId: parsed.benutzer_id || "",
+    mitgliedschaftId: parseOptionalString(parseRelationId(parsed.mitgliedschaft)),
+    menge: parseNumber(parsed.menge),
+    einheit: normalizeUnit(parsed.einheit || ""),
+    abholung: Boolean(parsed.abholung_ab),
+    produktName: parseOptionalString(parsed.produkt_name),
+    preisGesamt: parseNumber(parsed.gesamtpreis_eur),
+    preisEinheit: parseNumber(parsed.preis_pro_einheit_eur),
     status: normalizeOrderStatus(parsed.status) ?? "",
   };
 }
@@ -106,21 +94,15 @@ export async function listBestellungen(
   } = {},
 ): Promise<Bestellung[]> {
   const parsedInput = orderListInputSchema.parse(input);
-  const queries = [
-    Query.orderDesc("$createdAt"),
-    Query.limit(parsedInput.limit ?? 100),
-  ];
+  const queries = [Query.orderDesc("$createdAt"), Query.limit(parsedInput.limit ?? 100)];
 
   if (parsedInput.userId) {
-    queries.push(Query.equal("user_id", parsedInput.userId));
+    queries.push(Query.equal("benutzer_id", parsedInput.userId));
   }
 
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(
-      appwriteConfig.orderTableId,
-      "Bestellungs-Tabelle",
-    ),
+    ensureConfigured(appwriteConfig.orderTableId, "Bestellungs-Tabelle"),
     queries,
   );
 

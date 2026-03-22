@@ -25,7 +25,7 @@ const placeOrderInputSchema = z.object({
 });
 
 const membershipRequestInputSchema = z.object({
-  type: z.enum(["privat", "business"]),
+  type: z.enum(["privat", "business", "betrieb"]),
 });
 
 const verifyPaymentInputSchema = z.object({
@@ -89,22 +89,22 @@ export async function placeOrderRequest(input: {
   const parsedInput = placeOrderInputSchema.parse(input);
 
   await executeValidatedFunction<void>(appwriteConfig.orderFunctionId, {
-    offer_id: parsedInput.angebotId,
-    membership_id: parsedInput.membershipId,
-    quantity: parsedInput.menge,
-    user_email: parsedInput.userMail,
+    angebot_id: parsedInput.angebotId,
+    mitgliedschaft_id: parsedInput.membershipId,
+    menge: parsedInput.menge,
+    benutzer_email: parsedInput.userMail,
   });
 }
 
 export async function requestMembership(input: {
-  type: "privat" | "business";
+  type: "privat" | "business" | "betrieb";
 }): Promise<{ membership?: MembershipRecord }> {
   const parsedInput = membershipRequestInputSchema.parse(input);
   const payload = await executeValidatedFunction<ExecutionPayload>(
     appwriteConfig.membershipFunctionId,
     {
-      membership_type:
-        parsedInput.type === "privat" ? "private" : parsedInput.type,
+      mitgliedschaftstyp:
+        parsedInput.type === "business" ? "betrieb" : parsedInput.type,
     },
   );
 
@@ -126,11 +126,11 @@ export async function verifyPayment(input: {
   await executeValidatedFunction<void>(
     appwriteConfig.paymentVerifyFunctionId,
     {
-      payment_id: parsedInput.paymentId,
+      zahlung_id: parsedInput.paymentId,
       status: parsedInput.status,
-      membership_id: parsedInput.membershipId,
-      amount: parsedInput.amount,
-      note: parsedInput.note,
+      mitgliedschaft_id: parsedInput.membershipId,
+      betrag: parsedInput.amount,
+      notiz: parsedInput.note,
     },
   );
 }

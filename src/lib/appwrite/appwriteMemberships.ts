@@ -7,58 +7,29 @@ import {
   appwriteDocumentMetaSchema,
   ensureConfigured,
   parseOptionalNumber,
-  parseRelationId,
   parseOptionalString,
+  parseRelationId,
 } from "@/lib/appwrite/shared";
 
-const paymentDocumentSchema = appwriteDocumentMetaSchema.extend({
-  membership: z.unknown().optional(),
-  membership_id: z.string().optional(),
-  membershipId: z.string().optional(),
+const zahlungDocumentSchema = appwriteDocumentMetaSchema.extend({
+  mitgliedschaft: z.unknown().optional(),
   status: z.string().optional(),
-  state: z.string().optional(),
-  reference: z.string().optional(),
-  ref: z.string().optional(),
-  verwendungszweck: z.string().optional(),
-  amount_eur: z.unknown().optional(),
+  referenz: z.string().optional(),
   betrag_eur: z.unknown().optional(),
-  amount: z.unknown().optional(),
-  due_at: z.string().optional(),
   faellig_am: z.string().optional(),
-  verified_at: z.string().optional(),
+  verifiziert_am: z.string().optional(),
 });
 
-const membershipDocumentSchema = appwriteDocumentMetaSchema.extend({
-  membership_number: z.string().optional(),
-  typ: z.string().optional(),
-  membership_type: z.string().optional(),
-  type: z.string().optional(),
+const mitgliedschaftDocumentSchema = appwriteDocumentMetaSchema.extend({
+  mitgliedsnummer: z.string().optional(),
+  mitgliedschaftstyp: z.string().optional(),
   status: z.string().optional(),
-  state: z.string().optional(),
-  requested_at: z.string().optional(),
-  beantragungs_datum: z.string().optional(),
   beantragt_am: z.string().optional(),
-  duration_years: z.unknown().optional(),
   dauer_jahre: z.unknown().optional(),
-  dauer: z.unknown().optional(),
-  laufzeit: z.unknown().optional(),
-  payment_status: z.string().optional(),
   bezahl_status: z.string().optional(),
-  paymentStatus: z.string().optional(),
-  credit_balance_eur: z.unknown().optional(),
-  kontingent_aktuell: z.unknown().optional(),
-  aktuelles_kontingent: z.unknown().optional(),
-  kontingent: z.unknown().optional(),
-  balance: z.unknown().optional(),
-  guthaben: z.unknown().optional(),
-  credit_start_eur: z.unknown().optional(),
-  kontingent_start: z.unknown().optional(),
-  start_kontingent: z.unknown().optional(),
-  kontingent_gesamt: z.unknown().optional(),
-  billing_address: z.string().optional(),
+  guthaben_aktuell_eur: z.unknown().optional(),
+  guthaben_start_eur: z.unknown().optional(),
   rechnungsadresse: z.string().optional(),
-  adresse: z.string().optional(),
-  address: z.string().optional(),
 });
 
 const membershipListInputSchema = z.object({
@@ -103,9 +74,11 @@ export type MembershipRecord = {
 function normalizeMembershipType(value: string | undefined): string | undefined {
   switch ((value ?? "").trim().toLowerCase()) {
     case "private":
+    case "privat":
       return "privat";
     case "business":
-      return "business";
+    case "betrieb":
+      return "betrieb";
     default:
       return parseOptionalString(value);
   }
@@ -114,12 +87,16 @@ function normalizeMembershipType(value: string | undefined): string | undefined 
 function normalizeMembershipStatus(value: string | undefined): string | undefined {
   switch ((value ?? "").trim().toLowerCase()) {
     case "pending":
+    case "beantragt":
       return "beantragt";
     case "active":
+    case "aktiv":
       return "aktiv";
     case "expired":
+    case "abgelaufen":
       return "abgelaufen";
     case "cancelled":
+    case "storniert":
       return "storniert";
     default:
       return parseOptionalString(value);
@@ -129,16 +106,22 @@ function normalizeMembershipStatus(value: string | undefined): string | undefine
 function normalizePaymentStatus(value: string | undefined): string | undefined {
   switch ((value ?? "").trim().toLowerCase()) {
     case "open":
+    case "offen":
       return "offen";
     case "pending":
+    case "warten":
       return "warten";
     case "partial":
+    case "teilbezahlt":
       return "teilbezahlt";
     case "paid":
+    case "bezahlt":
       return "bezahlt";
     case "failed":
+    case "fehlgeschlagen":
       return "fehlgeschlagen";
     case "cancelled":
+    case "storniert":
       return "storniert";
     default:
       return parseOptionalString(value);
@@ -146,67 +129,35 @@ function normalizePaymentStatus(value: string | undefined): string | undefined {
 }
 
 export function normalizeMembershipPayment(raw: unknown): MembershipPayment {
-  const parsed = paymentDocumentSchema.parse(raw);
+  const parsed = zahlungDocumentSchema.parse(raw);
 
   return {
     id: parsed.$id,
-    membershipId: parseOptionalString(
-      parseRelationId(parsed.membership) ??
-        parsed.membership_id ??
-        parsed.membershipId,
-    ),
-    status: normalizePaymentStatus(parsed.status ?? parsed.state),
-    ref: parseOptionalString(
-      parsed.reference ?? parsed.ref ?? parsed.verwendungszweck,
-    ),
-    betrag: parseOptionalNumber(parsed.amount ?? parsed.amount_eur),
-    betragEur: parseOptionalNumber(parsed.amount_eur ?? parsed.betrag_eur),
-    faelligAm: parseOptionalString(parsed.due_at ?? parsed.faellig_am),
-    createdAt: parsed.verified_at ?? parsed.$createdAt,
+    membershipId: parseOptionalString(parseRelationId(parsed.mitgliedschaft)),
+    status: normalizePaymentStatus(parsed.status),
+    ref: parseOptionalString(parsed.referenz),
+    betrag: parseOptionalNumber(parsed.betrag_eur),
+    betragEur: parseOptionalNumber(parsed.betrag_eur),
+    faelligAm: parseOptionalString(parsed.faellig_am),
+    createdAt: parsed.verifiziert_am ?? parsed.$createdAt,
   };
 }
 
 export function normalizeMembership(raw: unknown): MembershipRecord {
-  const parsed = membershipDocumentSchema.parse(raw);
+  const parsed = mitgliedschaftDocumentSchema.parse(raw);
 
   return {
     id: parsed.$id,
-    membershipNumber: parseOptionalString(parsed.membership_number),
-    typ: normalizeMembershipType(parsed.membership_type ?? parsed.typ ?? parsed.type),
-    status: normalizeMembershipStatus(parsed.status ?? parsed.state),
-    beantragungsDatum: parseOptionalString(
-      parsed.requested_at ??
-        parsed.beantragungs_datum ??
-        parsed.beantragt_am ??
-        parsed.$createdAt,
-    ),
+    membershipNumber: parseOptionalString(parsed.mitgliedsnummer),
+    typ: normalizeMembershipType(parsed.mitgliedschaftstyp),
+    status: normalizeMembershipStatus(parsed.status),
+    beantragungsDatum: parseOptionalString(parsed.beantragt_am ?? parsed.$createdAt),
     createdAt: parsed.$createdAt,
-    dauerJahre: parseOptionalNumber(
-      parsed.duration_years ?? parsed.dauer_jahre ?? parsed.dauer ?? parsed.laufzeit,
-    ),
-    bezahlStatus: normalizePaymentStatus(
-      parsed.payment_status ?? parsed.bezahl_status ?? parsed.paymentStatus,
-    ),
-    kontingentAktuell: parseOptionalNumber(
-      parsed.credit_balance_eur ??
-        parsed.kontingent_aktuell ??
-        parsed.aktuelles_kontingent ??
-        parsed.kontingent ??
-        parsed.balance ??
-        parsed.guthaben,
-    ),
-    kontingentStart: parseOptionalNumber(
-      parsed.credit_start_eur ??
-        parsed.kontingent_start ??
-        parsed.start_kontingent ??
-        parsed.kontingent_gesamt,
-    ),
-    adresse: parseOptionalString(
-      parsed.billing_address ??
-        parsed.rechnungsadresse ??
-        parsed.adresse ??
-        parsed.address,
-    ),
+    dauerJahre: parseOptionalNumber(parsed.dauer_jahre),
+    bezahlStatus: normalizePaymentStatus(parsed.bezahl_status),
+    kontingentAktuell: parseOptionalNumber(parsed.guthaben_aktuell_eur),
+    kontingentStart: parseOptionalNumber(parsed.guthaben_start_eur),
+    adresse: parseOptionalString(parsed.rechnungsadresse),
     payments: [],
   };
 }
@@ -219,12 +170,9 @@ export async function listMembershipsByUserId(input: {
 
   const membershipsResponse = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(
-      appwriteConfig.membershipTableId,
-      "Mitgliedschafts-Tabelle",
-    ),
+    ensureConfigured(appwriteConfig.membershipTableId, "Mitgliedschafts-Tabelle"),
     [
-      Query.equal("user_id", parsedInput.userId),
+      Query.equal("benutzer_id", parsedInput.userId),
       Query.orderDesc("$createdAt"),
       Query.limit(parsedInput.limit ?? 10),
     ],
@@ -240,7 +188,7 @@ export async function listMembershipsByUserId(input: {
   const paymentsResponse = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(appwriteConfig.paymentTableId, "Zahlungs-Tabelle"),
-    [Query.equal("membership", membershipIds), Query.limit(200)],
+    [Query.equal("mitgliedschaft", membershipIds), Query.limit(200)],
   );
 
   const paymentsByMembership = new Map<string, MembershipPayment[]>();
@@ -266,7 +214,7 @@ export async function findPaymentIdByRef(ref: string): Promise<string | null> {
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(appwriteConfig.paymentTableId, "Zahlungs-Tabelle"),
-    [Query.equal("reference", parsedInput.ref), Query.limit(1)],
+    [Query.equal("referenz", parsedInput.ref), Query.limit(1)],
   );
 
   if (response.documents.length === 0) {
