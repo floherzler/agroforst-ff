@@ -1,8 +1,0 @@
-{
-  "name": "agroforst-function-add-produkt",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "node-appwrite": "22.1.3"
-  }
-}

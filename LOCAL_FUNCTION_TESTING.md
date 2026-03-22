@@ -59,19 +59,10 @@ from the managed schema in
 Use the function blocks only when you want to override those defaults or when a
 function needs something extra like `NEXTCLOUD_CSV_URL`.
 
-## Required scope for `addProdukt`
-
-The runtime API key for
-[`/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.js`](/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.js)
-needs:
-
-- `rows.write`
-
 ## Other functions and minimum scopes
 
 These are the current minimum runtime scopes based on the code in the repo.
 
-- `addAngebot`: `users.read`, `documents.read`, `documents.write`
 - `createMembership`: `users.read`, `rows.read`, `rows.write`
 - `verifyPayment`: `users.read`, `documents.read`, `documents.write`
 - `placeOrder`: `users.read`, `documents.read`, `documents.write`
@@ -89,7 +80,7 @@ local function tests, the practical union is:
 Run:
 
 ```bash
-scripts/appwrite-local-dev.sh addProdukt
+scripts/appwrite-local-dev.sh createMembership
 ```
 
 By default this:
@@ -100,7 +91,7 @@ By default this:
    [`/home/flo178/projects/agroforst-ff/.appwrite-local`](/home/flo178/projects/agroforst-ff/.appwrite-local)
 4. overlays the pulled function sources with the checked-in Node runtime
    implementations and rewrites the local Appwrite metadata to `node-22`
-5. generates the runtime `functions/addProdukt/.env` file inside that local
+5. generates the runtime `functions/createMembership/.env` file inside that local
    workspace
 6. starts the Docker-backed Appwrite function runner on `http://localhost:8091/`
 
@@ -113,13 +104,12 @@ scripts/appwrite-local-dev.sh <function-id> [user-id] [port]
 Example:
 
 ```bash
-scripts/appwrite-local-dev.sh addProdukt local-dev-user 8091
+scripts/appwrite-local-dev.sh createMembership local-dev-user 8091
 ```
 
 You can also use:
 
 ```bash
-scripts/appwrite-local-dev.sh addAngebot
 scripts/appwrite-local-dev.sh createMembership
 scripts/appwrite-local-dev.sh verifyPayment
 scripts/appwrite-local-dev.sh placeOrder
@@ -148,22 +138,6 @@ Expected result for a valid request:
 - JSON response with `"success": true`
 
 ## Suggested local test payloads
-
-`addProdukt`
-
-```bash
-curl -i -X POST http://localhost:8091/ \
-  -H 'Content-Type: application/json' \
-  --data '{"name":"CLI test","hauptkategorie":"Gemüse"}'
-```
-
-`addAngebot`
-
-```bash
-curl -i -X POST http://localhost:8091/ \
-  -H 'Content-Type: application/json' \
-  --data '{"produktID":"<produce-id>","menge":10,"einheit":"kg","euroPreis":4.5}'
-```
 
 `createMembership`
 
@@ -199,5 +173,5 @@ curl -i -X POST http://localhost:8091/ \
 - If you want to force a fresh pull before running, use:
 
 ```bash
-APPWRITE_LOCAL_REFRESH=1 scripts/appwrite-local-dev.sh addProdukt
+APPWRITE_LOCAL_REFRESH=1 scripts/appwrite-local-dev.sh createMembership
 ```

@@ -10,7 +10,9 @@ import {
   createRealtimeChangeType,
   ensureConfigured,
   parseNumber,
+  parseOptionalNumber,
   parseOptionalString,
+  parseRelationId,
   parseStringArray,
   RealtimeChange,
 } from "@/lib/appwrite/shared";
@@ -37,11 +39,14 @@ const productDocumentSchema = appwriteDocumentMetaSchema.extend({
   saisonalitaet: z.unknown().optional(),
   image_file_id: z.string().optional(),
   imageID: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 const offerDocumentSchema = appwriteDocumentMetaSchema.extend({
+  product: z.unknown().optional(),
   product_id: z.string().optional().default(""),
   produktID: z.string().optional().default(""),
+  year: z.unknown().optional(),
   available_quantity: z.unknown().optional(),
   mengeVerfuegbar: z.unknown().optional(),
   unit: z.string().optional().default(""),
@@ -56,6 +61,13 @@ const offerDocumentSchema = appwriteDocumentMetaSchema.extend({
   ernteProjektion: z.unknown().optional(),
   allocated_quantity: z.unknown().optional(),
   mengeAbgeholt: z.unknown().optional(),
+  producer_price_eur: z.unknown().optional(),
+  standard_price_eur: z.unknown().optional(),
+  member_price_eur: z.unknown().optional(),
+  expected_revenue_eur: z.unknown().optional(),
+  pickup_at: z.string().optional(),
+  created_by_user_id: z.string().optional(),
+  updated_by_user_id: z.string().optional(),
   beschreibung: z.string().optional(),
   description: z.string().optional(),
 });
@@ -95,6 +107,40 @@ const previewImageInputSchema = z.object({
   imageId: z.string().trim().min(1),
   width: z.number().int().positive().max(4000).optional(),
   height: z.number().int().positive().max(4000).optional(),
+});
+
+const upsertProduktInputSchema = z.object({
+  id: z.string().trim().optional(),
+  name: z.string().trim().min(1),
+  sorte: z.string().trim().optional(),
+  hauptkategorie: z.string().trim().min(1),
+  unterkategorie: z.string().trim().optional(),
+  lebensdauer: z.string().trim().optional(),
+  fruchtfolgeVor: z.array(z.string().trim()).optional(),
+  fruchtfolgeNach: z.array(z.string().trim()).optional(),
+  bodenansprueche: z.array(z.string().trim()).optional(),
+  begleitpflanzen: z.array(z.string().trim()).optional(),
+  saisonalitaet: z.array(z.number().int().min(1).max(12)).optional(),
+  notes: z.string().trim().optional(),
+});
+
+const upsertStaffelInputSchema = z.object({
+  id: z.string().trim().optional(),
+  produktId: z.string().trim().min(1),
+  year: z.number().int().min(2000).max(2100).optional(),
+  menge: z.number().positive(),
+  mengeVerfuegbar: z.number().nonnegative(),
+  mengeAbgeholt: z.number().nonnegative().optional(),
+  einheit: z.string().trim().min(1),
+  euroPreis: z.number().nonnegative(),
+  producerPreis: z.number().nonnegative().optional(),
+  standardPreis: z.number().nonnegative().optional(),
+  memberPreis: z.number().nonnegative().optional(),
+  expectedRevenue: z.number().nonnegative().optional(),
+  saatPflanzDatum: z.string().trim().optional(),
+  ernteProjektion: z.array(z.string().trim()).optional(),
+  pickupAt: z.string().trim().optional(),
+  beschreibung: z.string().trim().optional(),
 });
 
 export type ProduktMitAngeboten = {
@@ -157,15 +203,19 @@ export function normalizeProdukt(raw: unknown): Produkt {
     ),
     saisonalitaet: seasonalitaet,
     imageId: parseOptionalString(parsed.image_file_id ?? parsed.imageID),
+    notes: parseOptionalString(parsed.notes),
   };
 }
 
 export function normalizeStaffel(raw: unknown): Staffel {
   const parsed = offerDocumentSchema.parse(raw);
+  const parsedYear = parseOptionalNumber(parsed.year);
   return {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
-    produktId: parsed.product_id || parsed.produktID,
+    produktId:
+      parseRelationId(parsed.product) || parsed.product_id || parsed.produktID,
+    year: parsedYear,
     mengeVerfuegbar: parseNumber(
       parsed.available_quantity ?? parsed.mengeVerfuegbar,
     ),
@@ -179,6 +229,13 @@ export function normalizeStaffel(raw: unknown): Staffel {
     mengeAbgeholt: parseNumber(
       parsed.allocated_quantity ?? parsed.mengeAbgeholt,
     ),
+    producerPreis: parseOptionalNumber(parsed.producer_price_eur),
+    standardPreis: parseOptionalNumber(parsed.standard_price_eur),
+    memberPreis: parseOptionalNumber(parsed.member_price_eur),
+    expectedRevenue: parseOptionalNumber(parsed.expected_revenue_eur),
+    pickupAt: parseOptionalString(parsed.pickup_at),
+    createdByUserId: parseOptionalString(parsed.created_by_user_id),
+    updatedByUserId: parseOptionalString(parsed.updated_by_user_id),
     beschreibung: parseOptionalString(parsed.description ?? parsed.beschreibung),
   };
 }
@@ -251,11 +308,11 @@ export async function listStaffeln(
   ];
 
   if (parsedInput.produktId) {
-    queries.push(Query.equal("product_id", parsedInput.produktId));
+    queries.push(Query.equal("product", parsedInput.produktId));
   }
 
   if (parsedInput.produktIds && parsedInput.produktIds.length > 0) {
-    queries.push(Query.equal("product_id", parsedInput.produktIds));
+    queries.push(Query.equal("product", parsedInput.produktIds));
   }
 
   const response = await databases.listDocuments(
@@ -306,6 +363,92 @@ export async function listBlogPosts(): Promise<BlogPost[]> {
   );
 
   return response.documents.map(normalizeBlogPost);
+}
+
+export async function upsertProdukt(input: {
+  id?: string;
+  name: string;
+  sorte?: string;
+  hauptkategorie: string;
+  unterkategorie?: string;
+  lebensdauer?: string;
+  fruchtfolgeVor?: string[];
+  fruchtfolgeNach?: string[];
+  bodenansprueche?: string[];
+  begleitpflanzen?: string[];
+  saisonalitaet?: number[];
+  notes?: string;
+}): Promise<Produkt> {
+  const parsedInput = upsertProduktInputSchema.parse(input);
+  const documentId = parsedInput.id || ID.unique();
+
+  const response = await databases.upsertDocument(
+    ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
+    ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
+    documentId,
+    {
+      name: parsedInput.name,
+      variety: parsedInput.sorte?.trim() || "",
+      category: parsedInput.hauptkategorie,
+      subcategory: parsedInput.unterkategorie?.trim() || "",
+      lifespan: parsedInput.lebensdauer?.trim() || "",
+      crop_rotation_before: parsedInput.fruchtfolgeVor ?? [],
+      crop_rotation_after: parsedInput.fruchtfolgeNach ?? [],
+      soil_requirements: parsedInput.bodenansprueche ?? [],
+      companion_plants: parsedInput.begleitpflanzen ?? [],
+      seasonality_months: parsedInput.saisonalitaet ?? [],
+      notes: parsedInput.notes?.trim() || undefined,
+    },
+  );
+
+  return normalizeProdukt(response);
+}
+
+export async function upsertStaffel(input: {
+  id?: string;
+  produktId: string;
+  year?: number;
+  menge: number;
+  mengeVerfuegbar: number;
+  mengeAbgeholt?: number;
+  einheit: string;
+  euroPreis: number;
+  producerPreis?: number;
+  standardPreis?: number;
+  memberPreis?: number;
+  expectedRevenue?: number;
+  saatPflanzDatum?: string;
+  ernteProjektion?: string[];
+  pickupAt?: string;
+  beschreibung?: string;
+}): Promise<Staffel> {
+  const parsedInput = upsertStaffelInputSchema.parse(input);
+  const documentId = parsedInput.id || ID.unique();
+
+  const response = await databases.upsertDocument(
+    ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
+    ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle"),
+    documentId,
+    {
+      product: parsedInput.produktId,
+      year: parsedInput.year,
+      projected_quantity: parsedInput.menge,
+      available_quantity: parsedInput.mengeVerfuegbar,
+      allocated_quantity: parsedInput.mengeAbgeholt ?? 0,
+      unit: parsedInput.einheit,
+      unit_price_eur: parsedInput.euroPreis,
+      producer_price_eur: parsedInput.producerPreis,
+      standard_price_eur: parsedInput.standardPreis,
+      member_price_eur: parsedInput.memberPreis,
+      expected_revenue_eur: parsedInput.expectedRevenue,
+      sowing_date: parsedInput.saatPflanzDatum || undefined,
+      harvest_projection: parsedInput.ernteProjektion ?? [],
+      pickup_at: parsedInput.pickupAt || undefined,
+      description: parsedInput.beschreibung?.trim() || undefined,
+    },
+  );
+
+  return normalizeStaffel(response);
 }
 
 export async function submitFeedbackMessage(input: {

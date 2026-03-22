@@ -1,17 +1,5 @@
 {
   "functions": {
-    "addProdukt": {
-      "source": "functions/addProdukt",
-      "runtime": "node-22",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    },
-    "addAngebot": {
-      "source": "functions/addAngebot",
-      "runtime": "node-22",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    },
     "createMembership": {
       "source": "functions/createMembership",
       "runtime": "node-22",

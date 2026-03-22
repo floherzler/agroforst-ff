@@ -2,6 +2,7 @@ interface Staffel {
   id: string;
   createdAt: string;
   produktId: string;
+  year?: number;
   saatPflanzDatum: string;
   ernteProjektion: string[];
   einheit: string;
@@ -9,6 +10,13 @@ interface Staffel {
   menge: number;
   mengeVerfuegbar: number;
   mengeAbgeholt: number;
+  producerPreis?: number;
+  standardPreis?: number;
+  memberPreis?: number;
+  expectedRevenue?: number;
+  pickupAt?: string;
+  createdByUserId?: string;
+  updatedByUserId?: string;
   beschreibung?: string;
 }
 
@@ -26,6 +34,7 @@ interface Produkt {
   begleitpflanzen: string[];
   saisonalitaet: number[];
   imageId?: string;
+  notes?: string;
 }
 
 interface BlogPost {

@@ -117,8 +117,6 @@ Recommended flow after additive changes:
   - `customer_messages`
   - `backoffice_events`
 - Functions:
-  - `addProdukt`
-  - `addAngebot`
   - `createMembership`
   - `createOrder`
   - `verifyPayment`
@@ -137,8 +135,6 @@ When adding a new column, update the matching normalization/parsing code there i
 Local function runner:
 
 ```bash
-scripts/run-function-local.sh addProdukt
-scripts/run-function-local.sh addAngebot
 scripts/run-function-local.sh createMembership
 scripts/run-function-local.sh verifyPayment
 scripts/run-function-local.sh createOrder

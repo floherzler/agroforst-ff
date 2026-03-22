@@ -5,7 +5,7 @@ repo:
 
 - [`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json) is the single source of truth for the managed Appwrite schema
 - [`/home/flo178/projects/agroforst-ff/scripts/appwrite-schema-sync.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-schema-sync.mjs) owns schema push, pull, reset, and type generation
-- [`/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs) seeds demo rows and syncs shared function variables only
+- [`/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs) seeds demo rows and syncs shared server-function variables only
 
 ## Managed resources
 
@@ -14,7 +14,7 @@ repo:
 - Public content tables: `products`, `offers`, `blog_posts`
 - Member and commerce tables: `memberships`, `membership_payments`, `orders`
 - Support and audit tables: `customer_messages`, `backoffice_events`
-- Function IDs: `addProdukt`, `addAngebot`, `createMembership`, `createOrder`, `verifyPayment`
+- Function IDs: `createMembership`, `createOrder`, `verifyPayment`
 
 ## Commands
 
@@ -48,7 +48,7 @@ npm run appwrite:schema:add-index -- --table offers --key offer_harvest_notes_ft
 The seed script is intentionally narrow:
 
 - upsert demo rows
-- sync shared function variables such as `APPWRITE_TABLE_PRODUCTS_ID`
+- sync shared server-function variables such as `APPWRITE_TABLE_PRODUCTS_ID`
 
 It does not:
 

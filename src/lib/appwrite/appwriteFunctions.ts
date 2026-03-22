@@ -19,6 +19,7 @@ const functionExecutionSchema = z.object({
 
 const placeOrderInputSchema = z.object({
   angebotId: z.string().trim().min(1),
+  membershipId: z.string().trim().min(1),
   menge: z.number().positive(),
   userMail: z.email(),
 });
@@ -33,31 +34,6 @@ const verifyPaymentInputSchema = z.object({
   membershipId: z.string().trim().optional(),
   amount: z.number().finite().optional(),
   note: z.string().trim().optional(),
-});
-
-const createProduktInputSchema = z.object({
-  id: z.string().trim().optional(),
-  name: z.string().trim().min(1),
-  sorte: z.string().trim().optional(),
-  hauptkategorie: z.string().trim().min(1),
-  unterkategorie: z.string().trim().optional(),
-  lebensdauer: z.string().trim().optional(),
-  fruchtfolgeVor: z.array(z.string()).optional(),
-  fruchtfolgeNach: z.array(z.string()).optional(),
-  bodenansprueche: z.array(z.string()).optional(),
-  begleitpflanzen: z.array(z.string()).optional(),
-});
-
-const createAngebotInputSchema = z.object({
-  produktId: z.string().trim().min(1),
-  menge: z.number().positive(),
-  mengeVerfuegbar: z.number().nonnegative(),
-  einheit: z.string().trim().min(1),
-  euroPreis: z.number().nonnegative(),
-  saatPflanzDatum: z.string().trim().optional(),
-  ernteProjektion: z.array(z.string()).optional(),
-  mengeAbgeholt: z.number().nonnegative().optional(),
-  beschreibung: z.string().trim().optional(),
 });
 
 type ExecutionPayload = {
@@ -106,6 +82,7 @@ async function executeValidatedFunction<TOutput = unknown>(
 
 export async function placeOrderRequest(input: {
   angebotId: string;
+  membershipId: string;
   menge: number;
   userMail: string;
 }): Promise<void> {
@@ -113,6 +90,7 @@ export async function placeOrderRequest(input: {
 
   await executeValidatedFunction<void>(appwriteConfig.orderFunctionId, {
     offer_id: parsedInput.angebotId,
+    membership_id: parsedInput.membershipId,
     quantity: parsedInput.menge,
     user_email: parsedInput.userMail,
   });
@@ -155,56 +133,4 @@ export async function verifyPayment(input: {
       note: parsedInput.note,
     },
   );
-}
-
-export async function createProdukt(input: {
-  id?: string;
-  name: string;
-  sorte?: string;
-  hauptkategorie: string;
-  unterkategorie?: string;
-  lebensdauer?: string;
-  fruchtfolgeVor?: string[];
-  fruchtfolgeNach?: string[];
-  bodenansprueche?: string[];
-  begleitpflanzen?: string[];
-}): Promise<void> {
-  const parsedInput = createProduktInputSchema.parse(input);
-  await executeValidatedFunction<void>(appwriteConfig.addProduktFunctionId, {
-    id: parsedInput.id,
-    name: parsedInput.name,
-    variety: parsedInput.sorte,
-    category: parsedInput.hauptkategorie,
-    subcategory: parsedInput.unterkategorie,
-    lifespan: parsedInput.lebensdauer,
-    crop_rotation_before: parsedInput.fruchtfolgeVor,
-    crop_rotation_after: parsedInput.fruchtfolgeNach,
-    soil_requirements: parsedInput.bodenansprueche,
-    companion_plants: parsedInput.begleitpflanzen,
-  });
-}
-
-export async function createAngebot(input: {
-  produktId: string;
-  menge: number;
-  mengeVerfuegbar: number;
-  einheit: string;
-  euroPreis: number;
-  saatPflanzDatum?: string;
-  ernteProjektion?: string[];
-  mengeAbgeholt?: number;
-  beschreibung?: string;
-}): Promise<void> {
-  const parsedInput = createAngebotInputSchema.parse(input);
-  await executeValidatedFunction<void>(appwriteConfig.addAngebotFunctionId, {
-    projected_quantity: parsedInput.menge,
-    available_quantity: parsedInput.mengeVerfuegbar,
-    unit: parsedInput.einheit,
-    unit_price_eur: parsedInput.euroPreis,
-    sowing_date: parsedInput.saatPflanzDatum,
-    harvest_projection: parsedInput.ernteProjektion,
-    allocated_quantity: parsedInput.mengeAbgeholt,
-    description: parsedInput.beschreibung,
-    product_id: parsedInput.produktId,
-  });
 }
