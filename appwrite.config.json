@@ -319,13 +319,6 @@
             ],
             "indexes": [
                 {
-                    "key": "offer_product_key",
-                    "type": "key",
-                    "attributes": [
-                        "product"
-                    ]
-                },
-                {
                     "key": "offer_year_key",
                     "type": "key",
                     "attributes": [
@@ -604,13 +597,6 @@
             ],
             "indexes": [
                 {
-                    "key": "pay_membership_key",
-                    "type": "key",
-                    "attributes": [
-                        "membership"
-                    ]
-                },
-                {
                     "key": "pay_ref_unique",
                     "type": "unique",
                     "attributes": [
@@ -739,20 +725,6 @@
                     "type": "key",
                     "attributes": [
                         "user_id"
-                    ]
-                },
-                {
-                    "key": "order_offer_key",
-                    "type": "key",
-                    "attributes": [
-                        "offer"
-                    ]
-                },
-                {
-                    "key": "order_member_key",
-                    "type": "key",
-                    "attributes": [
-                        "membership"
                     ]
                 }
             ]
