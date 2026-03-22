@@ -1,295 +1,1038 @@
 {
-  "projectId": "670b925800275a11d5c1",
-  "projectName": "Agroforst FF",
-  "endpoint": "",
-  "tablesDB": [
-    {
-      "$id": "agroforst",
-      "name": "Agroforst FF",
-      "enabled": true
-    }
-  ],
-  "tables": [
-    {
-      "$id": "products",
-      "databaseId": "agroforst",
-      "name": "Products",
-      "enabled": true,
-      "rowSecurity": false,
-      "$permissions": [
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "name", "type": "varchar", "required": true, "array": false, "size": 255, "default": null },
-        { "key": "variety", "type": "varchar", "required": false, "array": false, "size": 255, "default": "" },
-        { "key": "category", "type": "varchar", "required": true, "array": false, "size": 100, "default": null },
-        { "key": "subcategory", "type": "varchar", "required": false, "array": false, "size": 100, "default": "" },
-        { "key": "lifespan", "type": "varchar", "required": false, "array": false, "size": 100, "default": "" },
-        { "key": "crop_rotation_before", "type": "varchar", "required": false, "array": true, "size": 120, "default": null },
-        { "key": "crop_rotation_after", "type": "varchar", "required": false, "array": true, "size": 120, "default": null },
-        { "key": "soil_requirements", "type": "varchar", "required": false, "array": true, "size": 120, "default": null },
-        { "key": "companion_plants", "type": "varchar", "required": false, "array": true, "size": 120, "default": null },
-        { "key": "seasonality_months", "type": "integer", "required": false, "array": true, "default": null, "min": 1, "max": 12 },
-        { "key": "image_file_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "notes", "type": "text", "required": false, "array": false, "default": null }
-      ],
-      "indexes": [
-        { "key": "prod_name_ft", "type": "fulltext", "attributes": ["name"] },
-        { "key": "prod_category_key", "type": "key", "attributes": ["category"] }
-      ]
-    },
-    {
-      "$id": "offers",
-      "databaseId": "agroforst",
-      "name": "Offers",
-      "enabled": true,
-      "rowSecurity": false,
-      "$permissions": [
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "product", "type": "relationship", "required": true, "array": false, "relatedTableId": "products", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
-        { "key": "year", "type": "integer", "required": false, "array": false, "default": null, "min": 2000, "max": 2100 },
-        { "key": "sowing_date", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "harvest_projection", "type": "datetime", "required": false, "array": true, "default": null },
-        { "key": "projected_quantity", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "available_quantity", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
-        { "key": "allocated_quantity", "type": "float", "required": false, "array": false, "default": 0, "min": 0 },
-        { "key": "unit", "type": "enum", "required": true, "array": false, "elements": ["piece", "gram", "bundle", "liter"], "default": null },
-        { "key": "unit_price_eur", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
-        { "key": "producer_price_eur", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "standard_price_eur", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "member_price_eur", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "expected_revenue_eur", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "pickup_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "description", "type": "text", "required": false, "array": false, "default": null },
-        { "key": "created_by_user_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "updated_by_user_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null }
-      ],
-      "indexes": [
-        { "key": "offer_product_key", "type": "key", "attributes": ["product"] },
-        { "key": "offer_year_key", "type": "key", "attributes": ["year"] }
-      ]
-    },
-    {
-      "$id": "memberships",
-      "databaseId": "agroforst",
-      "name": "Memberships",
-      "enabled": true,
-      "rowSecurity": true,
-      "$permissions": [
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "membership_number", "type": "varchar", "required": false, "array": false, "size": 32, "default": null },
-        { "key": "user_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
-        { "key": "membership_type", "type": "enum", "required": true, "array": false, "elements": ["private", "business"], "default": null },
-        { "key": "duration_years", "type": "integer", "required": false, "array": false, "default": null, "min": 1, "max": 10 },
-        { "key": "requested_at", "type": "datetime", "required": true, "array": false, "default": null },
-        { "key": "status", "type": "enum", "required": true, "array": false, "elements": ["pending", "active", "expired", "cancelled"], "default": null },
-        { "key": "cancel_reason", "type": "text", "required": false, "array": false, "default": null },
-        { "key": "payment_status", "type": "enum", "required": true, "array": false, "elements": ["pending", "partial", "paid"], "default": null },
-        { "key": "paid_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "starts_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "ends_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "last_reminder_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "credit_start_eur", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "credit_balance_eur", "type": "float", "required": false, "array": false, "default": null, "min": 0 },
-        { "key": "billing_address", "type": "text", "required": false, "array": false, "default": null },
-        { "key": "last_payment_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "last_payment_at", "type": "datetime", "required": false, "array": false, "default": null }
-      ],
-      "indexes": [
-        { "key": "mem_user_key", "type": "key", "attributes": ["user_id"] },
-        { "key": "mem_number_unique", "type": "unique", "attributes": ["membership_number"] }
-      ]
-    },
-    {
-      "$id": "membership_payments",
-      "databaseId": "agroforst",
-      "name": "Membership Payments",
-      "enabled": true,
-      "rowSecurity": true,
-      "$permissions": [
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "membership", "type": "relationship", "required": true, "array": false, "relatedTableId": "memberships", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
-        { "key": "payment_type", "type": "enum", "required": true, "array": false, "elements": ["membership", "order", "other"], "default": null },
-        { "key": "customer_type", "type": "enum", "required": false, "array": false, "elements": ["private", "business"], "default": null },
-        { "key": "amount_eur", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
-        { "key": "status", "type": "enum", "required": true, "array": false, "elements": ["open", "pending", "paid", "failed", "cancelled"], "default": null },
-        { "key": "reference", "type": "varchar", "required": false, "array": false, "size": 64, "default": null },
-        { "key": "note", "type": "text", "required": false, "array": false, "default": null },
-        { "key": "verified_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "due_at", "type": "datetime", "required": false, "array": false, "default": null }
-      ],
-      "indexes": [
-        { "key": "pay_membership_key", "type": "key", "attributes": ["membership"] },
-        { "key": "pay_ref_unique", "type": "unique", "attributes": ["reference"] }
-      ]
-    },
-    {
-      "$id": "orders",
-      "databaseId": "agroforst",
-      "name": "Orders",
-      "enabled": true,
-      "rowSecurity": true,
-      "$permissions": [
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "user_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
-        { "key": "user_email", "type": "varchar", "required": false, "array": false, "size": 255, "default": null },
-        { "key": "membership", "type": "relationship", "required": true, "array": false, "relatedTableId": "memberships", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
-        { "key": "offer", "type": "relationship", "required": true, "array": false, "relatedTableId": "offers", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
-        { "key": "quantity", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
-        { "key": "unit", "type": "enum", "required": true, "array": false, "elements": ["piece", "gram", "bundle", "liter"], "default": null },
-        { "key": "unit_price_eur", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
-        { "key": "total_price_eur", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
-        { "key": "pickup_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "product_name", "type": "varchar", "required": true, "array": false, "size": 255, "default": null },
-        { "key": "status", "type": "enum", "required": true, "array": false, "elements": ["requested", "confirmed", "fulfilled", "cancelled"], "default": null }
-      ],
-      "indexes": [
-        { "key": "order_user_key", "type": "key", "attributes": ["user_id"] },
-        { "key": "order_offer_key", "type": "key", "attributes": ["offer"] },
-        { "key": "order_member_key", "type": "key", "attributes": ["membership"] }
-      ]
-    },
-    {
-      "$id": "blog_posts",
-      "databaseId": "agroforst",
-      "name": "Blog Posts",
-      "enabled": true,
-      "rowSecurity": false,
-      "$permissions": [
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "title", "type": "varchar", "required": true, "array": false, "size": 255, "default": null },
-        { "key": "summary", "type": "text", "required": false, "array": false, "default": null },
-        { "key": "content", "type": "text", "required": true, "array": false, "default": null },
-        { "key": "tags", "type": "varchar", "required": false, "array": true, "size": 80, "default": null },
-        { "key": "author_name", "type": "varchar", "required": false, "array": false, "size": 255, "default": null },
-        { "key": "published_at", "type": "datetime", "required": false, "array": false, "default": null },
-        { "key": "updated_at", "type": "datetime", "required": false, "array": false, "default": null }
-      ],
-      "indexes": [
-        { "key": "blog_published_key", "type": "key", "attributes": ["published_at"] },
-        { "key": "blog_title_ft", "type": "fulltext", "attributes": ["title"] }
-      ]
-    },
-    {
-      "$id": "customer_messages",
-      "databaseId": "agroforst",
-      "name": "Customer Messages",
-      "enabled": true,
-      "rowSecurity": true,
-      "$permissions": [
-        "create(\"users\")",
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "user_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
-        { "key": "message_type", "type": "enum", "required": true, "array": false, "elements": ["feedback", "newsletter_request", "grow_request"], "default": null },
-        { "key": "message", "type": "text", "required": true, "array": false, "default": null },
-        { "key": "status", "type": "enum", "required": true, "array": false, "elements": ["new", "done"], "default": null }
-      ],
-      "indexes": [
-        { "key": "msg_user_key", "type": "key", "attributes": ["user_id"] },
-        { "key": "msg_type_key", "type": "key", "attributes": ["message_type"] }
-      ]
-    },
-    {
-      "$id": "backoffice_events",
-      "databaseId": "agroforst",
-      "name": "Backoffice Events",
-      "enabled": true,
-      "rowSecurity": true,
-      "$permissions": [
-        "read(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ],
-      "columns": [
-        { "key": "event_type", "type": "varchar", "required": true, "array": false, "size": 80, "default": null },
-        { "key": "order_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "offer_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "user_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "user_email", "type": "varchar", "required": false, "array": false, "size": 255, "default": null },
-        { "key": "subject", "type": "varchar", "required": false, "array": false, "size": 255, "default": null },
-        { "key": "message", "type": "text", "required": true, "array": false, "default": null },
-        { "key": "delivered", "type": "boolean", "required": true, "array": false, "default": false },
-        { "key": "created_at", "type": "datetime", "required": true, "array": false, "default": null }
-      ],
-      "indexes": [
-        { "key": "evt_type_key", "type": "key", "attributes": ["event_type"] },
-        { "key": "evt_order_key", "type": "key", "attributes": ["order_id"] }
-      ]
-    }
-  ],
-  "buckets": [
-    {
-      "$id": "product_images",
-      "name": "Product Images",
-      "enabled": true,
-      "fileSecurity": true,
-      "maximumFileSize": 20000000,
-      "allowedFileExtensions": ["jpg", "jpeg", "png", "webp", "avif"],
-      "compression": "gzip",
-      "encryption": true,
-      "antivirus": true,
-      "transformations": true,
-      "$permissions": [
-        "read(\"any\")",
-        "create(\"label:admin\")",
-        "update(\"label:admin\")",
-        "delete(\"label:admin\")"
-      ]
-    }
-  ],
-  "functions": [
-    {
-      "$id": "createMembership",
-      "name": "createMembership",
-      "runtime": "node-22",
-      "path": "functions/createMembership",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    },
-    {
-      "$id": "createOrder",
-      "name": "createOrder",
-      "runtime": "node-22",
-      "path": "functions/createOrder",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    },
-    {
-      "$id": "verifyPayment",
-      "name": "verifyPayment",
-      "runtime": "node-22",
-      "path": "functions/verifyPayment",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    }
-  ]
+    "projectId": "670b925800275a11d5c1",
+    "projectName": "Agroforst FF",
+    "endpoint": "",
+    "functions": [
+        {
+            "$id": "createMembership",
+            "name": "createMembership",
+            "runtime": "node-22",
+            "path": "functions/createMembership",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        },
+        {
+            "$id": "createOrder",
+            "name": "createOrder",
+            "runtime": "node-22",
+            "path": "functions/createOrder",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        },
+        {
+            "$id": "verifyPayment",
+            "name": "verifyPayment",
+            "runtime": "node-22",
+            "path": "functions/verifyPayment",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        }
+    ],
+    "tablesDB": [
+        {
+            "$id": "agroforst",
+            "name": "Agroforst FF",
+            "enabled": true
+        }
+    ],
+    "tables": [
+        {
+            "$id": "products",
+            "databaseId": "agroforst",
+            "name": "Products",
+            "enabled": true,
+            "rowSecurity": false,
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "variety",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": ""
+                },
+                {
+                    "key": "category",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                },
+                {
+                    "key": "subcategory",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": ""
+                },
+                {
+                    "key": "lifespan",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": ""
+                },
+                {
+                    "key": "crop_rotation_before",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 120,
+                    "default": null
+                },
+                {
+                    "key": "crop_rotation_after",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 120,
+                    "default": null
+                },
+                {
+                    "key": "soil_requirements",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 120,
+                    "default": null
+                },
+                {
+                    "key": "companion_plants",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 120,
+                    "default": null
+                },
+                {
+                    "key": "seasonality_months",
+                    "type": "integer",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 1,
+                    "max": 12
+                },
+                {
+                    "key": "image_file_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "notes",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "prod_name_ft",
+                    "type": "fulltext",
+                    "attributes": [
+                        "name"
+                    ]
+                },
+                {
+                    "key": "prod_category_key",
+                    "type": "key",
+                    "attributes": [
+                        "category"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "offers",
+            "databaseId": "agroforst",
+            "name": "Offers",
+            "enabled": true,
+            "rowSecurity": false,
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "product",
+                    "type": "relationship",
+                    "required": true,
+                    "array": false,
+                    "relatedTableId": "products",
+                    "relationType": "many-to-one",
+                    "twoWay": false,
+                    "onDelete": "restrict"
+                },
+                {
+                    "key": "year",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 2000,
+                    "max": 2100
+                },
+                {
+                    "key": "sowing_date",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "harvest_projection",
+                    "type": "datetime",
+                    "required": false,
+                    "array": true,
+                    "default": null
+                },
+                {
+                    "key": "projected_quantity",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "available_quantity",
+                    "type": "float",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "allocated_quantity",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0
+                },
+                {
+                    "key": "unit",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "piece",
+                        "gram",
+                        "bundle",
+                        "liter"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "unit_price_eur",
+                    "type": "float",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "producer_price_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "standard_price_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "member_price_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "expected_revenue_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "pickup_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "description",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "created_by_user_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "updated_by_user_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "offer_product_key",
+                    "type": "key",
+                    "attributes": [
+                        "product"
+                    ]
+                },
+                {
+                    "key": "offer_year_key",
+                    "type": "key",
+                    "attributes": [
+                        "year"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "memberships",
+            "databaseId": "agroforst",
+            "name": "Memberships",
+            "enabled": true,
+            "rowSecurity": true,
+            "$permissions": [
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "membership_number",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null
+                },
+                {
+                    "key": "user_id",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "membership_type",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "private",
+                        "business"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "duration_years",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 1,
+                    "max": 10
+                },
+                {
+                    "key": "requested_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "pending",
+                        "active",
+                        "expired",
+                        "cancelled"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "cancel_reason",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "payment_status",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "pending",
+                        "partial",
+                        "paid"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "paid_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "starts_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "ends_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "last_reminder_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "credit_start_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "credit_balance_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "billing_address",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "last_payment_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "last_payment_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "mem_user_key",
+                    "type": "key",
+                    "attributes": [
+                        "user_id"
+                    ]
+                },
+                {
+                    "key": "mem_number_unique",
+                    "type": "unique",
+                    "attributes": [
+                        "membership_number"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "membership_payments",
+            "databaseId": "agroforst",
+            "name": "Membership Payments",
+            "enabled": true,
+            "rowSecurity": true,
+            "$permissions": [
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "membership",
+                    "type": "relationship",
+                    "required": true,
+                    "array": false,
+                    "relatedTableId": "memberships",
+                    "relationType": "many-to-one",
+                    "twoWay": false,
+                    "onDelete": "restrict"
+                },
+                {
+                    "key": "payment_type",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "membership",
+                        "order",
+                        "other"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "customer_type",
+                    "type": "enum",
+                    "required": false,
+                    "array": false,
+                    "elements": [
+                        "private",
+                        "business"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "amount_eur",
+                    "type": "float",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "status",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "open",
+                        "pending",
+                        "paid",
+                        "failed",
+                        "cancelled"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "reference",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null
+                },
+                {
+                    "key": "note",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "verified_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "due_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "pay_membership_key",
+                    "type": "key",
+                    "attributes": [
+                        "membership"
+                    ]
+                },
+                {
+                    "key": "pay_ref_unique",
+                    "type": "unique",
+                    "attributes": [
+                        "reference"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "orders",
+            "databaseId": "agroforst",
+            "name": "Orders",
+            "enabled": true,
+            "rowSecurity": true,
+            "$permissions": [
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "user_id",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "user_email",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "membership",
+                    "type": "relationship",
+                    "required": true,
+                    "array": false,
+                    "relatedTableId": "memberships",
+                    "relationType": "many-to-one",
+                    "twoWay": false,
+                    "onDelete": "restrict"
+                },
+                {
+                    "key": "offer",
+                    "type": "relationship",
+                    "required": true,
+                    "array": false,
+                    "relatedTableId": "offers",
+                    "relationType": "many-to-one",
+                    "twoWay": false,
+                    "onDelete": "restrict"
+                },
+                {
+                    "key": "quantity",
+                    "type": "float",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "unit",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "piece",
+                        "gram",
+                        "bundle",
+                        "liter"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "unit_price_eur",
+                    "type": "float",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "total_price_eur",
+                    "type": "float",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "pickup_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "product_name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "requested",
+                        "confirmed",
+                        "fulfilled",
+                        "cancelled"
+                    ],
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "order_user_key",
+                    "type": "key",
+                    "attributes": [
+                        "user_id"
+                    ]
+                },
+                {
+                    "key": "order_offer_key",
+                    "type": "key",
+                    "attributes": [
+                        "offer"
+                    ]
+                },
+                {
+                    "key": "order_member_key",
+                    "type": "key",
+                    "attributes": [
+                        "membership"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "blog_posts",
+            "databaseId": "agroforst",
+            "name": "Blog Posts",
+            "enabled": true,
+            "rowSecurity": false,
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "summary",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "content",
+                    "type": "text",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "tags",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 80,
+                    "default": null
+                },
+                {
+                    "key": "author_name",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "published_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "updated_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "blog_published_key",
+                    "type": "key",
+                    "attributes": [
+                        "published_at"
+                    ]
+                },
+                {
+                    "key": "blog_title_ft",
+                    "type": "fulltext",
+                    "attributes": [
+                        "title"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "customer_messages",
+            "databaseId": "agroforst",
+            "name": "Customer Messages",
+            "enabled": true,
+            "rowSecurity": true,
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "user_id",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "message_type",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "feedback",
+                        "newsletter_request",
+                        "grow_request"
+                    ],
+                    "default": null
+                },
+                {
+                    "key": "message",
+                    "type": "text",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "enum",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "new",
+                        "done"
+                    ],
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "msg_user_key",
+                    "type": "key",
+                    "attributes": [
+                        "user_id"
+                    ]
+                },
+                {
+                    "key": "msg_type_key",
+                    "type": "key",
+                    "attributes": [
+                        "message_type"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "backoffice_events",
+            "databaseId": "agroforst",
+            "name": "Backoffice Events",
+            "enabled": true,
+            "rowSecurity": true,
+            "$permissions": [
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "event_type",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 80,
+                    "default": null
+                },
+                {
+                    "key": "order_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "offer_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "user_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null
+                },
+                {
+                    "key": "user_email",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "subject",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null
+                },
+                {
+                    "key": "message",
+                    "type": "text",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "delivered",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "created_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "evt_type_key",
+                    "type": "key",
+                    "attributes": [
+                        "event_type"
+                    ]
+                },
+                {
+                    "key": "evt_order_key",
+                    "type": "key",
+                    "attributes": [
+                        "order_id"
+                    ]
+                }
+            ]
+        }
+    ],
+    "buckets": [
+        {
+            "$id": "product_images",
+            "name": "Product Images",
+            "enabled": true,
+            "fileSecurity": true,
+            "maximumFileSize": 20000000,
+            "allowedFileExtensions": [
+                "jpg",
+                "jpeg",
+                "png",
+                "webp",
+                "avif"
+            ],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": true,
+            "transformations": true,
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ]
+        }
+    ]
 }
