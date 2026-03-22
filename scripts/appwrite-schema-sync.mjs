@@ -347,7 +347,7 @@ function buildCreateColumnArgs(tableId, column, databaseId) {
 }
 
 function waitForStatus({ getterArgs, kind, id }) {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < 180; attempt += 1) {
     const response = runCli(getterArgs, {
       json: true,
       allowFailure: true,
