@@ -70,6 +70,10 @@ const paymentRefInputSchema = z.object({
   ref: z.string().trim().min(1),
 });
 
+const adminPaymentListInputSchema = z.object({
+  limit: z.number().int().positive().max(200).optional(),
+});
+
 export type MembershipPayment = {
   id: string;
   membershipId?: string;
@@ -270,4 +274,18 @@ export async function findPaymentIdByRef(ref: string): Promise<string | null> {
   }
 
   return appwriteDocumentMetaSchema.parse(response.documents[0]).$id;
+}
+
+export async function listAdminMembershipPayments(input: {
+  limit?: number;
+} = {}): Promise<MembershipPayment[]> {
+  const parsedInput = adminPaymentListInputSchema.parse(input);
+
+  const response = await databases.listDocuments(
+    ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
+    ensureConfigured(appwriteConfig.paymentTableId, "Zahlungs-Tabelle"),
+    [Query.orderDesc("$createdAt"), Query.limit(parsedInput.limit ?? 50)],
+  );
+
+  return response.documents.map(normalizeMembershipPayment);
 }
