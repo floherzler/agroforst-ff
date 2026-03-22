@@ -47,7 +47,6 @@ in the frontend build. Keep the secret in `APPWRITE_API_KEY`.
 Other supported optional override blocks can be copied from
 [`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example):
 
-- `# [addAngebot]`
 - `# [createMembership]`
 - `# [verifyPayment]`
 - `# [placeOrder]`

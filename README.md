@@ -51,7 +51,9 @@ Put your dev-only local function settings into
 using the function sections from
 [`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example).
 
-For `addProdukt`, the API key there should have `rows.write` scope.
+For the remaining server functions, the API key there should have the scopes
+documented in
+[`/home/flo178/projects/agroforst-ff/LOCAL_FUNCTION_TESTING.md`](/home/flo178/projects/agroforst-ff/LOCAL_FUNCTION_TESTING.md).
 
 The full local testing guide is here:
 [`/home/flo178/projects/agroforst-ff/LOCAL_FUNCTION_TESTING.md`](/home/flo178/projects/agroforst-ff/LOCAL_FUNCTION_TESTING.md).
@@ -59,8 +61,7 @@ The full local testing guide is here:
 Then run:
 
 ```bash
-scripts/appwrite-local-dev.sh addProdukt
+scripts/appwrite-local-dev.sh createMembership
 ```
 
-The same guide also covers `addAngebot`, `createMembership`, `verifyPayment`,
-and `placeOrder`.
+The same guide also covers `verifyPayment` and `placeOrder`.
