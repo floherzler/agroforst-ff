@@ -8,9 +8,17 @@
     "build": "vite build",
     "serve": "vite preview",
     "test:e2e": "playwright test",
-    "appwrite:seed": "node scripts/appwrite-seed.mjs",
-    "appwrite:seed:demo": "node scripts/appwrite-seed.mjs --with-demo-data",
-    "appwrite:reset": "node scripts/appwrite-seed.mjs --reset"
+    "appwrite:schema:pull": "node --env-file=.env scripts/appwrite-schema-sync.mjs pull",
+    "appwrite:schema:push": "node --env-file=.env scripts/appwrite-schema-sync.mjs push",
+    "appwrite:schema:reset": "node --env-file=.env scripts/appwrite-schema-sync.mjs reset",
+    "appwrite:schema:types": "node --env-file=.env scripts/appwrite-schema-sync.mjs types",
+    "appwrite:schema:validate": "node scripts/appwrite-schema-tools.mjs validate",
+    "appwrite:schema:add-column": "node scripts/appwrite-schema-tools.mjs add-column",
+    "appwrite:schema:add-index": "node scripts/appwrite-schema-tools.mjs add-index",
+    "appwrite:seed": "node --env-file=.env scripts/appwrite-seed.mjs",
+    "appwrite:seed:demo": "node --env-file=.env scripts/appwrite-seed.mjs --with-demo-data",
+    "appwrite:bootstrap": "npm run appwrite:schema:push && npm run appwrite:seed:demo",
+    "appwrite:reset": "npm run appwrite:schema:reset && npm run appwrite:seed:demo"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

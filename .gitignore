@@ -41,4 +41,3 @@ next-env.d.ts
 .gemini/settings.json
 playwright-report/
 test-results/
-appwrite.config.json

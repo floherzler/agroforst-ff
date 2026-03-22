@@ -1,7 +1,7 @@
 # Local Function Testing
 
 The canonical Appwrite resource IDs are now defined in
-[`/home/flo178/projects/agroforst-ff/appwrite/resources.json`](/home/flo178/projects/agroforst-ff/appwrite/resources.json).
+[`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json).
 Local function runs no longer need per-function table ID env blocks in
 `.env`; [`/home/flo178/projects/agroforst-ff/scripts/run-function-local.sh`](/home/flo178/projects/agroforst-ff/scripts/run-function-local.sh)
 injects them from the repo-owned schema contract.
@@ -44,15 +44,6 @@ workflow.
 Do not put the key into a `VITE_` variable. `VITE_` values are client-exposed
 in the frontend build. Keep the secret in `APPWRITE_API_KEY`.
 
-For `addProdukt`, you can either rely on the existing `VITE_*` IDs or keep this
-optional override block in the root `.env`:
-
-```env
-# [addProdukt]
-APPWRITE_FUNCTION_DATABASE_ID=670bac4800336c5e29b5
-APPWRITE_FUNCTION_PRODUCE_COLLECTION_ID=670bac8900319dfcc4e4
-```
-
 Other supported optional override blocks can be copied from
 [`/home/flo178/projects/agroforst-ff/.env.example`](/home/flo178/projects/agroforst-ff/.env.example):
 
@@ -62,14 +53,8 @@ Other supported optional override blocks can be copied from
 - `# [placeOrder]`
 
 In most cases you do not need those blocks at all. The runner derives defaults
-from:
-
-- `VITE_DATABASE_ID`
-- `VITE_PRODUCE_COLLECTION_ID`
-- `VITE_STAFFEL_COLLECTION_ID`
-- `VITE_ORDER_COLLECTION_ID`
-- `VITE_MEMBERSHIP_COLLECTION_ID`
-- `VITE_PAYMENT_COLLECTION_ID`
+from the managed schema in
+[`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json).
 
 Use the function blocks only when you want to override those defaults or when a
 function needs something extra like `NEXTCLOUD_CSV_URL`.
@@ -77,7 +62,7 @@ function needs something extra like `NEXTCLOUD_CSV_URL`.
 ## Required scope for `addProdukt`
 
 The runtime API key for
-[`/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.ts`](/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.ts)
+[`/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.js`](/home/flo178/projects/agroforst-ff/functions/addProdukt/src/main.js)
 needs:
 
 - `rows.write`

@@ -220,7 +220,7 @@ export async function listProdukte(
 
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.productCollectionId, "Produkt-Collection"),
+    ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
     queries,
   );
 
@@ -230,7 +230,7 @@ export async function listProdukte(
 export async function listAlleProdukte(): Promise<Produkt[]> {
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.productCollectionId, "Produkt-Collection"),
+    ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
     [Query.limit(500), Query.orderAsc("name")],
   );
 
@@ -260,7 +260,7 @@ export async function listStaffeln(
 
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.offerCollectionId, "Angebots-Collection"),
+    ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle"),
     queries,
   );
 
@@ -270,7 +270,7 @@ export async function listStaffeln(
 export async function getStaffelById(id: string): Promise<Staffel> {
   const response = await databases.getDocument(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.offerCollectionId, "Angebots-Collection"),
+    ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle"),
     z.string().trim().min(1).parse(id),
   );
 
@@ -301,7 +301,7 @@ export async function listProdukteMitStaffeln(): Promise<
 export async function listBlogPosts(): Promise<BlogPost[]> {
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.postCollectionId, "Blog-Collection"),
+    ensureConfigured(appwriteConfig.postTableId, "Blog-Tabelle"),
     [Query.limit(500), Query.orderDesc("$createdAt")],
   );
 
@@ -317,8 +317,8 @@ export async function submitFeedbackMessage(input: {
   await databases.createDocument(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(
-      appwriteConfig.feedbackCollectionId,
-      "Nachrichten-Collection",
+      appwriteConfig.feedbackTableId,
+      "Nachrichten-Tabelle",
     ),
     ID.unique(),
     {
@@ -366,14 +366,14 @@ function subscribeToChannel<T>(
 export function subscribeToProdukte(
   onChange: (change: RealtimeChange<Produkt>) => void,
 ): () => void {
-  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.productCollectionId, "Produkt-Collection")}.documents`;
+  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle")}.documents`;
   return subscribeToChannel(channel, normalizeProdukt, onChange);
 }
 
 export function subscribeToStaffeln(
   onChange: (change: RealtimeChange<Staffel>) => void,
 ): () => void {
-  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.offerCollectionId, "Angebots-Collection")}.documents`;
+  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle")}.documents`;
   return subscribeToChannel(channel, normalizeStaffel, onChange);
 }
 
@@ -382,13 +382,13 @@ export function subscribeToStaffel(
   onChange: (change: RealtimeChange<Staffel>) => void,
 ): () => void {
   const parsedId = z.string().trim().min(1).parse(staffelId);
-  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.offerCollectionId, "Angebots-Collection")}.documents.${parsedId}`;
+  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle")}.documents.${parsedId}`;
   return subscribeToChannel(channel, normalizeStaffel, onChange);
 }
 
 export function subscribeToBlogPosts(
   onChange: (change: RealtimeChange<BlogPost>) => void,
 ): () => void {
-  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.postCollectionId, "Blog-Collection")}.documents`;
+  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.postTableId, "Blog-Tabelle")}.documents`;
   return subscribeToChannel(channel, normalizeBlogPost, onChange);
 }

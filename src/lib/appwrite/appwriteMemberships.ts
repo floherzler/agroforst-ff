@@ -212,8 +212,8 @@ export async function listMembershipsByUserId(input: {
   const membershipsResponse = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(
-      appwriteConfig.membershipCollectionId,
-      "Mitgliedschafts-Collection",
+      appwriteConfig.membershipTableId,
+      "Mitgliedschafts-Tabelle",
     ),
     [
       Query.equal("user_id", parsedInput.userId),
@@ -231,7 +231,7 @@ export async function listMembershipsByUserId(input: {
 
   const paymentsResponse = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.paymentCollectionId, "Zahlungs-Collection"),
+    ensureConfigured(appwriteConfig.paymentTableId, "Zahlungs-Tabelle"),
     [Query.equal("membership_id", membershipIds), Query.limit(200)],
   );
 
@@ -257,7 +257,7 @@ export async function findPaymentIdByRef(ref: string): Promise<string | null> {
   const parsedInput = paymentRefInputSchema.parse({ ref });
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.paymentCollectionId, "Zahlungs-Collection"),
+    ensureConfigured(appwriteConfig.paymentTableId, "Zahlungs-Tabelle"),
     [Query.equal("reference", parsedInput.ref), Query.limit(1)],
   );
 

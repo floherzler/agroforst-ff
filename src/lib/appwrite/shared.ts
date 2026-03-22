@@ -2,25 +2,34 @@ import { Account, Client, Databases, Functions, Storage } from "appwrite";
 import { z } from "zod";
 
 import env from "@/app/env";
-import resources from "../../../appwrite/resources.json";
+import managedAppwrite from "../../../appwrite.config.json";
+
+const managedDatabase = managedAppwrite.tablesDB?.[0];
+const managedTables = new Map(
+  (managedAppwrite.tables ?? []).map((table) => [table.$id, table]),
+);
+const managedBucket = managedAppwrite.buckets?.[0];
+const managedFunctions = new Map(
+  (managedAppwrite.functions ?? []).map((fn) => [fn.$id || fn.name, fn]),
+);
 
 export const appwriteConfig = {
   endpoint: String(env.appwrite.endpoint ?? "").trim(),
   projectId: String(env.appwrite.project_id ?? "").trim(),
-  databaseId: resources.database.id,
-  storageId: resources.bucket.id,
-  productCollectionId: resources.tables.products.id,
-  offerCollectionId: resources.tables.offers.id,
-  orderCollectionId: resources.tables.orders.id,
-  postCollectionId: resources.tables.blog_posts.id,
-  membershipCollectionId: resources.tables.memberships.id,
-  paymentCollectionId: resources.tables.membership_payments.id,
-  feedbackCollectionId: resources.tables.customer_messages.id,
-  orderFunctionId: resources.functions.createOrder.id,
-  membershipFunctionId: resources.functions.createMembership.id,
-  paymentVerifyFunctionId: resources.functions.verifyPayment.id,
-  addProduktFunctionId: resources.functions.addProdukt.id,
-  addAngebotFunctionId: resources.functions.addAngebot.id,
+  databaseId: String(managedDatabase?.$id ?? "").trim(),
+  storageId: String(managedBucket?.$id ?? "").trim(),
+  productTableId: getManagedTableId("products"),
+  offerTableId: getManagedTableId("offers"),
+  orderTableId: getManagedTableId("orders"),
+  postTableId: getManagedTableId("blog_posts"),
+  membershipTableId: getManagedTableId("memberships"),
+  paymentTableId: getManagedTableId("membership_payments"),
+  feedbackTableId: getManagedTableId("customer_messages"),
+  orderFunctionId: getManagedFunctionId("createOrder"),
+  membershipFunctionId: getManagedFunctionId("createMembership"),
+  paymentVerifyFunctionId: getManagedFunctionId("verifyPayment"),
+  addProduktFunctionId: getManagedFunctionId("addProdukt"),
+  addAngebotFunctionId: getManagedFunctionId("addAngebot"),
 };
 
 export const appwriteDocumentMetaSchema = z.object({
@@ -134,4 +143,12 @@ export function parseExecutionPayload(rawResponse: unknown): unknown {
   } catch {
     return rawResponse;
   }
+}
+
+function getManagedTableId(id: string): string {
+  return String(managedTables.get(id)?.$id ?? "").trim();
+}
+
+function getManagedFunctionId(id: string): string {
+  return String(managedFunctions.get(id)?.$id ?? "").trim();
 }

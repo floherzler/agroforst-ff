@@ -1,34 +1,61 @@
-# Appwrite Resource Contract
+# Appwrite Schema Contract
 
-This directory is the canonical Appwrite contract for this repository.
+This repository now uses the same Appwrite mental model as the sibling `home`
+repo:
 
-- [`/home/flo178/projects/agroforst-ff/appwrite/resources.json`](/home/flo178/projects/agroforst-ff/appwrite/resources.json) defines the managed database ID, bucket ID, table IDs, column definitions, indexes, function IDs, and optional demo seed rows.
-- [`/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs) applies that contract with the Appwrite CLI.
+- [`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json) is the single source of truth for the managed Appwrite schema
+- [`/home/flo178/projects/agroforst-ff/scripts/appwrite-schema-sync.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-schema-sync.mjs) owns schema push, pull, reset, and type generation
+- [`/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs`](/home/flo178/projects/agroforst-ff/scripts/appwrite-seed.mjs) seeds demo rows and syncs shared function variables only
 
-## Naming Scheme
+## Managed resources
 
-- Database ID: `agroforst`
-- Bucket ID: `product_images`
+- Database: `agroforst`
+- Bucket: `product_images`
 - Public content tables: `products`, `offers`, `blog_posts`
 - Member and commerce tables: `memberships`, `membership_payments`, `orders`
 - Support and audit tables: `customer_messages`, `backoffice_events`
-- Column names: `snake_case`
-- Function IDs: stable camelCase IDs matching the existing deployed functions
+- Function IDs: `addProdukt`, `addAngebot`, `createMembership`, `createOrder`, `verifyPayment`
 
 ## Commands
 
-Use the root npm scripts:
-
 ```bash
+npm run appwrite:schema:validate
+npm run appwrite:schema:push
+npm run appwrite:schema:pull
+npm run appwrite:schema:reset
+npm run appwrite:schema:types
 npm run appwrite:seed
 npm run appwrite:seed:demo
-npm run appwrite:reset
+npm run appwrite:bootstrap
 ```
 
-Expected env:
+## How schema changes should be made
 
-- `VITE_APPWRITE_ENDPOINT`
-- `VITE_APPWRITE_PROJECT_ID`
-- `APPWRITE_API_KEY`
+1. Edit [`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json) directly, or use one of the helper commands.
+2. Run `npm run appwrite:schema:push`.
+3. Run `npm run appwrite:schema:types` if you want refreshed generated types.
+4. Update app or function code to use the new table shape.
 
-`npm run appwrite:seed` is idempotent for additive changes. If you rename or remove columns, run `npm run appwrite:reset` and then seed again.
+Additive helpers:
+
+```bash
+npm run appwrite:schema:add-column -- --table offers --key harvest_notes --type text
+npm run appwrite:schema:add-index -- --table offers --key offer_harvest_notes_ft --type fulltext --columns harvest_notes
+```
+
+## How seeding should be used
+
+The seed script is intentionally narrow:
+
+- upsert demo rows
+- sync shared function variables such as `APPWRITE_TABLE_PRODUCTS_ID`
+
+It does not:
+
+- create databases
+- create tables
+- add columns
+- add indexes
+- own schema migrations
+
+`npm run appwrite:seed:demo` is idempotent for the demo rows tracked in the script.

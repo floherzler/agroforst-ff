@@ -112,8 +112,8 @@ export async function listBestellungen(
   const response = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(
-      appwriteConfig.orderCollectionId,
-      "Bestellungs-Collection",
+      appwriteConfig.orderTableId,
+      "Bestellungs-Tabelle",
     ),
     queries,
   );
@@ -141,6 +141,6 @@ function subscribeToOrders(
 export function subscribeToBestellungen(
   onChange: (change: RealtimeChange<Bestellung>) => void,
 ): () => void {
-  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.orderCollectionId, "Bestellungs-Collection")}.documents`;
+  const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.orderTableId, "Bestellungs-Tabelle")}.documents`;
   return subscribeToOrders(channel, onChange);
 }

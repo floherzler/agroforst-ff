@@ -83,19 +83,26 @@ $0 ~ "^# \\[" section "\\][[:space:]]*$" {
 
 emit_defaults() {
     node --input-type=module <<'NODE'
-import resources from "./appwrite/resources.json" with { type: "json" };
+import config from "./appwrite.config.json" with { type: "json" };
+
+const database = config.tablesDB?.[0];
+const bucket = config.buckets?.[0];
+
+if (!database?.$id || !bucket?.$id) {
+  throw new Error("appwrite.config.json must define one database and one bucket.");
+}
 
 const lines = [
-  `APPWRITE_DATABASE_ID=${resources.database.id}`,
-  `APPWRITE_BUCKET_PRODUCT_IMAGES_ID=${resources.bucket.id}`,
-  `APPWRITE_TABLE_PRODUCTS_ID=${resources.tables.products.id}`,
-  `APPWRITE_TABLE_OFFERS_ID=${resources.tables.offers.id}`,
-  `APPWRITE_TABLE_MEMBERSHIPS_ID=${resources.tables.memberships.id}`,
-  `APPWRITE_TABLE_PAYMENTS_ID=${resources.tables.membership_payments.id}`,
-  `APPWRITE_TABLE_ORDERS_ID=${resources.tables.orders.id}`,
-  `APPWRITE_TABLE_BLOG_POSTS_ID=${resources.tables.blog_posts.id}`,
-  `APPWRITE_TABLE_CUSTOMER_MESSAGES_ID=${resources.tables.customer_messages.id}`,
-  `APPWRITE_TABLE_BACKOFFICE_EVENTS_ID=${resources.tables.backoffice_events.id}`,
+  `APPWRITE_DATABASE_ID=${database.$id}`,
+  `APPWRITE_BUCKET_PRODUCT_IMAGES_ID=${bucket.$id}`,
+  "APPWRITE_TABLE_PRODUCTS_ID=products",
+  "APPWRITE_TABLE_OFFERS_ID=offers",
+  "APPWRITE_TABLE_MEMBERSHIPS_ID=memberships",
+  "APPWRITE_TABLE_PAYMENTS_ID=membership_payments",
+  "APPWRITE_TABLE_ORDERS_ID=orders",
+  "APPWRITE_TABLE_BLOG_POSTS_ID=blog_posts",
+  "APPWRITE_TABLE_CUSTOMER_MESSAGES_ID=customer_messages",
+  "APPWRITE_TABLE_BACKOFFICE_EVENTS_ID=backoffice_events",
 ];
 
 process.stdout.write(`${lines.join("\n")}\n`);

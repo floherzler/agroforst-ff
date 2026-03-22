@@ -2,7 +2,7 @@
 
 Appwrite Cloud Function for admins to insert or update produce catalog entries that power the `marketing` and `zentrale` pages.
 
-Canonical IDs now come from [`/home/flo178/projects/agroforst-ff/appwrite/resources.json`](/home/flo178/projects/agroforst-ff/appwrite/resources.json).
+Canonical IDs now come from [`/home/flo178/projects/agroforst-ff/appwrite.config.json`](/home/flo178/projects/agroforst-ff/appwrite.config.json).
 
 **Required environment variables**
 
