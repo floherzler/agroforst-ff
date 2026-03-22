@@ -18,7 +18,7 @@ import {
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +28,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   displayProductName,
+  displayUnitLabel,
+  displayValueLabel,
   formatCurrency,
   hauptkategorieValues,
   lebensdauerValues,
@@ -100,7 +102,7 @@ export function ProductEditor({
           <div className="flex flex-col gap-1">
             <CardTitle>{selectedProduct ? "Produkt bearbeiten" : "Produkt anlegen"}</CardTitle>
             <CardDescription>
-              Stammdaten für den Produktkatalog. Appwrite-Upsert und Realtime bleiben identisch.
+              Produktstammdaten für Hofladen, Abokiste und Saisonplanung. Die sichtbaren Feldnamen bleiben deutsch, technisch wird sauber ins Backend geschrieben.
             </CardDescription>
           </div>
           <Badge variant="outline">Live</Badge>
@@ -116,7 +118,7 @@ export function ProductEditor({
                 onChange={(event) =>
                   state.setProductForm((current: any) => ({ ...current, id: event.target.value }))
                 }
-                placeholder="z. B. apple_topaz"
+                placeholder="z. B. kartoffel_linda oder salbei_common"
               />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
@@ -126,7 +128,7 @@ export function ProductEditor({
                 onChange={(event) =>
                   state.setProductForm((current: any) => ({ ...current, name: event.target.value }))
                 }
-                placeholder="Produktname"
+                placeholder="z. B. Kartoffel, Salbei oder Apfel"
               />
             </label>
           </div>
@@ -139,7 +141,7 @@ export function ProductEditor({
                 onChange={(event) =>
                   state.setProductForm((current: any) => ({ ...current, sorte: event.target.value }))
                 }
-                placeholder="Variante oder Sorte"
+                placeholder="z. B. Linda, Topaz oder Echter Salbei"
               />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
@@ -156,7 +158,7 @@ export function ProductEditor({
                 <SelectContent>
                   {hauptkategorieValues.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {value}
+                      {displayValueLabel(value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -183,7 +185,7 @@ export function ProductEditor({
                   <SelectItem value="__empty__">Keine</SelectItem>
                   {unterkategorieValues.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {value}
+                      {displayValueLabel(value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -207,7 +209,7 @@ export function ProductEditor({
                   <SelectItem value="__empty__">Keine</SelectItem>
                   {lebensdauerValues.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {value}
+                      {displayValueLabel(value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -216,15 +218,19 @@ export function ProductEditor({
           </div>
 
           <label className="flex flex-col gap-2 text-sm font-medium">
-            Notizen
+            Interne Notizen
             <Textarea
               value={productForm.notes}
               onChange={(event) =>
                 state.setProductForm((current: any) => ({ ...current, notes: event.target.value }))
               }
-              placeholder="Kurze interne Einordnung oder Bearbeitungshinweis"
+              placeholder="z. B. lagert gut, für Wochenmarkt beliebt, empfindlich bei Nässe"
             />
           </label>
+
+          <p className="text-xs text-muted-foreground">
+            Tipp: Name und Sorte so pflegen, wie sie später auch im Marktplatz und in Bestellungen erscheinen sollen.
+          </p>
 
           <Accordion type="multiple" className="w-full rounded-[1.3rem] border border-border/70 bg-background/60 px-4">
             <AccordionItem value="saison">
@@ -245,7 +251,7 @@ export function ProductEditor({
                         saisonalitaet: event.target.value,
                       }))
                     }
-                    placeholder="z. B. 7, 8, 9"
+                    placeholder="z. B. 5, 6, 7, 8 oder 9, 10, 11"
                   />
                 </label>
               </AccordionContent>
@@ -269,7 +275,7 @@ export function ProductEditor({
                         fruchtfolgeVor: event.target.value,
                       }))
                     }
-                    placeholder="Komma- oder zeilengetrennt"
+                    placeholder="z. B. Kleegras, Salat, Zwiebel"
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-sm font-medium">
@@ -282,7 +288,7 @@ export function ProductEditor({
                         fruchtfolgeNach: event.target.value,
                       }))
                     }
-                    placeholder="Komma- oder zeilengetrennt"
+                    placeholder="z. B. Bohnen, Kürbis, Phacelia"
                   />
                 </label>
               </AccordionContent>
@@ -306,7 +312,7 @@ export function ProductEditor({
                         bodenansprueche: event.target.value,
                       }))
                     }
-                    placeholder="Komma- oder zeilengetrennt"
+                    placeholder="z. B. sandiger Lehm, humos, frisch"
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-sm font-medium">
@@ -319,7 +325,7 @@ export function ProductEditor({
                         begleitpflanzen: event.target.value,
                       }))
                     }
-                    placeholder="Komma- oder zeilengetrennt"
+                    placeholder="z. B. Dill, Ringelblume, Basilikum"
                   />
                 </label>
               </AccordionContent>
@@ -327,16 +333,24 @@ export function ProductEditor({
           </Accordion>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={productStatus.state === "loading"}>
+            <button
+              type="submit"
+              disabled={productStatus.state === "loading"}
+              className={cn(buttonVariants({ variant: "default", size: "lg" }), "min-w-[12rem] px-4")}
+            >
               {productStatus.state === "loading"
                 ? "Speichert..."
                 : selectedProduct
                   ? "Produkt aktualisieren"
                   : "Produkt anlegen"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={state.resetProductForm}>
+            </button>
+            <button
+              type="button"
+              onClick={state.resetProductForm}
+              className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "min-w-[11rem] px-4")}
+            >
               Neues Formular
-            </Button>
+            </button>
           </div>
 
           <StatusMessage status={productStatus} />
@@ -362,7 +376,7 @@ export function OfferEditor({
           <div className="flex flex-col gap-1">
             <CardTitle>{selectedOffer ? "Angebot bearbeiten" : "Angebot anlegen"}</CardTitle>
             <CardDescription>
-              Produktbezug, Mengen, Preise und Abholfenster für die aktuelle Saison.
+              Angebotsdaten für Saison, Verfügbarkeit und Preislogik im Verkauf.
             </CardDescription>
           </div>
           <Badge variant="outline">Live</Badge>
@@ -408,6 +422,10 @@ export function OfferEditor({
             </label>
           </div>
 
+          <p className="text-xs text-muted-foreground">
+            Mengen und Preise immer aus Sicht des Hofalltags pflegen: Was wird real angeboten, was ist schon reserviert und welche Einheit ist für Kund:innen später verständlich?
+          </p>
+
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm font-medium">
               Jahr
@@ -445,7 +463,7 @@ export function OfferEditor({
 
           <div className="grid gap-4 md:grid-cols-3">
             <label className="flex flex-col gap-2 text-sm font-medium">
-              Projektionsmenge
+              Geplante Menge
               <Input
                 type="number"
                 min="0"
@@ -456,7 +474,7 @@ export function OfferEditor({
               />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
-              Verfügbar
+              Aktuell verfügbar
               <Input
                 type="number"
                 min="0"
@@ -487,7 +505,7 @@ export function OfferEditor({
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm font-medium">
-              Verkaufspreis
+              Verkaufspreis pro Einheit
               <Input
                 type="number"
                 min="0"
@@ -502,7 +520,7 @@ export function OfferEditor({
               />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
-              Erwarteter Umsatz
+              Erwarteter Umsatz gesamt
               <Input
                 type="number"
                 min="0"
@@ -528,7 +546,7 @@ export function OfferEditor({
                   beschreibung: event.target.value,
                 }))
               }
-              placeholder="Kurzer interner oder externer Hinweis"
+              placeholder="z. B. frisch aus der Ernte, lagerfähig bis Februar, nur Abholung freitags"
             />
           </label>
 
@@ -542,7 +560,7 @@ export function OfferEditor({
               </AccordionTrigger>
               <AccordionContent className="grid gap-4 pt-1 md:grid-cols-3">
                 <label className="flex flex-col gap-2 text-sm font-medium">
-                  Produzentenpreis
+                  Erzeugerpreis
                   <Input
                     type="number"
                     min="0"
@@ -572,7 +590,7 @@ export function OfferEditor({
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-sm font-medium">
-                  Mitgliederpreis
+                  Mitgliedspreis
                   <Input
                     type="number"
                     min="0"
@@ -612,7 +630,7 @@ export function OfferEditor({
                     />
                   </label>
                   <label className="flex flex-col gap-2 text-sm font-medium">
-                    Abholung
+                    Abholung möglich ab
                     <Input
                       type="datetime-local"
                       value={offerForm.pickupAt}
@@ -633,7 +651,7 @@ export function OfferEditor({
                         ernteProjektion: event.target.value,
                       }))
                     }
-                    placeholder="Komma- oder zeilengetrennte Datumswerte"
+                    placeholder="z. B. 2026-08-15, 2026-08-29"
                   />
                 </label>
               </AccordionContent>
@@ -641,16 +659,24 @@ export function OfferEditor({
           </Accordion>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={offerStatus.state === "loading"}>
+            <button
+              type="submit"
+              disabled={offerStatus.state === "loading"}
+              className={cn(buttonVariants({ variant: "default", size: "lg" }), "min-w-[12rem] px-4")}
+            >
               {offerStatus.state === "loading"
                 ? "Speichert..."
                 : selectedOffer
                   ? "Angebot aktualisieren"
                   : "Angebot anlegen"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={state.resetOfferForm}>
+            </button>
+            <button
+              type="button"
+              onClick={state.resetOfferForm}
+              className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "min-w-[11rem] px-4")}
+            >
               Neues Formular
-            </Button>
+            </button>
           </div>
 
           <StatusMessage status={offerStatus} />
@@ -684,7 +710,7 @@ export function ProductTable({
         <Input
           value={state.productFilter}
           onChange={(event) => state.setProductFilter(event.target.value)}
-          placeholder="Nach ID, Name, Sorte oder Kategorie filtern"
+          placeholder="Nach ID, Produktname, Sorte oder Kategorie filtern"
         />
       </CardHeader>
       <CardContent className={dense ? "px-4 pb-4 pt-0" : "overflow-x-auto"}>
@@ -715,9 +741,9 @@ export function ProductTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{product.hauptkategorie}</Badge>
+                    <Badge variant="outline">{displayValueLabel(product.hauptkategorie)}</Badge>
                     {product.unterkategorie ? (
-                      <Badge variant="secondary">{product.unterkategorie}</Badge>
+                      <Badge variant="secondary">{displayValueLabel(product.unterkategorie)}</Badge>
                     ) : null}
                   </div>
                 </TableCell>
@@ -786,7 +812,7 @@ export function OfferTable({
                   <TableCell>{formatCurrency(offer.euroPreis)}</TableCell>
                   <TableCell>
                     <Badge variant={offer.mengeVerfuegbar > 0 ? "default" : "secondary"}>
-                      {offer.mengeVerfuegbar} {offer.einheit}
+                      {offer.mengeVerfuegbar} {displayUnitLabel(offer.einheit)}
                     </Badge>
                   </TableCell>
                 </TableRow>
@@ -806,10 +832,10 @@ export function OfferTable({
               </div>
               <div className="grid gap-1 text-sm text-muted-foreground">
                 <span>
-                  Projektionsmenge: {state.selectedOffer.menge} {state.selectedOffer.einheit}
+                  Geplante Menge: {state.selectedOffer.menge} {displayUnitLabel(state.selectedOffer.einheit)}
                 </span>
                 <span>
-                  Reserviert: {state.selectedOffer.mengeAbgeholt} {state.selectedOffer.einheit}
+                  Reserviert: {state.selectedOffer.mengeAbgeholt} {displayUnitLabel(state.selectedOffer.einheit)}
                 </span>
                 <span>
                   Abholung:{" "}
@@ -1093,9 +1119,9 @@ export function ProductGallery({
               <ArrowRight className="text-muted-foreground" />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge variant="outline">{product.hauptkategorie}</Badge>
-              {product.unterkategorie ? <Badge variant="secondary">{product.unterkategorie}</Badge> : null}
-              {product.lebensdauer ? <Badge variant="secondary">{product.lebensdauer}</Badge> : null}
+              <Badge variant="outline">{displayValueLabel(product.hauptkategorie)}</Badge>
+              {product.unterkategorie ? <Badge variant="secondary">{displayValueLabel(product.unterkategorie)}</Badge> : null}
+              {product.lebensdauer ? <Badge variant="secondary">{displayValueLabel(product.lebensdauer)}</Badge> : null}
             </div>
             <div className="mt-4 grid gap-1 text-sm text-muted-foreground">
               <span>Saison: {(product.saisonalitaet ?? []).length > 0 ? product.saisonalitaet.join(", ") : "-"}</span>
@@ -1187,7 +1213,7 @@ export function OfferBoard({
                   </div>
                   <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
                     <span>{formatCurrency(offer.euroPreis)}</span>
-                    <span>{offer.einheit}</span>
+                    <span>{displayUnitLabel(offer.einheit)}</span>
                   </div>
                 </button>
               ))}
@@ -1235,7 +1261,7 @@ export function WorkbenchBrowser({
               >
                 <span className="text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
                 <span className="truncate">{displayProductName(product)}</span>
-                <span className="text-xs text-muted-foreground">{product.hauptkategorie}</span>
+                <span className="text-xs text-muted-foreground">{displayValueLabel(product.hauptkategorie)}</span>
               </button>
             ))}
           </div>

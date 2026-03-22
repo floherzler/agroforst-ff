@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import {
   Select,
   SelectContent,
@@ -259,8 +260,8 @@ export default function MarketplacePage() {
                       </CardTitle>
                       <CardDescription>
                         {offer.produkt.sorte
-                          ? `${offer.produkt.sorte} · ${offer.produkt.unterkategorie || ""}`
-                          : offer.produkt.unterkategorie}
+                          ? `${offer.produkt.sorte} · ${displayValueLabel(offer.produkt.unterkategorie) || ""}`
+                          : displayValueLabel(offer.produkt.unterkategorie)}
                       </CardDescription>
                     </div>
                   </div>
@@ -305,7 +306,7 @@ export default function MarketplacePage() {
 
                 <CardFooter className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-muted-foreground">
-                    {offer.produkt.hauptkategorie}
+                    {displayValueLabel(offer.produkt.hauptkategorie)}
                   </p>
 
                   <Button asChild className="w-full sm:w-auto">

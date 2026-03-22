@@ -15,7 +15,7 @@ type Props = {
 
 export default function OrderDialog({ angebotId, membershipId }: Props) {
   const [open, setOpen] = React.useState(false)
-  // displayedAmount is what the user edits: for weight units we show kilograms, for count units we show integer count
+  // displayedAmount is what the user edits: for weight units we show kilograms, for count units integer values
   const [displayedAmount, setDisplayedAmount] = React.useState<string>("")
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -40,23 +40,12 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
     return () => { mounted = false }
   }, [angebotId])
 
-  // When dialog opens, set sensible defaults (10 kg for weight units, 1 for count units)
+  // When dialog opens, set sensible defaults.
   React.useEffect(() => {
     if (!open) return
     setError(null)
     setSuccess(null)
-    if (!angebot) {
-      // default to 1 kg display (will be converted internally to grams)
-      setDisplayedAmount("1")
-      return
-    }
-    const unitRaw = (angebot.einheit || '').toString().toLowerCase()
-    if (unitRaw === 'gramm' || unitRaw === 'g' || unitRaw === 'kg' || unitRaw === 'kilogramm') {
-      setDisplayedAmount("1")
-    } else {
-      // count-like units (Stück, Bund, etc.) default to 1
-      setDisplayedAmount("1")
-    }
+    setDisplayedAmount("1")
   }, [open, angebot])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -69,7 +58,6 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
       return
     }
 
-    // compute internal numeric menge depending on angebot.einheit
     const displayParsed = Number(displayedAmount)
     if (!Number.isFinite(displayParsed) || displayParsed <= 0) {
       setError("Bitte eine gültige Menge > 0 eingeben.")
@@ -78,15 +66,9 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
 
     const unitRaw = (angebot?.einheit || '').toString().toLowerCase()
     let internalMenge: number
-    // weight units: display in kg, internal in grams
-    if (unitRaw === 'gramm' || unitRaw === 'g') {
-      // displayParsed is in kilograms
-      internalMenge = Math.round(displayParsed * 1000)
-    } else if (unitRaw === 'kg' || unitRaw === 'kilogramm') {
-      // assume displayParsed in kilograms, internal still use grams for consistency
-      internalMenge = Math.round(displayParsed * 1000)
+    if (unitRaw === 'kg' || unitRaw === 'kilogramm' || unitRaw === 'gramm' || unitRaw === 'g') {
+      internalMenge = Math.round(displayParsed * 100) / 100
     } else {
-      // count-like units: must be integer
       if (!Number.isInteger(displayParsed)) {
         setError('Bitte eine ganze Zahl für diese Einheit eingeben.')
         return
@@ -133,11 +115,9 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
     const displayParsed = parseDisplayNumber(displayedAmount)
     if (!Number.isFinite(displayParsed) || displayParsed <= 0) return { label: '' }
 
-    if (unitRaw === 'gramm' || unitRaw === 'g' || unitRaw === 'kg' || unitRaw === 'kilogramm') {
-      // display is kilograms
+    if (unitRaw === 'kg' || unitRaw === 'kilogramm' || unitRaw === 'gramm' || unitRaw === 'g') {
       const kg = displayParsed
-      const grams = kg * 1000
-      const total = (grams / 1000) * price // price assumed per kg
+      const total = kg * price
       return { label: `${kg} kg`, total: formatCurrency(total) }
     }
 
@@ -159,10 +139,8 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
     if (!Number.isFinite(displayParsed) || displayParsed <= 0 || !angebot) return null
     const unitRaw = (angebot.einheit || '').toString().toLowerCase()
     if (['gramm', 'g', 'kg', 'kilogramm'].includes(unitRaw)) {
-      // displayed in kilograms -> internal in grams
-      return Math.round(displayParsed * 1000)
+      return Math.round(displayParsed * 100) / 100
     }
-    // count-like
     return Math.round(displayParsed)
   }
 
@@ -201,16 +179,13 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
               {(() => {
                 const unitRaw = (angebot?.einheit || '').toString().toLowerCase()
                 const isWeight = ['gramm', 'g', 'kg', 'kilogramm'].includes(unitRaw)
-                // build suggestions dynamically from availability; always include 1kg basis for weight
                 let suggestions: number[] = []
                 if (isWeight) {
                   const avail = Number(angebot?.mengeVerfuegbar ?? 0)
-                  const availKg = Number.isFinite(avail) ? avail / 1000 : Infinity
-                  // prefer 1,3,5 but filter by availability; if avail < 1kg, suggest avail rounded to 0.1
+                  const availKg = Number.isFinite(avail) ? avail : Infinity
                   const base = [1, 3, 5]
                   suggestions = base.filter((b) => !Number.isFinite(availKg) || b <= Math.max(1, Math.floor(availKg)))
                   if (suggestions.length === 0 && Number.isFinite(availKg) && availKg > 0) {
-                    // push available rounded to 0.1
                     suggestions = [Math.round(availKg * 10) / 10]
                   }
                 } else {
@@ -219,7 +194,7 @@ export default function OrderDialog({ angebotId, membershipId }: Props) {
                 return (
                   <div className="flex gap-2">
                     {suggestions.map((s) => {
-                      const would = (['gramm', 'g', 'kg', 'kilogramm'].includes((angebot?.einheit || '').toString().toLowerCase())) ? Math.round(s * 1000) : Math.round(s)
+                      const would = (['gramm', 'g', 'kg', 'kilogramm'].includes((angebot?.einheit || '').toString().toLowerCase())) ? Math.round(s * 100) / 100 : Math.round(s)
                       const wouldExceed = !!(angebot && Number.isFinite(Number(angebot.mengeVerfuegbar)) && would > Number(angebot.mengeVerfuegbar))
                       const clickInternal = (val: number) => {
                         if (wouldExceed) return

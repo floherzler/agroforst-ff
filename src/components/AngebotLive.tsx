@@ -25,15 +25,7 @@ export default function AngebotLive({ initial }: { initial: Staffel }) {
             </p>
             <p>
                 <span className="font-semibold">Preis:</span>{" "}
-                {(() => {
-                    let menge = angebot.menge;
-                    let einheit = angebot.einheit;
-                    if (menge >= 1000 && einheit.toLowerCase() === "gramm") {
-                        menge = menge / 1000;
-                        einheit = "kg";
-                    }
-                    return `${angebot.euroPreis.toFixed(2)} € / ${menge} ${einheit}`;
-                })()}
+                {`${angebot.euroPreis.toFixed(2)} € / ${angebot.einheit}`}
             </p>
         </div>
     );

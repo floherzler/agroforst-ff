@@ -197,7 +197,7 @@ export function useZentraleAdmin({
       setActivePanel("produkte");
       setProductStatus({
         state: "success",
-        message: selectedProductId ? "Produkt wurde aktualisiert." : "Produkt wurde angelegt.",
+        message: selectedProductId ? "Produkt wurde aktualisiert." : "Produkt wurde angelegt und kann sofort für Angebote verwendet werden.",
       });
     } catch (rawError) {
       const message =
@@ -215,12 +215,12 @@ export function useZentraleAdmin({
     try {
       const produktId = offerForm.produktId.trim();
       if (!produktId) {
-        throw new Error("Produkt ist erforderlich.");
+        throw new Error("Bitte zuerst ein Produkt für das Angebot wählen.");
       }
 
       const menge = parseRequiredNumber(offerForm.menge, "Projektionsmenge");
       const mengeVerfuegbar = offerForm.mengeVerfuegbar.trim()
-        ? parseRequiredNumber(offerForm.mengeVerfuegbar, "Verfuegbare Menge")
+        ? parseRequiredNumber(offerForm.mengeVerfuegbar, "Verfügbare Menge")
         : menge;
       const mengeAbgeholt = offerForm.mengeAbgeholt.trim()
         ? parseRequiredNumber(offerForm.mengeAbgeholt, "Reservierte Menge")
@@ -237,7 +237,7 @@ export function useZentraleAdmin({
         menge,
         mengeVerfuegbar,
         mengeAbgeholt,
-        einheit: canonicalUnit(offerForm.einheit) || "gram",
+        einheit: canonicalUnit(offerForm.einheit) || "kilogramm",
         euroPreis,
         producerPreis: parseOptionalNumberField(offerForm.producerPreis),
         standardPreis: parseOptionalNumberField(offerForm.standardPreis),
@@ -253,7 +253,7 @@ export function useZentraleAdmin({
       setActivePanel("angebote");
       setOfferStatus({
         state: "success",
-        message: selectedOfferId ? "Angebot wurde aktualisiert." : "Angebot wurde angelegt.",
+        message: selectedOfferId ? "Angebot wurde aktualisiert." : "Angebot wurde angelegt und ist direkt in der Liste sichtbar.",
       });
     } catch (rawError) {
       const message =

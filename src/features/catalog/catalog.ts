@@ -158,15 +158,14 @@ export function getOfferAvailabilityBadgeVariant(
 
 export function formatPricePerUnit(
   euroPreis: number,
-  menge: number,
+  _menge: number,
   einheit: string,
 ) {
-  if (!Number.isFinite(euroPreis) || !Number.isFinite(menge) || menge <= 0) {
+  if (!Number.isFinite(euroPreis)) {
     return "-";
   }
 
-  const pricePerUnit = euroPreis / menge;
-  return `${formatEuro(pricePerUnit)} / ${einheit}`;
+  return `${formatEuro(euroPreis)} / ${einheit}`;
 }
 
 export function formatHarvestRange(values: string[]) {

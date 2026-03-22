@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 import { OfferEditor, ProductEditor } from "@/features/zentrale/admin-ui";
-import { displayProductName, formatCurrency } from "@/features/zentrale/admin-domain";
+import { displayProductName, displayValueLabel, formatCurrency } from "@/features/zentrale/admin-domain";
 import { useZentraleAdmin } from "@/features/zentrale/use-zentrale-admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -214,10 +214,10 @@ function ProductCatalog({
                       <div className="truncate font-medium text-earth-700">{displayProductName(product)}</div>
                       <div className="mt-1 truncate text-xs text-muted-foreground">{product.id}</div>
                     </div>
-                    <Badge variant="outline">{product.hauptkategorie}</Badge>
+                    <Badge variant="outline">{displayValueLabel(product.hauptkategorie)}</Badge>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span>{product.unterkategorie || "Ohne Unterkategorie"}</span>
+                    <span>{displayValueLabel(product.unterkategorie) || "Ohne Unterkategorie"}</span>
                     <span>•</span>
                     <span>
                       {(product.saisonalitaet ?? []).length > 0
@@ -326,9 +326,9 @@ function SelectedProductSnapshot({ state }: { state: ReturnType<typeof useZentra
               <div className="text-muted-foreground">{selectedProduct.id}</div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{selectedProduct.hauptkategorie}</Badge>
-              {selectedProduct.unterkategorie ? <Badge variant="secondary">{selectedProduct.unterkategorie}</Badge> : null}
-              {selectedProduct.lebensdauer ? <Badge variant="outline">{selectedProduct.lebensdauer}</Badge> : null}
+              <Badge variant="outline">{displayValueLabel(selectedProduct.hauptkategorie)}</Badge>
+              {selectedProduct.unterkategorie ? <Badge variant="secondary">{displayValueLabel(selectedProduct.unterkategorie)}</Badge> : null}
+              {selectedProduct.lebensdauer ? <Badge variant="outline">{displayValueLabel(selectedProduct.lebensdauer)}</Badge> : null}
             </div>
             <div className="rounded-[1.2rem] border border-earth-500/10 bg-white/65 p-3 text-muted-foreground">
               {selectedProduct.notes?.trim() || "Keine internen Notizen hinterlegt."}

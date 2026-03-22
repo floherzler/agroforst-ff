@@ -4,6 +4,7 @@ import { Search as SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import AngeboteModal from "@/components/AngeboteModal";
+import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import {
   EmptyState,
   PageHeader,
@@ -271,9 +272,9 @@ function TableView({
                   {product.name}
                   {product.sorte ? ` – ${product.sorte}` : ""}
                 </TableCell>
-                <TableCell>{product.hauptkategorie}</TableCell>
+                <TableCell>{displayValueLabel(product.hauptkategorie)}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {product.unterkategorie || "–"}
+                  {displayValueLabel(product.unterkategorie) || "–"}
                 </TableCell>
                 <TableCell>
                   <AngeboteModal

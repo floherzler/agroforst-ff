@@ -27,11 +27,27 @@ export const unterkategorieValues = [
 export const lebensdauerValues = ["einjaehrig", "zweijaehrig", "mehrjaehrig"] as const;
 
 export const offerUnits = [
-  { value: "piece", label: "Stueck" },
-  { value: "gram", label: "Gramm" },
-  { value: "bundle", label: "Bund" },
+  { value: "stueck", label: "Stück" },
+  { value: "kilogramm", label: "Kilogramm" },
+  { value: "bund", label: "Bund" },
   { value: "liter", label: "Liter" },
 ] as const;
+
+const labelByValue: Record<string, string> = {
+  Gemuese: "Gemüse",
+  Kraeuter: "Kräuter",
+  Huelsenfruechte: "Hülsenfrüchte",
+  Kohlgemuese: "Kohlgemüse",
+  "Wurzel-/Knollengemuese": "Wurzel-/Knollengemüse",
+  "Blattgemuese/Salat": "Blattgemüse / Salat",
+  Fruchtgemuese: "Fruchtgemüse",
+  Zwiebelgemuese: "Zwiebelgemüse",
+  Zitrusfruechte: "Zitrusfrüchte",
+  Schalenfruechte: "Schalenfrüchte",
+  einjaehrig: "einjährig",
+  zweijaehrig: "zweijährig",
+  mehrjaehrig: "mehrjährig",
+};
 
 export type FunctionStatus = {
   state: "idle" | "loading" | "success" | "error";
@@ -154,19 +170,35 @@ export function displayProductName(product?: Produkt): string {
   return [product.name, product.sorte].filter(Boolean).join(" - ");
 }
 
+export function displayValueLabel(value?: string): string {
+  if (!value) {
+    return "";
+  }
+
+  return labelByValue[value] ?? value;
+}
+
+export function displayUnitLabel(value?: string): string {
+  const canonical = canonicalUnit(value);
+  return offerUnits.find((unit) => unit.value === canonical)?.label ?? value ?? "";
+}
+
 export function canonicalUnit(value?: string): string {
   switch ((value ?? "").trim().toLowerCase()) {
     case "stueck":
     case "stuck":
+    case "stück":
     case "piece":
-      return "piece";
+      return "stueck";
+    case "kilogramm":
+    case "kg":
     case "gramm":
     case "gram":
     case "g":
-      return "gram";
+      return "kilogramm";
     case "bund":
     case "bundle":
-      return "bundle";
+      return "bund";
     case "liter":
     case "l":
       return "liter";
@@ -200,7 +232,7 @@ export function emptyOfferForm(defaultProductId = ""): OfferFormState {
     menge: "",
     mengeVerfuegbar: "",
     mengeAbgeholt: "0",
-    einheit: "gram",
+    einheit: "kilogramm",
     euroPreis: "",
     producerPreis: "",
     standardPreis: "",
@@ -238,7 +270,7 @@ export function offerToFormState(offer: Staffel): OfferFormState {
     menge: String(offer.menge ?? ""),
     mengeVerfuegbar: String(offer.mengeVerfuegbar ?? ""),
     mengeAbgeholt: String(offer.mengeAbgeholt ?? 0),
-    einheit: canonicalUnit(offer.einheit) || "gram",
+    einheit: canonicalUnit(offer.einheit) || "kilogramm",
     euroPreis: String(offer.euroPreis ?? ""),
     producerPreis: offer.producerPreis === undefined ? "" : String(offer.producerPreis),
     standardPreis: offer.standardPreis === undefined ? "" : String(offer.standardPreis),

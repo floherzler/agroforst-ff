@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { subscribeToProdukte } from "@/lib/appwrite/appwriteProducts";
+import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
 
 
@@ -59,9 +60,9 @@ export default function ProduktListe({ initialProdukte }: { initialProdukte: Pro
                             <TableCell>{produkt.id}</TableCell>
                             <TableCell>{produkt.name}</TableCell>
                             <TableCell>{produkt.sorte}</TableCell>
-                            <TableCell>{produkt.hauptkategorie}</TableCell>
-                            <TableCell>{produkt.unterkategorie}</TableCell>
-                            <TableCell>{produkt.lebensdauer}</TableCell>
+                            <TableCell>{displayValueLabel(produkt.hauptkategorie)}</TableCell>
+                            <TableCell>{displayValueLabel(produkt.unterkategorie)}</TableCell>
+                            <TableCell>{displayValueLabel(produkt.lebensdauer)}</TableCell>
                             <TableCell>{produkt.fruchtfolgeVor.join(", ")}</TableCell>
                             <TableCell>{produkt.fruchtfolgeNach.join(", ")}</TableCell>
                             <TableCell>{produkt.bodenansprueche}</TableCell>
