@@ -33,7 +33,7 @@ In der Funktions-Konfiguration setzen:
 Die Funktion akzeptiert JSON **und** Query-Parameter:
 
 - `offer_id` *(String, Pflicht)* – ID des Angebots
-- `membership_id` *(String, optional)* – ID der Mitgliedschaft des Nutzers
+- `membership_id` *(String, Pflicht)* – ID der aktiven Mitgliedschaft des Nutzers
 - `quantity` *(Number, Pflicht, > 0)* – angefragte Menge
 
 > **User-ID** kommt aus dem Header `x-appwrite-user-id` (kein Body-Feld nötig).  

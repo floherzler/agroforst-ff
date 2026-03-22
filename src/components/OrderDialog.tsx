@@ -10,9 +10,10 @@ import { useAuthStore } from "@/store/Auth";
 
 type Props = {
   angebotId: string
+  membershipId?: string
 }
 
-export default function OrderDialog({ angebotId }: Props) {
+export default function OrderDialog({ angebotId, membershipId }: Props) {
   const [open, setOpen] = React.useState(false)
   // displayedAmount is what the user edits: for weight units we show kilograms, for count units we show integer count
   const [displayedAmount, setDisplayedAmount] = React.useState<string>("")
@@ -63,6 +64,11 @@ export default function OrderDialog({ angebotId }: Props) {
     setError(null)
     setSuccess(null)
 
+    if (!membershipId) {
+      setError("Für eine Bestellung wird eine aktive Mitgliedschaft benötigt.")
+      return
+    }
+
     // compute internal numeric menge depending on angebot.einheit
     const displayParsed = Number(displayedAmount)
     if (!Number.isFinite(displayParsed) || displayParsed <= 0) {
@@ -92,6 +98,7 @@ export default function OrderDialog({ angebotId }: Props) {
     try {
       await placeOrderRequest({
         angebotId,
+        membershipId: membershipId ?? "",
         menge: internalMenge,
         userMail: user_mail,
       })

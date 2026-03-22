@@ -149,7 +149,7 @@ function seedDemoData() {
       [
         {
           $id: "offer_apple_topaz_2026",
-          product_id: "apple_topaz",
+          product: "apple_topaz",
           year: 2026,
           projected_quantity: 120000,
           available_quantity: 120000,
@@ -160,7 +160,7 @@ function seedDemoData() {
         },
         {
           $id: "offer_tomato_sungold_2026",
-          product_id: "tomato_sungold",
+          product: "tomato_sungold",
           year: 2026,
           projected_quantity: 60000,
           available_quantity: 60000,
@@ -229,8 +229,6 @@ function syncFunctionVariables() {
   };
 
   const functionIds = [
-    findFunctionId("addProdukt"),
-    findFunctionId("addAngebot"),
     findFunctionId("createMembership"),
     findFunctionId("createOrder"),
     findFunctionId("verifyPayment"),

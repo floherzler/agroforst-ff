@@ -9,15 +9,18 @@ import {
   createRealtimeChangeType,
   ensureConfigured,
   parseNumber,
+  parseRelationId,
   parseOptionalString,
   RealtimeChange,
 } from "@/lib/appwrite/shared";
 
 const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
+  offer: z.unknown().optional(),
   offer_id: z.string().optional().default(""),
   angebotID: z.string().optional().default(""),
   user_id: z.string().optional().default(""),
   userID: z.string().optional().default(""),
+  membership: z.unknown().optional(),
   membership_id: z.string().optional(),
   mitgliedschaftID: z.string().optional(),
   quantity: z.unknown().optional(),
@@ -78,10 +81,13 @@ export function normalizeBestellung(raw: unknown): Bestellung {
   return {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
-    angebotId: parsed.offer_id || parsed.angebotID || "",
+    angebotId:
+      parseRelationId(parsed.offer) || parsed.offer_id || parsed.angebotID || "",
     userId: parsed.user_id || parsed.userID || "",
     mitgliedschaftId: parseOptionalString(
-      parsed.membership_id ?? parsed.mitgliedschaftID,
+      parseRelationId(parsed.membership) ??
+        parsed.membership_id ??
+        parsed.mitgliedschaftID,
     ),
     menge: parseNumber(parsed.quantity ?? parsed.menge),
     einheit: normalizeUnit(parsed.unit || parsed.einheit || ""),

@@ -256,6 +256,21 @@ function buildCreateColumnArgs(tableId, column, databaseId) {
   if (Array.isArray(column.elements)) {
     args.push("--elements", ...column.elements);
   }
+  if (typeof column.relatedTableId === "string" && column.relatedTableId.length > 0) {
+    args.push("--related-table-id", column.relatedTableId);
+  }
+  if (typeof column.relationType === "string" && column.relationType.length > 0) {
+    args.push("--type", column.relationType);
+  }
+  if (typeof column.twoWay === "boolean") {
+    args.push("--two-way", String(column.twoWay));
+  }
+  if (typeof column.twoWayKey === "string" && column.twoWayKey.length > 0) {
+    args.push("--two-way-key", column.twoWayKey);
+  }
+  if (typeof column.onDelete === "string" && column.onDelete.length > 0) {
+    args.push("--on-delete", column.onDelete);
+  }
   if (typeof column.size === "number") {
     args.push("--size", String(column.size));
   }

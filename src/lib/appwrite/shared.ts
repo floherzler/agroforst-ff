@@ -28,8 +28,6 @@ export const appwriteConfig = {
   orderFunctionId: getManagedFunctionId("createOrder"),
   membershipFunctionId: getManagedFunctionId("createMembership"),
   paymentVerifyFunctionId: getManagedFunctionId("verifyPayment"),
-  addProduktFunctionId: getManagedFunctionId("addProdukt"),
-  addAngebotFunctionId: getManagedFunctionId("addAngebot"),
 };
 
 export const appwriteDocumentMetaSchema = z.object({
@@ -108,6 +106,21 @@ export function parseOptionalString(value: unknown): string | undefined {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
   }
+  return undefined;
+}
+
+export function parseRelationId(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return parseOptionalString(value);
+  }
+
+  if (value && typeof value === "object") {
+    const candidate = (value as { $id?: unknown }).$id;
+    if (typeof candidate === "string") {
+      return parseOptionalString(candidate);
+    }
+  }
+
   return undefined;
 }
 

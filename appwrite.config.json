@@ -54,7 +54,7 @@
         "delete(\"label:admin\")"
       ],
       "columns": [
-        { "key": "product_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
+        { "key": "product", "type": "relationship", "required": true, "array": false, "relatedTableId": "products", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
         { "key": "year", "type": "integer", "required": false, "array": false, "default": null, "min": 2000, "max": 2100 },
         { "key": "sowing_date", "type": "datetime", "required": false, "array": false, "default": null },
         { "key": "harvest_projection", "type": "datetime", "required": false, "array": true, "default": null },
@@ -73,7 +73,7 @@
         { "key": "updated_by_user_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null }
       ],
       "indexes": [
-        { "key": "offer_product_key", "type": "key", "attributes": ["product_id"] },
+        { "key": "offer_product_key", "type": "key", "attributes": ["product"] },
         { "key": "offer_year_key", "type": "key", "attributes": ["year"] }
       ]
     },
@@ -124,7 +124,7 @@
         "delete(\"label:admin\")"
       ],
       "columns": [
-        { "key": "membership_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
+        { "key": "membership", "type": "relationship", "required": true, "array": false, "relatedTableId": "memberships", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
         { "key": "payment_type", "type": "enum", "required": true, "array": false, "elements": ["membership", "order", "other"], "default": null },
         { "key": "customer_type", "type": "enum", "required": false, "array": false, "elements": ["private", "business"], "default": null },
         { "key": "amount_eur", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
@@ -135,7 +135,7 @@
         { "key": "due_at", "type": "datetime", "required": false, "array": false, "default": null }
       ],
       "indexes": [
-        { "key": "pay_membership_key", "type": "key", "attributes": ["membership_id"] },
+        { "key": "pay_membership_key", "type": "key", "attributes": ["membership"] },
         { "key": "pay_ref_unique", "type": "unique", "attributes": ["reference"] }
       ]
     },
@@ -153,8 +153,8 @@
       "columns": [
         { "key": "user_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
         { "key": "user_email", "type": "varchar", "required": false, "array": false, "size": 255, "default": null },
-        { "key": "membership_id", "type": "varchar", "required": false, "array": false, "size": 36, "default": null },
-        { "key": "offer_id", "type": "varchar", "required": true, "array": false, "size": 36, "default": null },
+        { "key": "membership", "type": "relationship", "required": true, "array": false, "relatedTableId": "memberships", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
+        { "key": "offer", "type": "relationship", "required": true, "array": false, "relatedTableId": "offers", "relationType": "many-to-one", "twoWay": false, "onDelete": "restrict" },
         { "key": "quantity", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
         { "key": "unit", "type": "enum", "required": true, "array": false, "elements": ["piece", "gram", "bundle", "liter"], "default": null },
         { "key": "unit_price_eur", "type": "float", "required": true, "array": false, "default": null, "min": 0 },
@@ -165,8 +165,8 @@
       ],
       "indexes": [
         { "key": "order_user_key", "type": "key", "attributes": ["user_id"] },
-        { "key": "order_offer_key", "type": "key", "attributes": ["offer_id"] },
-        { "key": "order_member_key", "type": "key", "attributes": ["membership_id"] }
+        { "key": "order_offer_key", "type": "key", "attributes": ["offer"] },
+        { "key": "order_member_key", "type": "key", "attributes": ["membership"] }
       ]
     },
     {
@@ -267,22 +267,6 @@
     }
   ],
   "functions": [
-    {
-      "$id": "addProdukt",
-      "name": "addProdukt",
-      "runtime": "node-22",
-      "path": "functions/addProdukt",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    },
-    {
-      "$id": "addAngebot",
-      "name": "addAngebot",
-      "runtime": "node-22",
-      "path": "functions/addAngebot",
-      "entrypoint": "src/main.js",
-      "commands": "npm install --omit=dev"
-    },
     {
       "$id": "createMembership",
       "name": "createMembership",

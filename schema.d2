@@ -1,5 +1,8 @@
 direction: down
 
-Agroforst <-> Kunden: Newsletter / Anbauwunsch
-
-Agroforst -> Produkt -> Angebot -- Bestellung <- Mitgliedschaft <- Kunden
+Agroforst -> Produkt: pflegt Katalog
+Produkt -> Angebot: 1:n
+Kunden -> Mitgliedschaft: 1:n über Zeit
+Angebot -> Bestellung: 1:n
+Mitgliedschaft -> Bestellung: 1:n
+Kunden -> Bestellung: 1:n

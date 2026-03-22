@@ -24,6 +24,8 @@ Appwrite Cloud Function that lets admin users mark payments as verified and keep
 }
 ```
 
+Canonical schema now stores the payment linkage in the relationship field `membership`. The function still accepts `membership_id` in the payload for compatibility.
+
 **Authorization**
 
 Expects `x-appwrite-user-id` header; looks up the user and ensures it has the `admin` label before touching the database.

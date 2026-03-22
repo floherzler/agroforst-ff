@@ -7,10 +7,12 @@ import {
   appwriteDocumentMetaSchema,
   ensureConfigured,
   parseOptionalNumber,
+  parseRelationId,
   parseOptionalString,
 } from "@/lib/appwrite/shared";
 
 const paymentDocumentSchema = appwriteDocumentMetaSchema.extend({
+  membership: z.unknown().optional(),
   membership_id: z.string().optional(),
   membershipId: z.string().optional(),
   status: z.string().optional(),
@@ -145,7 +147,9 @@ export function normalizeMembershipPayment(raw: unknown): MembershipPayment {
   return {
     id: parsed.$id,
     membershipId: parseOptionalString(
-      parsed.membership_id ?? parsed.membershipId,
+      parseRelationId(parsed.membership) ??
+        parsed.membership_id ??
+        parsed.membershipId,
     ),
     status: normalizePaymentStatus(parsed.status ?? parsed.state),
     ref: parseOptionalString(
@@ -232,7 +236,7 @@ export async function listMembershipsByUserId(input: {
   const paymentsResponse = await databases.listDocuments(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(appwriteConfig.paymentTableId, "Zahlungs-Tabelle"),
-    [Query.equal("membership_id", membershipIds), Query.limit(200)],
+    [Query.equal("membership", membershipIds), Query.limit(200)],
   );
 
   const paymentsByMembership = new Map<string, MembershipPayment[]>();

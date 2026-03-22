@@ -109,6 +109,18 @@ function compactObject(value) {
     );
 }
 
+function parseRelationId(value) {
+    if (typeof value === "string" && value.trim()) {
+        return value.trim();
+    }
+
+    if (value && typeof value === "object" && typeof value.$id === "string") {
+        return value.$id.trim();
+    }
+
+    return "";
+}
+
 export default async ({ req, res, log, error }) => {
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
@@ -118,7 +130,7 @@ export default async ({ req, res, log, error }) => {
 
         const body = await extractBody(req);
         const paymentId = String(body.payment_id ?? body.paymentId ?? "").trim();
-        const membershipId = String(body.membership_id ?? body.membershipId ?? "").trim() || undefined;
+        const membershipId = String(body.membership ?? body.membership_id ?? body.membershipId ?? "").trim() || undefined;
         const note = typeof body.note === "string" ? body.note : undefined;
         const force = Boolean(body.force);
         const status = normalizePaymentStatus(body.status);
@@ -173,7 +185,8 @@ export default async ({ req, res, log, error }) => {
             }),
         });
 
-        const targetMembershipId = membershipId || String(existing.membership_id ?? "").trim() || undefined;
+        const targetMembershipId =
+            membershipId || parseRelationId(existing.membership) || String(existing.membership_id ?? "").trim() || undefined;
         if (targetMembershipId) {
             try {
                 const membership = await tables.getRow({

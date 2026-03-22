@@ -184,7 +184,7 @@ export default async ({ req, res, log, error }) => {
                 tableId: paymentsTableId,
                 rowId: ID.unique(),
                 data: compactObject({
-                    membership_id: membership.$id,
+                    membership: membership.$id,
                     payment_type: "membership",
                     customer_type: membershipType,
                     amount_eur: Number(body.amount_eur ?? 100),

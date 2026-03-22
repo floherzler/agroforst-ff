@@ -107,6 +107,18 @@ function compactObject(value) {
     );
 }
 
+function parseRelationId(value) {
+    if (typeof value === "string" && value.trim()) {
+        return value.trim();
+    }
+
+    if (value && typeof value === "object" && typeof value.$id === "string") {
+        return value.$id.trim();
+    }
+
+    return "";
+}
+
 export default async ({ req, res, log, error }) => {
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
@@ -118,12 +130,12 @@ export default async ({ req, res, log, error }) => {
         const url = new URL(req?.url ?? "http://localhost/");
         const offerId = String(body.offer_id ?? body.angebotID ?? url.searchParams.get("angebotID") ?? "").trim();
         const membershipId = String(
-            body.membership_id ?? body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? ""
+            body.membership ?? body.membership_id ?? body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? ""
         ).trim();
         const quantity = Number(body.quantity ?? body.menge ?? url.searchParams.get("menge"));
 
-        if (!offerId || !Number.isFinite(quantity) || quantity <= 0) {
-            return fail(res, "Invalid input: require { offer_id, quantity > 0 }", 400);
+        if (!offerId || !membershipId || !Number.isFinite(quantity) || quantity <= 0) {
+            return fail(res, "Invalid input: require { offer_id, membership_id, quantity > 0 }", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
@@ -147,19 +159,16 @@ export default async ({ req, res, log, error }) => {
         const tables = new TablesDB(client);
         const users = new Users(client);
 
-        let membership = null;
-        if (membershipId) {
-            membership = await tables.getRow({
-                databaseId,
-                tableId: membershipsTableId,
-                rowId: membershipId,
-            });
-            if (membership.user_id !== callerId) {
-                return fail(res, "Membership does not belong to caller", 403);
-            }
-            if (!isActiveMembership(membership.status)) {
-                return fail(res, "Membership is not active", 409, { status: membership.status });
-            }
+        const membership = await tables.getRow({
+            databaseId,
+            tableId: membershipsTableId,
+            rowId: membershipId,
+        });
+        if (membership.user_id !== callerId) {
+            return fail(res, "Membership does not belong to caller", 403);
+        }
+        if (!isActiveMembership(membership.status)) {
+            return fail(res, "Membership is not active", 409, { status: membership.status });
         }
 
         const offer = await tables.getRow({
@@ -179,11 +188,12 @@ export default async ({ req, res, log, error }) => {
 
         let productName = "";
         try {
-            if (offer.product_id) {
+            const productId = parseRelationId(offer.product) || String(offer.product_id ?? "").trim();
+            if (productId) {
                 const product = await tables.getRow({
                     databaseId,
                     tableId: productsTableId,
-                    rowId: offer.product_id,
+                    rowId: productId,
                 });
                 productName = [product.name, product.variety].filter(Boolean).join(" - ");
             }
@@ -192,7 +202,8 @@ export default async ({ req, res, log, error }) => {
         }
 
         if (!productName) {
-            productName = String(offer.product_name ?? `Produkt ${offer.product_id ?? ""}`).trim();
+            const productId = parseRelationId(offer.product) || String(offer.product_id ?? "").trim();
+            productName = String(offer.product_name ?? `Produkt ${productId}`).trim();
         }
 
         const unitPriceEur = Number(offer.unit_price_eur ?? 0);
@@ -218,8 +229,8 @@ export default async ({ req, res, log, error }) => {
             data: compactObject({
                 user_id: callerId,
                 user_email: "",
-                membership_id: membershipId || undefined,
-                offer_id: offerId,
+                membership: membershipId,
+                offer: offerId,
                 quantity,
                 unit: canonicalUnit,
                 unit_price_eur: unitPriceEur,
@@ -286,7 +297,7 @@ export default async ({ req, res, log, error }) => {
                 orderId: order.$id,
                 offer: { before: availableQuantity, after: nextAvailableQuantity },
                 total_price_eur: totalPriceEur,
-                membership: membership ? membership.$id : null,
+                membership: membership.$id,
             },
             201,
         );

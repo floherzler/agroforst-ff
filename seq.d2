@@ -20,14 +20,16 @@ User→Server Flows: {
     shape: sequence_diagram
     user: Benutzer
     web: Website (Next.js)
-    db: Appwrite Databases
-    msg: Appwrite Messaging
+    fn: Cloud Function createMembership
+    db: Appwrite TablesDB
 
     user -> web: Klickt Mitgliedschaft beantragen
-    web -> db: createDocument(mitgliedschaft, status: beantragt, userID)
-    db -> web: Mitgliedschaft angelegt
+    web -> fn: POST createMembership(type)
+    fn -> db: createRow(membership, pending, user_id)
+    fn -> db: createRow(payment) bei private
+    db -> fn: membership angelegt
+    fn -> web: membership payload
     web -> user: Bestätigung "beantragt"
-    db -> msg: (optional) Notify Admin-Team
   }
 
   Angebot bestellen: {
@@ -41,15 +43,15 @@ User→Server Flows: {
     inv: (optional) Cloud Function generateInvoice
 
     user -> web: Wählt Angebot & klickt Bestellen
-    web -> fn: POST createOrder(angebotID, mitgliedschaftID, menge) + userId Header
-    fn -> db: getDocument(mitgliedschaft)
+    web -> fn: POST createOrder(offer, membership, quantity) + userId Header
+    fn -> db: getRow(membership)
     db -> fn: Mitgliedschaft (Status/Guthaben)
-    fn -> db: getDocument(angebot)
+    fn -> db: getRow(offer)
     db -> fn: Angebot (Preis/Einheit/Menge)
 
-    fn -> db: Prüfe Verfügbarkeit & Guthaben
-    fn -> db: updateDocument(angebot, mengeVerfuegbar -= menge, mengeAbgeholt += menge)
-    fn -> db: createDocument(bestellung, Snapshot menge, einheit, preis_einheit, preis_gesamt, produkt_name, status:"offen")
+    fn -> db: Prüfe aktive Mitgliedschaft & Verfügbarkeit
+    fn -> db: updateRow(offer, available -= menge, allocated += menge)
+    fn -> db: createRow(order, membership relation, offer relation, snapshot fields)
 
     fn -> web: 201 orderId, preis_gesamt
     web -> user: Erfolgsanzeige & Zusammenfassung
