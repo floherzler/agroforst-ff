@@ -176,7 +176,7 @@ key must match the remote Appwrite function name.
 Example already used in this repo:
 
 - remote function: `createOrder`
-- repo source folder: [`/home/flo178/projects/agroforst-ff/functions/placeOrder`](/home/flo178/projects/agroforst-ff/functions/placeOrder)
+- repo source folder: [`/home/flo178/projects/agroforst-ff/functions/createOrder`](/home/flo178/projects/agroforst-ff/functions/createOrder)
 
 When you create a new Appwrite function, prefer:
 
@@ -228,7 +228,7 @@ Examples:
 
 ```bash
 scripts/appwrite-local-dev.sh createMembership
-scripts/appwrite-local-dev.sh placeOrder
+scripts/appwrite-local-dev.sh createOrder
 scripts/appwrite-local-dev.sh verifyPayment
 ```
 
@@ -275,5 +275,5 @@ Before merging function work, check:
 Good examples in this repo:
 
 - [`/home/flo178/projects/agroforst-ff/functions/createMembership/src/main.js`](/home/flo178/projects/agroforst-ff/functions/createMembership/src/main.js)
-- [`/home/flo178/projects/agroforst-ff/functions/placeOrder/src/main.js`](/home/flo178/projects/agroforst-ff/functions/placeOrder/src/main.js)
+- [`/home/flo178/projects/agroforst-ff/functions/createOrder/src/main.js`](/home/flo178/projects/agroforst-ff/functions/createOrder/src/main.js)
 - [`/home/flo178/projects/agroforst-ff/functions/verifyPayment/src/main.js`](/home/flo178/projects/agroforst-ff/functions/verifyPayment/src/main.js)

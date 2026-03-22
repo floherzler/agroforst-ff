@@ -16,7 +16,7 @@ workspace="$repo_root/.appwrite-local"
 manifest_file="$repo_root/functions/local-manifest.json"
 
 case "$requested_function_id" in
-    placeOrder)
+    placeOrder|createOrder)
         function_id="createOrder"
         ;;
     *)

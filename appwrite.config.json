@@ -279,7 +279,7 @@
       "$id": "createOrder",
       "name": "createOrder",
       "runtime": "node-22",
-      "path": "functions/placeOrder",
+      "path": "functions/createOrder",
       "entrypoint": "src/main.js",
       "commands": "npm install --omit=dev"
     },

@@ -49,7 +49,7 @@ Other supported optional override blocks can be copied from
 
 - `# [createMembership]`
 - `# [verifyPayment]`
-- `# [placeOrder]`
+- `# [createOrder]`
 
 In most cases you do not need those blocks at all. The runner derives defaults
 from the managed schema in
@@ -64,7 +64,7 @@ These are the current minimum runtime scopes based on the code in the repo.
 
 - `createMembership`: `users.read`, `rows.read`, `rows.write`
 - `verifyPayment`: `users.read`, `documents.read`, `documents.write`
-- `placeOrder`: `users.read`, `documents.read`, `documents.write`
+- `createOrder`: `users.read`, `documents.read`, `documents.write`
 If you want to keep a single shared key for CLI automation and all current
 local function tests, the practical union is:
 
@@ -111,11 +111,8 @@ You can also use:
 ```bash
 scripts/appwrite-local-dev.sh createMembership
 scripts/appwrite-local-dev.sh verifyPayment
-scripts/appwrite-local-dev.sh placeOrder
+scripts/appwrite-local-dev.sh createOrder
 ```
-
-`placeOrder` is accepted as a local alias even though the deployed Appwrite
-function is still named `createOrder`.
 
 The local runner intentionally patches the pulled Deno function definitions to
 `node-22` and uses the repo-owned `src/main.js` handlers plus each function's
@@ -154,7 +151,7 @@ curl -i -X POST http://localhost:8091/ \
   --data '{"paymentId":"<payment-id>","membershipId":"<membership-id>","status":"bezahlt"}'
 ```
 
-`placeOrder`
+`createOrder`
 
 ```bash
 curl -i -X POST http://localhost:8091/ \

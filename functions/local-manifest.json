@@ -7,7 +7,7 @@
       "commands": "npm install --omit=dev"
     },
     "createOrder": {
-      "source": "functions/placeOrder",
+      "source": "functions/createOrder",
       "runtime": "node-22",
       "entrypoint": "src/main.js",
       "commands": "npm install --omit=dev"

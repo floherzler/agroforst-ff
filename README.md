@@ -64,4 +64,4 @@ Then run:
 scripts/appwrite-local-dev.sh createMembership
 ```
 
-The same guide also covers `verifyPayment` and `placeOrder`.
+The same guide also covers `verifyPayment` and `createOrder`.
