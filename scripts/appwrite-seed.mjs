@@ -309,8 +309,43 @@ function listResponse(data, key) {
   return Array.isArray(list) ? list : [];
 }
 
+function extractJsonPayload(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const objectStart = trimmed.indexOf("{");
+    const arrayStart = trimmed.indexOf("[");
+    const startCandidates = [objectStart, arrayStart].filter((value) => value >= 0);
+    if (startCandidates.length === 0) {
+      return null;
+    }
+
+    const start = Math.min(...startCandidates);
+    const lastObjectEnd = trimmed.lastIndexOf("}");
+    const lastArrayEnd = trimmed.lastIndexOf("]");
+    const end = Math.max(lastObjectEnd, lastArrayEnd);
+    if (end < start) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+}
+
 function runAppwrite(args, options = {}) {
-  const result = spawnSync("appwrite", args, {
+  const commandArgs =
+    options.json && !args.includes("--json") ? [...args, "--json"] : args;
+
+  const result = spawnSync("appwrite", commandArgs, {
     cwd: repoRoot,
     encoding: "utf8",
   });
@@ -323,12 +358,18 @@ function runAppwrite(args, options = {}) {
   }
 
   if (options.json) {
-    if (!combinedOutput) {
-      return { ok, data: null };
+    const raw = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
+    const data = extractJsonPayload(raw);
+
+    if (!ok) {
+      return { ok, data };
     }
 
-    const parsed = JSON.parse(result.stdout || result.stderr || "null");
-    return { ok, data: parsed };
+    if (data === null) {
+      throw new Error(combinedOutput || `appwrite ${commandArgs.join(" ")} did not return JSON`);
+    }
+
+    return { ok, data };
   }
 
   if (combinedOutput) {

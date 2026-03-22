@@ -78,8 +78,43 @@ const configureCli = () => {
   ]);
 };
 
+const extractJsonPayload = (raw) => {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const objectStart = trimmed.indexOf("{");
+    const arrayStart = trimmed.indexOf("[");
+    const startCandidates = [objectStart, arrayStart].filter((value) => value >= 0);
+    if (startCandidates.length === 0) {
+      return null;
+    }
+
+    const start = Math.min(...startCandidates);
+    const lastObjectEnd = trimmed.lastIndexOf("}");
+    const lastArrayEnd = trimmed.lastIndexOf("]");
+    const end = Math.max(lastObjectEnd, lastArrayEnd);
+    if (end < start) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+};
+
 const runCli = (args, options = {}) => {
-  const result = spawnSync("appwrite", args, {
+  const commandArgs =
+    options.json && !args.includes("--json") ? [...args, "--json"] : args;
+
+  const result = spawnSync("appwrite", commandArgs, {
     cwd: process.cwd(),
     encoding: "utf8",
   });
@@ -96,8 +131,18 @@ const runCli = (args, options = {}) => {
   }
 
   if (options.json) {
-    const raw = result.stdout?.trim() || result.stderr?.trim() || "null";
-    return { ok, data: JSON.parse(raw) };
+    const raw = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
+    const data = extractJsonPayload(raw);
+
+    if (!ok) {
+      return { ok, data };
+    }
+
+    if (data === null) {
+      throw new Error(output || `appwrite ${commandArgs.join(" ")} did not return JSON`);
+    }
+
+    return { ok, data };
   }
 
   if (output && !options.silent) {
