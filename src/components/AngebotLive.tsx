@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-import { subscribeToStaffel } from "@/lib/appwrite/appwriteProducts";
+import { subscribeToAngebot } from "@/lib/appwrite/appwriteProducts";
 
-export default function AngebotLive({ initial }: { initial: Staffel }) {
-    const [angebot, setAngebot] = useState<Staffel>(initial);
+export default function AngebotLive({ initial }: { initial: Angebot }) {
+    const [angebot, setAngebot] = useState<Angebot>(initial);
 
     useEffect(() => {
-        const unsubscribe = subscribeToStaffel(initial.id, ({ type, record }) => {
+        const unsubscribe = subscribeToAngebot(initial.id, ({ type, record }) => {
             if (type === "update") {
                 setAngebot((prev) => ({ ...prev, ...record }));
             }

@@ -2,6 +2,7 @@
 
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowRight,
   Calendar,
   Euro,
   Filter,
@@ -20,8 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  CardAction,
   Card,
+  CardAction,
   CardContent,
   CardFooter,
   CardDescription,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useAuthStore } from "@/features/auth/auth-store";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import {
   Select,
@@ -43,25 +45,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   catalogCategories,
+  composeMarketplaceOffers,
   filterMarketplaceOffers,
   formatHarvestRange,
   formatPricePerUnit,
   getOfferAvailabilityBadgeVariant,
   getOfferAvailabilityText,
   getProductImageUrl,
-  listMarketplaceOffers,
+  listMarketplaceSnapshot,
   type CatalogCategory,
   type MarketplaceFilterOption,
   type MarketplaceSortOption,
-  type ProductOffer,
 } from "@/features/catalog/catalog";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import {
+  subscribeToProdukte,
+  subscribeToAngebote,
+} from "@/lib/appwrite/appwriteProducts";
 
 export default function MarketplacePage() {
-  const [offers, setOffers] = useState<ProductOffer[]>([]);
+  const session = useAuthStore((state) => state.session);
+  const [products, setProducts] = useState<Produkt[]>([]);
+  const [offers, setOffers] = useState<Angebot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<MarketplaceSortOption>("date");
+  const [sortBy, setSortBy] = useState<MarketplaceSortOption>("availability");
   const [filterBy, setFilterBy] = useState<MarketplaceFilterOption>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedCategory, setSelectedCategory] =
@@ -71,17 +80,22 @@ export default function MarketplacePage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadOffers() {
+    async function loadMarketplace() {
       setLoading(true);
+      setLoadError(null);
 
       try {
-        const nextOffers = await listMarketplaceOffers();
+        const snapshot = await listMarketplaceSnapshot();
 
         if (!cancelled) {
-          setOffers(nextOffers);
+          setProducts(snapshot.products);
+          setOffers(snapshot.offers);
         }
       } catch (error) {
         console.error("Error loading marketplace offers", error);
+        if (!cancelled) {
+          setLoadError("Angebote konnten nicht geladen werden.");
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -89,40 +103,99 @@ export default function MarketplacePage() {
       }
     }
 
-    void loadOffers();
+    void loadMarketplace();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    const unsubscribeOffers = subscribeToAngebote(({ type, record }) => {
+      setOffers((current) => applyRealtimeRecord(current, type, record));
+    });
+
+    const unsubscribeProducts = subscribeToProdukte(({ type, record }) => {
+      setProducts((current) => applyRealtimeRecord(current, type, record));
+    });
+
+    return () => {
+      unsubscribeOffers();
+      unsubscribeProducts();
+    };
+  }, [session]);
+
+  const marketplaceOffers = useMemo(
+    () => composeMarketplaceOffers(products, offers),
+    [offers, products],
+  );
+
   const visibleOffers = useMemo(
     () =>
       filterMarketplaceOffers({
-        offers,
+        offers: marketplaceOffers,
         category: selectedCategory,
         search: debouncedSearch,
         filterBy,
         sortBy,
         sortOrder,
       }),
-    [debouncedSearch, filterBy, offers, selectedCategory, sortBy, sortOrder],
+    [
+      debouncedSearch,
+      filterBy,
+      marketplaceOffers,
+      selectedCategory,
+      sortBy,
+      sortOrder,
+    ],
   );
 
   return (
     <PageShell>
       <PageHeader
         title="Marktplatz"
-        description="Aktuelle Angebote, reduziert auf Suche, Filter und Verfügbarkeit."
+        badge="Live-Angebote"
+        description="Ein reduzierter Überblick über sofort verfügbare Angebote. Für die komplette Produktauswahl springst du direkt in den Produktkatalog."
         actions={
-          <Button asChild variant="outline">
-            <Link to="/produkte">Alle Produkte</Link>
+          <Button asChild>
+            <Link to="/produkte">
+              Produkte durchsuchen
+              <ArrowRight data-icon="inline-end" />
+            </Link>
           </Button>
         }
       />
 
       <SurfaceSection className="p-5 sm:p-6">
         <div className="grid gap-4">
+          <div className="grid gap-3 rounded-2xl border border-border/70 bg-muted/30 p-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">
+                  {marketplaceOffers.length === 1
+                    ? "1 sichtbares Angebot"
+                    : `${marketplaceOffers.length} sichtbare Angebote`}
+                </Badge>
+                <Badge variant="outline">{products.length} Produkte im Katalog</Badge>
+              </div>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                Nutze den Marktplatz für schnelle Verfügbarkeitschecks. Wenn du
+                nach Produktfamilien, Saisonfenstern oder mehreren Optionen
+                suchst, ist die Produktseite der bessere Einstieg.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-start lg:justify-end">
+              <Button asChild variant="outline">
+                <Link to="/produkte">Zum vollständigen Produktkatalog</Link>
+              </Button>
+            </div>
+          </div>
+
           <Tabs
             value={selectedCategory}
             onValueChange={(value) =>
@@ -179,10 +252,10 @@ export default function MarketplacePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="date">Nach Datum</SelectItem>
+                  <SelectItem value="availability">Nach Bestand</SelectItem>
                   <SelectItem value="price">Nach Preis</SelectItem>
                   <SelectItem value="name">Nach Name</SelectItem>
-                  <SelectItem value="availability">Nach Bestand</SelectItem>
+                  <SelectItem value="date">Nach Datum</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -222,7 +295,9 @@ export default function MarketplacePage() {
       </SurfaceSection>
 
       <div className="text-sm text-muted-foreground">
-        {loading
+        {loadError
+          ? loadError
+          : loading
           ? "Angebote werden geladen."
           : visibleOffers.length === 1
             ? "1 Angebot gefunden"
@@ -231,6 +306,11 @@ export default function MarketplacePage() {
 
       {loading ? (
         <MarketplaceSkeletonGrid />
+      ) : loadError ? (
+        <EmptyState
+          title="Marktplatz momentan nicht erreichbar"
+          description="Bitte versuche es erneut, sobald die Appwrite-Verbindung wieder steht."
+        />
       ) : visibleOffers.length === 0 ? (
         <EmptyState
           title="Keine Angebote gefunden"
@@ -309,11 +389,16 @@ export default function MarketplacePage() {
                     {displayValueLabel(offer.produkt.hauptkategorie)}
                   </p>
 
-                  <Button asChild className="w-full sm:w-auto">
-                    <Link to="/angebote/$id" params={{ id: offer.id }}>
-                      Details anzeigen
-                    </Link>
-                  </Button>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link to="/produkte">Zum Produktkatalog</Link>
+                    </Button>
+                    <Button asChild className="w-full sm:w-auto">
+                      <Link to="/angebote/$id" params={{ id: offer.id }}>
+                        Angebotsdetails
+                      </Link>
+                    </Button>
+                  </div>
                 </CardFooter>
               </SurfaceSection>
             );
@@ -322,6 +407,23 @@ export default function MarketplacePage() {
       )}
     </PageShell>
   );
+}
+
+function applyRealtimeRecord<T extends { id: string }>(
+  records: T[],
+  type: "create" | "update" | "delete",
+  record: T,
+): T[] {
+  if (type === "delete") {
+    return records.filter((entry) => entry.id !== record.id);
+  }
+
+  const existingIndex = records.findIndex((entry) => entry.id === record.id);
+  if (existingIndex === -1) {
+    return [...records, record];
+  }
+
+  return records.map((entry) => (entry.id === record.id ? record : entry));
 }
 
 function InfoRow({

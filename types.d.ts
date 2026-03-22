@@ -1,4 +1,4 @@
-interface Staffel {
+interface Angebot {
   id: string;
   createdAt: string;
   produktId: string;
@@ -19,6 +19,8 @@ interface Staffel {
   updatedByUserId?: string;
   beschreibung?: string;
 }
+
+type Staffel = Angebot;
 
 interface Produkt {
   id: string;

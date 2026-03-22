@@ -100,7 +100,7 @@ const upsertProduktInputSchema = z.object({
   notes: z.string().trim().optional(),
 });
 
-const upsertStaffelInputSchema = z.object({
+const upsertAngebotInputSchema = z.object({
   id: z.string().trim().optional(),
   produktId: z.string().trim().min(1),
   year: z.number().int().min(2000).max(2100).optional(),
@@ -121,7 +121,7 @@ const upsertStaffelInputSchema = z.object({
 
 export type ProduktMitAngeboten = {
   produkt: Produkt;
-  angebote: Staffel[];
+  angebote: Angebot[];
 };
 
 function normalizeUnit(value: string): string {
@@ -171,7 +171,7 @@ export function normalizeProdukt(raw: unknown): Produkt {
   };
 }
 
-export function normalizeStaffel(raw: unknown): Staffel {
+export function normalizeAngebot(raw: unknown): Angebot {
   const parsed = offerDocumentSchema.parse(raw);
   const parsedYear = parseOptionalNumber(parsed.jahr);
   return {
@@ -251,13 +251,13 @@ export async function listAlleProdukte(): Promise<Produkt[]> {
   return response.documents.map(normalizeProdukt);
 }
 
-export async function listStaffeln(
+export async function listAngebote(
   input: {
     produktId?: string;
     produktIds?: string[];
     limit?: number;
   } = {},
-): Promise<Staffel[]> {
+): Promise<Angebot[]> {
   const parsedInput = offerListInputSchema.parse(input);
   const queries = [
     Query.limit(parsedInput.limit ?? 500),
@@ -278,37 +278,37 @@ export async function listStaffeln(
     queries,
   );
 
-  return response.documents.map(normalizeStaffel);
+  return response.documents.map(normalizeAngebot);
 }
 
-export async function getStaffelById(id: string): Promise<Staffel> {
+export async function getAngebotById(id: string): Promise<Angebot> {
   const response = await databases.getDocument(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
     ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle"),
     z.string().trim().min(1).parse(id),
   );
 
-  return normalizeStaffel(response);
+  return normalizeAngebot(response);
 }
 
-export async function listProdukteMitStaffeln(): Promise<
+export async function listProdukteMitAngeboten(): Promise<
   ProduktMitAngeboten[]
 > {
-  const [produkte, staffeln] = await Promise.all([
+  const [produkte, angebote] = await Promise.all([
     listAlleProdukte(),
-    listStaffeln(),
+    listAngebote(),
   ]);
-  const staffelnByProdukt = new Map<string, Staffel[]>();
+  const angeboteByProdukt = new Map<string, Angebot[]>();
 
-  for (const staffel of staffeln) {
-    const existing = staffelnByProdukt.get(staffel.produktId) ?? [];
-    existing.push(staffel);
-    staffelnByProdukt.set(staffel.produktId, existing);
+  for (const angebot of angebote) {
+    const existing = angeboteByProdukt.get(angebot.produktId) ?? [];
+    existing.push(angebot);
+    angeboteByProdukt.set(angebot.produktId, existing);
   }
 
   return produkte.map((produkt) => ({
     produkt,
-    angebote: staffelnByProdukt.get(produkt.id) ?? [],
+    angebote: angeboteByProdukt.get(produkt.id) ?? [],
   }));
 }
 
@@ -361,7 +361,7 @@ export async function upsertProdukt(input: {
   return normalizeProdukt(response);
 }
 
-export async function upsertStaffel(input: {
+export async function upsertAngebot(input: {
   id?: string;
   produktId: string;
   year?: number;
@@ -378,8 +378,8 @@ export async function upsertStaffel(input: {
   ernteProjektion?: string[];
   pickupAt?: string;
   beschreibung?: string;
-}): Promise<Staffel> {
-  const parsedInput = upsertStaffelInputSchema.parse(input);
+}): Promise<Angebot> {
+  const parsedInput = upsertAngebotInputSchema.parse(input);
   const documentId = parsedInput.id || ID.unique();
 
   const response = await databases.upsertDocument(
@@ -405,7 +405,7 @@ export async function upsertStaffel(input: {
     },
   );
 
-  return normalizeStaffel(response);
+  return normalizeAngebot(response);
 }
 
 export async function submitFeedbackMessage(input: {
@@ -470,21 +470,29 @@ export function subscribeToProdukte(
   return subscribeToChannel(channel, normalizeProdukt, onChange);
 }
 
-export function subscribeToStaffeln(
-  onChange: (change: RealtimeChange<Staffel>) => void,
+export function subscribeToAngebote(
+  onChange: (change: RealtimeChange<Angebot>) => void,
 ): () => void {
   const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle")}.documents`;
-  return subscribeToChannel(channel, normalizeStaffel, onChange);
+  return subscribeToChannel(channel, normalizeAngebot, onChange);
 }
 
-export function subscribeToStaffel(
-  staffelId: string,
-  onChange: (change: RealtimeChange<Staffel>) => void,
+export function subscribeToAngebot(
+  angebotId: string,
+  onChange: (change: RealtimeChange<Angebot>) => void,
 ): () => void {
-  const parsedId = z.string().trim().min(1).parse(staffelId);
+  const parsedId = z.string().trim().min(1).parse(angebotId);
   const channel = `databases.${ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank")}.collections.${ensureConfigured(appwriteConfig.offerTableId, "Angebots-Tabelle")}.documents.${parsedId}`;
-  return subscribeToChannel(channel, normalizeStaffel, onChange);
+  return subscribeToChannel(channel, normalizeAngebot, onChange);
 }
+
+export const normalizeStaffel = normalizeAngebot;
+export const listStaffeln = listAngebote;
+export const getStaffelById = getAngebotById;
+export const listProdukteMitStaffeln = listProdukteMitAngeboten;
+export const upsertStaffel = upsertAngebot;
+export const subscribeToStaffeln = subscribeToAngebote;
+export const subscribeToStaffel = subscribeToAngebot;
 
 export function subscribeToBlogPosts(
   onChange: (change: RealtimeChange<BlogPost>) => void,

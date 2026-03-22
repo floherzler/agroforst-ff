@@ -4,11 +4,11 @@ import React from "react";
 import { useParams } from "@tanstack/react-router";
 import AngebotLive from "@/components/AngebotLive";
 import OrderDialog from "@/components/OrderDialog";
-import { getStaffelById } from "@/lib/appwrite/appwriteProducts";
+import { getAngebotById } from "@/lib/appwrite/appwriteProducts";
 
 export default function AngebotPage() {
     const { id } = useParams({ from: "/angebote/$id" });
-    const [angebot, setAngebot] = React.useState<Staffel | null>(null);
+    const [angebot, setAngebot] = React.useState<Angebot | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -16,7 +16,7 @@ export default function AngebotPage() {
 
         async function loadAngebot() {
             try {
-                const record = await getStaffelById(id);
+                const record = await getAngebotById(id);
                 if (!cancelled) {
                     setAngebot(record);
                     setError(null);

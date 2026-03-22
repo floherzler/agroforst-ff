@@ -1,6 +1,13 @@
 "use client";
 
-import { Search as SearchIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Layers3,
+  Search as SearchIcon,
+  Sprout,
+  Store,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import AngeboteModal from "@/components/AngeboteModal";
@@ -13,9 +20,12 @@ import {
 } from "@/components/base/page-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   CardAction,
+  CardDescription,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -54,7 +64,12 @@ export default function ProductsCatalogPage() {
     (sum, product) => sum + (offerCounts[product.id] ?? 0),
     0,
   );
-
+  const productsWithOffers = products.filter(
+    (product) => (offerCounts[product.id] ?? 0) > 0,
+  ).length;
+  const seasonalProducts = products.filter(
+    (product) => product.saisonalitaet.length > 0,
+  ).length;
   useEffect(() => {
     let cancelled = false;
 
@@ -89,51 +104,79 @@ export default function ProductsCatalogPage() {
     <PageShell>
       <PageHeader
         title="Produktkatalog"
-        description={
-          loading
-            ? "Produkte werden geladen."
-            : `${products.length} Produkte in der aktuellen Ansicht.`
+        description="Produkte nach Kategorie durchsehen, Saisonfenster prüfen und passende Angebote direkt öffnen."
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/marktplatz">Zum Marktplatz</Link>
+          </Button>
         }
       />
 
       <SurfaceSection className="p-5 sm:p-6">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="flex flex-col gap-4">
-            <Tabs
-              value={selectedCategory}
-              onValueChange={(value) =>
-                setSelectedCategory(value as CatalogCategory)
-              }
-            >
-              <TabsList variant="line" className="flex-wrap justify-start">
-                {catalogCategories.map((category) => (
-                  <TabsTrigger key={category} value={category}>
-                    {category}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+        <div className="grid gap-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <CatalogStat
+              icon={<Layers3 data-icon="inline-start" />}
+              label="Produkte"
+              value={loading ? "..." : String(products.length)}
+              hint="in der aktuellen Kategorie"
+            />
+            <CatalogStat
+              icon={<Store data-icon="inline-start" />}
+              label="Mit Angebot"
+              value={loading ? "..." : String(productsWithOffers)}
+              hint="direkt aus dem Katalog erreichbar"
+            />
+            <CatalogStat
+              icon={<Sprout data-icon="inline-start" />}
+              label="Mit Saisonfenster"
+              value={loading ? "..." : String(seasonalProducts)}
+              hint="mit gepflegten Monatsangaben"
+            />
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative min-w-[260px]">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Produkt oder Sorte suchen"
-                className="pl-9"
-                aria-label="Produkte suchen"
-              />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="flex flex-col gap-4">
+              <Tabs
+                value={selectedCategory}
+                onValueChange={(value) =>
+                  setSelectedCategory(value as CatalogCategory)
+                }
+              >
+                <TabsList variant="line" className="flex-wrap justify-start">
+                  {catalogCategories.map((category) => (
+                    <TabsTrigger key={category} value={category}>
+                      {category}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </div>
 
-            <Tabs value={view} onValueChange={(value) => setView(value as ViewMode)}>
-              <TabsList>
-                <TabsTrigger value="cards">Karten</TabsTrigger>
-                <TabsTrigger value="table">Tabelle</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative min-w-[260px]">
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Produkt oder Sorte suchen"
+                  className="pl-9"
+                  aria-label="Produkte suchen"
+                />
+              </div>
+
+              <Tabs
+                value={view}
+                onValueChange={(value) => setView(value as ViewMode)}
+              >
+                <TabsList>
+                  <TabsTrigger value="cards">Karten</TabsTrigger>
+                  <TabsTrigger value="table">Tabelle</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
+
         </div>
 
         <Separator className="my-4" />
@@ -203,19 +246,11 @@ function CardsView({
                     {product.sorte ? ` – ${product.sorte}` : ""}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {product.unterkategorie || "Keine Unterkategorie"}
+                    {displayValueLabel(product.unterkategorie) ||
+                      "Keine Unterkategorie"}
                   </p>
                 </div>
               </div>
-
-              <CardAction>
-                <AngeboteModal
-                  produktId={product.id}
-                  produktName={product.name}
-                  produktSorte={product.sorte}
-                  produktAngebote={offerCount}
-                />
-              </CardAction>
             </CardHeader>
 
             <CardContent className="flex flex-col gap-4 px-5 py-4 sm:px-6">
@@ -236,7 +271,38 @@ function CardsView({
                 <p className="text-sm font-medium">Saisonalität</p>
                 <Seasonality months={product.saisonalitaet} />
               </div>
+
+              <div className="pt-1">
+                <AngeboteModal
+                  produktId={product.id}
+                  produktName={product.name}
+                  produktSorte={product.sorte}
+                  produktAngebote={offerCount}
+                  triggerVariant="outline"
+                  triggerSize="default"
+                  triggerClassName="w-full justify-center"
+                  triggerLabel={
+                    offerCount === 0
+                      ? "Keine Angebote verfügbar"
+                      : offerCount === 1
+                        ? "1 Angebot ansehen"
+                        : `${offerCount} Angebote ansehen`
+                  }
+                />
+              </div>
             </CardContent>
+
+            <CardFooter className="flex items-center justify-between gap-3 border-t px-5 py-4 sm:px-6">
+              <p className="text-sm text-muted-foreground">
+                {displayValueLabel(product.hauptkategorie)}
+              </p>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/marktplatz">
+                  Zum Marktplatz
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            </CardFooter>
           </SurfaceSection>
         );
       })}
@@ -313,6 +379,31 @@ function Seasonality({
         </Badge>
       ))}
     </div>
+  );
+}
+
+function CatalogStat({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <SurfaceSection className="border-border/70 bg-muted/20 p-4">
+      <div className="flex flex-col gap-2">
+        <Badge variant="outline" className="w-fit">
+          {icon}
+          {label}
+        </Badge>
+        <div className="text-3xl font-semibold tracking-tight">{value}</div>
+        <CardDescription>{hint}</CardDescription>
+      </div>
+    </SurfaceSection>
   );
 }
 

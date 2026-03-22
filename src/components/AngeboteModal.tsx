@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import type { VariantProps } from "class-variance-authority";
 
 import { formatHarvestRange, formatPricePerUnit } from "@/features/catalog/catalog";
 import { listStaffeln } from "@/lib/appwrite/appwriteProducts";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,11 +24,19 @@ export default function AngeboteModal({
   produktName,
   produktSorte,
   produktAngebote,
+  triggerVariant = "default",
+  triggerSize = "sm",
+  triggerClassName,
+  triggerLabel,
 }: {
   produktId: string;
   produktName: string;
   produktSorte?: string;
   produktAngebote: number;
+  triggerVariant?: VariantProps<typeof buttonVariants>["variant"];
+  triggerSize?: VariantProps<typeof buttonVariants>["size"];
+  triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const [angebote, setAngebote] = useState<Staffel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +62,13 @@ export default function AngeboteModal({
   return (
     <Dialog onOpenChange={(open) => open && void load()}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          {produktAngebote} {produktAngebote > 1 ? "Angebote" : "Angebot"} anzeigen
+        <Button
+          variant={triggerVariant}
+          size={triggerSize}
+          className={triggerClassName}
+        >
+          {triggerLabel ??
+            `${produktAngebote} ${produktAngebote > 1 ? "Angebote" : "Angebot"} anzeigen`}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
