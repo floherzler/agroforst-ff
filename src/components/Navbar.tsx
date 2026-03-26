@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Sprout } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,8 +35,13 @@ export default function Navbar() {
               to="/"
               className="inline-flex items-center gap-3 text-foreground no-underline"
             >
-              <span className="flex size-10 items-center justify-center rounded-full bg-[var(--color-forest-50)] text-[var(--color-forest-700)]">
-                <Sprout className="size-5" />
+              <span className="flex size-10 items-center justify-center rounded-full bg-[rgba(255,252,247,0.9)] ring-1 ring-[var(--color-soil-900)]/8">
+                <img
+                  src="/img/agroforst_ff_icon_bg.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="size-7 object-contain"
+                />
               </span>
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm font-semibold">Agroforst Frank Fege</span>

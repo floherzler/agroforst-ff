@@ -2,7 +2,15 @@
 
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Loader2, Mail, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Expand,
+  FileText,
+  Loader2,
+  Mail,
+  MapPin,
+} from "lucide-react";
 
 import { PageShell } from "@/components/base/page-shell";
 import { Button } from "@/components/ui/button";
@@ -13,6 +21,14 @@ import {
 } from "@/components/ui/carousel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { submitFeedbackMessage } from "@/lib/appwrite/appwriteProducts";
 import type { CarouselApi } from "@/components/ui/carousel";
@@ -76,6 +92,9 @@ const galleryImages = [
     label: "Morgens im Agroforst",
   },
 ];
+
+const permdalCertificatePdfUrl = encodeURI("/img/statut_Permdal_öko.pdf");
+const permdalCertificateImageUrl = encodeURI("/img/statut_Permdal_öko.png");
 
 export default function HomePage() {
   const { user, createAccount, login } = useAuthStore();
@@ -298,6 +317,26 @@ export default function HomePage() {
         })}
       </section>
 
+      <InView
+        as="section"
+        once
+        viewOptions={{ margin: "0px 0px -20% 0px" }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        variants={{
+          hidden: { opacity: 0, y: 22, scale: 0.96 },
+          visible: { opacity: 1, y: 0, scale: 1 },
+        }}
+        className="home-logo-buffer"
+      >
+        <div className="home-logo-buffer-mark" aria-hidden="true">
+          <img
+            src="/img/agroforst_ff_icon_bg.png"
+            alt=""
+            className="home-logo-buffer-image"
+          />
+        </div>
+      </InView>
+
       <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
         <div className="grid gap-6 lg:grid-cols-[1.18fr_0.82fr] lg:items-center">
           <div className="home-schema-wrap">
@@ -330,17 +369,9 @@ export default function HomePage() {
 
       <section className="landing-reveal home-promise-panel px-5 py-10 sm:px-8 sm:py-12 lg:px-10">
         <div className="home-promise-shell flex flex-col items-center gap-6 text-center">
-          <div className="home-promise-heading flex max-w-3xl flex-col items-center gap-4">
-            <p className="font-accent text-[0.78rem] uppercase tracking-[0.28em] text-[var(--color-harvest-600)]">
-              Unsere Versprechen
-            </p>
-            <h2 className="max-w-4xl font-display text-[2.3rem] leading-[0.94] tracking-[-0.05em] text-[var(--color-soil-900)] sm:text-[3rem] lg:text-[3.8rem]">
-              Was zwischen Hof und Gemeinschaft wachsen soll.
-            </h2>
-            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Klar im Angebot, nah im Kontakt und spürbar im Genuss.
-            </p>
-          </div>
+          <h2 className="max-w-4xl font-display text-[2.3rem] leading-[0.94] tracking-[-0.05em] text-[var(--color-soil-900)] sm:text-[3rem] lg:text-[3.8rem]">
+            Was zwischen Hof und Gemeinschaft wachsen soll.
+          </h2>
 
           <div className="home-promise-stage">
             <div className="home-promise-stage-glow" aria-hidden="true" />
@@ -363,6 +394,26 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <InView
+        as="section"
+        once
+        viewOptions={{ margin: "0px 0px -20% 0px" }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        variants={{
+          hidden: { opacity: 0, y: 22, scale: 0.96 },
+          visible: { opacity: 1, y: 0, scale: 1 },
+        }}
+        className="home-logo-buffer"
+      >
+        <div className="home-logo-buffer-mark" aria-hidden="true">
+          <img
+            src="/img/agroforst_ff_icon_bg.png"
+            alt=""
+            className="home-logo-buffer-image"
+          />
+        </div>
+      </InView>
 
       <section className="landing-reveal overflow-hidden rounded-[2rem] border border-[var(--color-soil-900)]/8 bg-white/58 px-5 py-6 shadow-[0_30px_70px_-52px_rgba(35,22,15,0.36)] sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
@@ -592,6 +643,26 @@ export default function HomePage() {
         </div>
       </section>
 
+      <InView
+        as="section"
+        once
+        viewOptions={{ margin: "0px 0px -20% 0px" }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        variants={{
+          hidden: { opacity: 0, y: 22, scale: 0.96 },
+          visible: { opacity: 1, y: 0, scale: 1 },
+        }}
+        className="home-logo-buffer"
+      >
+        <div className="home-logo-buffer-mark" aria-hidden="true">
+          <img
+            src="/img/agroforst_ff_icon_bg.png"
+            alt=""
+            className="home-logo-buffer-image"
+          />
+        </div>
+      </InView>
+
       <section className="landing-reveal home-team-panel overflow-hidden rounded-[2rem] px-5 py-7 sm:px-8 sm:py-9">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-5 text-center">
           <h2 className="font-display text-4xl leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.5rem]">
@@ -609,6 +680,111 @@ export default function HomePage() {
           </p>
         </div>
       </section>
+
+      <InView
+        as="section"
+        once
+        viewOptions={{ margin: "0px 0px -12% 0px" }}
+        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+        variants={{
+          hidden: { opacity: 0, y: 42, filter: "blur(10px)" },
+          visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+        }}
+        className="home-permdal-panel overflow-hidden rounded-[2rem] px-5 py-8 sm:px-8 sm:py-10"
+      >
+        <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <div className="flex flex-col gap-5">
+            <div className="inline-flex w-fit items-center gap-3 rounded-full border border-[var(--color-soil-900)]/10 bg-white/72 px-3 py-2 shadow-[0_16px_34px_-24px_rgba(35,22,15,0.28)]">
+              <img
+                src="/img/permdal-logo.png"
+                alt="Permdal"
+                className="h-7 w-auto object-contain"
+              />
+            </div>
+            <h2 className="max-w-xl font-display text-[2.4rem] leading-[0.94] tracking-[-0.05em] text-[var(--color-soil-900)] sm:text-[3.2rem]">
+              Permdal-Produkte sind unsere Philosophie des Wachsens.
+            </h2>
+            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
+              Für uns bedeutet Permdal nicht nur ein Zertifikat, sondern eine klare
+              Haltung: vielfältig anbauen, langfristig Boden aufbauen und Produkte so
+              wachsen lassen, dass Hof, Landschaft und Gemeinschaft zusammen stärker
+              werden.
+            </p>
+            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
+              Das Statut beschreibt genau diesen Rahmen. Wer verstehen will, wie wir
+              unsere Produkte denken, findet darin die Grundlage unserer Arbeit.
+            </p>
+          </div>
+
+          <Dialog>
+            <DialogTrigger>
+              <button
+                type="button"
+                className="home-permdal-certificate group w-full text-left"
+              >
+                <div className="home-permdal-certificate-sheet">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-[var(--color-harvest-500)]/14 text-[var(--color-harvest-600)]">
+                        <FileText className="size-5" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-accent text-[0.72rem] uppercase tracking-[0.22em] text-[var(--color-harvest-600)]">
+                          Zertifikat
+                        </span>
+                        <span className="font-display text-[1.7rem] leading-[0.98] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2rem]">
+                          Permdal-Statut
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex size-11 items-center justify-center rounded-full border border-[var(--color-soil-900)]/10 bg-white/76 text-[var(--color-soil-900)] transition group-hover:scale-[1.04] group-hover:bg-white">
+                      <Expand className="size-4" />
+                    </div>
+                  </div>
+
+                  <img
+                    src={permdalCertificateImageUrl}
+                    alt="Vorschau des Permdal-Statuts"
+                    className="home-permdal-certificate-image"
+                  />
+                </div>
+              </button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-[min(98vw,92rem)] rounded-[1.6rem] border border-[var(--color-soil-900)]/10 bg-[rgba(250,246,238,0.98)] p-3 shadow-[0_34px_90px_-40px_rgba(35,22,15,0.4)] sm:p-4 lg:p-5">
+              <DialogHeader className="px-2 pt-1 sm:px-3 lg:px-4">
+                <DialogTitle className="font-display text-2xl tracking-[-0.03em] text-[var(--color-soil-900)]">
+                  Permdal-Statut
+                </DialogTitle>
+                <DialogDescription className="text-[var(--color-soil-700)]">
+                  Das Dokument beschreibt die Grundlage unserer Permdal-Produkte und
+                  damit die Art, wie wir Anbau, Qualität und Verantwortung verstehen.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="home-permdal-dialog-frame">
+                <img
+                  src={permdalCertificateImageUrl}
+                  alt="Permdal-Statut"
+                  className="home-permdal-dialog-image"
+                />
+              </div>
+
+              <div className="px-2 pb-1 sm:px-3 lg:px-4">
+                <a
+                  href={permdalCertificatePdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-accent text-[0.72rem] uppercase tracking-[0.2em] text-[var(--color-harvest-600)] underline underline-offset-4"
+                >
+                  PDF separat öffnen
+                </a>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </InView>
     </PageShell>
   );
 }
