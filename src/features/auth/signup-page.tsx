@@ -24,6 +24,7 @@ export default function SignUpPage() {
   const searchStr = useLocation({ select: (state) => state.searchStr });
   const params = new URLSearchParams(searchStr);
   const redirectTo = params.get("redirect") || "/konto";
+  const prefilledEmail = params.get("email") || "";
   const showQrWelcome = params.get("origin") === "qr";
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -126,6 +127,7 @@ export default function SignUpPage() {
               name="email"
               type="email"
               autoComplete="email"
+              defaultValue={prefilledEmail}
               placeholder="email@beispiel.de"
               className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
             />

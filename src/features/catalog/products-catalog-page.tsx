@@ -3,12 +3,14 @@
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Calendar,
   Layers3,
+  Radio,
   Search as SearchIcon,
   Sprout,
   Store,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AngeboteModal from "@/components/AngeboteModal";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
@@ -23,8 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   CardAction,
-  CardDescription,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -43,13 +45,27 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   catalogCategories,
+  formatEuro,
+  formatHarvestRange,
   getProductImageUrl,
-  listProductCatalog,
+  listMarketplaceSnapshot,
+  normalizeCatalogCategory,
   type CatalogCategory,
 } from "@/features/catalog/catalog";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import {
+  subscribeToAngebote,
+  subscribeToProdukte,
+} from "@/lib/appwrite/appwriteProducts";
 
 type ViewMode = "cards" | "table";
+
+type OfferMeta = {
+  count: number;
+  availableAmount: number;
+  lowestPrice: number | null;
+  nextHarvest: string;
+};
 
 export default function ProductsCatalogPage() {
   const [selectedCategory, setSelectedCategory] =
@@ -57,34 +73,29 @@ export default function ProductsCatalogPage() {
   const [view, setView] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Produkt[]>([]);
-  const [offerCounts, setOfferCounts] = useState<Record<string, number>>({});
+  const [offers, setOffers] = useState<Angebot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
-  const offerTotal = products.reduce(
-    (sum, product) => sum + (offerCounts[product.id] ?? 0),
-    0,
-  );
-  const productsWithOffers = products.filter(
-    (product) => (offerCounts[product.id] ?? 0) > 0,
-  ).length;
-  const seasonalProducts = products.filter(
-    (product) => product.saisonalitaet.length > 0,
-  ).length;
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadCatalog() {
       setLoading(true);
+      setLoadError(null);
 
       try {
-        const nextCatalog = await listProductCatalog({
-          category: selectedCategory,
-          search: debouncedSearch.trim() || undefined,
-        });
+        const snapshot = await listMarketplaceSnapshot();
 
         if (!cancelled) {
-          setProducts(nextCatalog.products);
-          setOfferCounts(nextCatalog.offerCounts);
+          setProducts(snapshot.products);
+          setOffers(snapshot.offers);
+        }
+      } catch (error) {
+        console.error("Error loading product catalog", error);
+        if (!cancelled) {
+          setLoadError("Produkte konnten nicht geladen werden.");
         }
       } finally {
         if (!cancelled) {
@@ -98,40 +109,141 @@ export default function ProductsCatalogPage() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, selectedCategory]);
+  }, []);
+
+  useEffect(() => {
+    let unsubscribeProducts = () => {};
+    let unsubscribeOffers = () => {};
+
+    try {
+      unsubscribeProducts = subscribeToProdukte(({ type, record }) => {
+        setProducts((current) => applyRealtimeRecord(current, type, record));
+      });
+      unsubscribeOffers = subscribeToAngebote(({ type, record }) => {
+        setOffers((current) => applyRealtimeRecord(current, type, record));
+      });
+    } catch (error) {
+      console.error("Failed to subscribe to product realtime updates", error);
+    }
+
+    return () => {
+      unsubscribeProducts();
+      unsubscribeOffers();
+    };
+  }, []);
+
+  const visibleProducts = useMemo(() => {
+    const searchValue = debouncedSearch.trim().toLowerCase();
+
+    return products.filter((product) => {
+      if (normalizeCatalogCategory(product.hauptkategorie) !== selectedCategory) {
+        return false;
+      }
+
+      if (!searchValue) {
+        return true;
+      }
+
+      const haystack = [
+        product.name,
+        product.sorte,
+        product.hauptkategorie,
+        product.unterkategorie,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(searchValue);
+    });
+  }, [debouncedSearch, products, selectedCategory]);
+
+  const offerMetaByProduct = useMemo(() => {
+    return offers.reduce<Record<string, OfferMeta>>((result, offer) => {
+      const current = result[offer.produktId] ?? {
+        count: 0,
+        availableAmount: 0,
+        lowestPrice: null,
+        nextHarvest: "",
+      };
+      const nextHarvest = formatHarvestRange(offer.ernteProjektion);
+
+      result[offer.produktId] = {
+        count: current.count + 1,
+        availableAmount: current.availableAmount + offer.mengeVerfuegbar,
+        lowestPrice:
+          current.lowestPrice === null
+            ? offer.euroPreis
+            : Math.min(current.lowestPrice, offer.euroPreis),
+        nextHarvest:
+          current.nextHarvest && current.nextHarvest !== "Noch offen"
+            ? current.nextHarvest
+            : nextHarvest,
+      };
+
+      return result;
+    }, {});
+  }, [offers]);
+
+  const offerTotal = visibleProducts.reduce(
+    (sum, product) => sum + (offerMetaByProduct[product.id]?.count ?? 0),
+    0,
+  );
+  const productsWithOffers = visibleProducts.filter(
+    (product) => (offerMetaByProduct[product.id]?.count ?? 0) > 0,
+  ).length;
+  const seasonalProducts = visibleProducts.filter(
+    (product) => product.saisonalitaet.length > 0,
+  ).length;
 
   return (
     <PageShell>
       <PageHeader
-        title="Produktkatalog"
-        description="Produkte nach Kategorie durchsehen, Saisonfenster prüfen und passende Angebote direkt öffnen."
+        title="Produkte"
+        badge="Öffentlicher Katalog"
+        description="Der Produktkatalog ist der öffentliche Einstieg. Produkte, Saisonfenster und aktuelle Angebotslage werden hier strukturiert aus Appwrite zusammengeführt."
         actions={
-          <Button asChild variant="outline">
-            <Link to="/marktplatz">Zum Marktplatz</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/">
+                Zur Landing Page
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/signup" search={{ redirect: "/produkte" }}>
+                Für Neuigkeiten registrieren
+              </Link>
+            </Button>
+          </div>
         }
       />
 
       <SurfaceSection className="p-5 sm:p-6">
         <div className="grid gap-4">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <CatalogStat
               icon={<Layers3 data-icon="inline-start" />}
               label="Produkte"
-              value={loading ? "..." : String(products.length)}
+              value={loading ? "..." : String(visibleProducts.length)}
               hint="in der aktuellen Kategorie"
             />
             <CatalogStat
               icon={<Store data-icon="inline-start" />}
               label="Mit Angebot"
               value={loading ? "..." : String(productsWithOffers)}
-              hint="direkt aus dem Katalog erreichbar"
+              hint="mit mindestens einem aktiven Eintrag"
             />
             <CatalogStat
               icon={<Sprout data-icon="inline-start" />}
-              label="Mit Saisonfenster"
+              label="Saisonal"
               value={loading ? "..." : String(seasonalProducts)}
               hint="mit gepflegten Monatsangaben"
+            />
+            <CatalogStat
+              icon={<Radio data-icon="inline-start" />}
+              label="Live"
+              value={loading ? "..." : `${offerTotal}`}
+              hint="Angebote werden live aktualisiert"
             />
           </div>
 
@@ -176,18 +288,18 @@ export default function ProductsCatalogPage() {
               </Tabs>
             </div>
           </div>
-
         </div>
 
         <Separator className="my-4" />
 
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <Badge variant="secondary">
-            {loading ? "Produkte laden" : `${products.length} Produkte`}
+            {loading ? "Produkte laden" : `${visibleProducts.length} Produkte`}
           </Badge>
           <Badge variant="outline">
-            {loading ? "Angebote werden aktualisiert" : `${offerTotal} Angebote`}
+            {loading ? "Live-Abgleich läuft" : `${offerTotal} Angebote`}
           </Badge>
+          <Badge variant="outline">Realtime via Appwrite</Badge>
           {debouncedSearch ? (
             <Badge variant="outline">Suche: {debouncedSearch}</Badge>
           ) : null}
@@ -200,15 +312,20 @@ export default function ProductsCatalogPage() {
         ) : (
           <CatalogTableSkeleton />
         )
-      ) : products.length === 0 ? (
+      ) : loadError ? (
+        <EmptyState
+          title="Produktkatalog momentan nicht erreichbar"
+          description={loadError}
+        />
+      ) : visibleProducts.length === 0 ? (
         <EmptyState
           title="Keine Produkte gefunden"
           description="Passe Kategorie oder Suchbegriff an."
         />
       ) : view === "cards" ? (
-        <CardsView products={products} offerCounts={offerCounts} />
+        <CardsView products={visibleProducts} offerMetaByProduct={offerMetaByProduct} />
       ) : (
-        <TableView products={products} offerCounts={offerCounts} />
+        <TableView products={visibleProducts} offerMetaByProduct={offerMetaByProduct} />
       )}
     </PageShell>
   );
@@ -216,16 +333,17 @@ export default function ProductsCatalogPage() {
 
 function CardsView({
   products,
-  offerCounts,
+  offerMetaByProduct,
 }: {
   products: Produkt[];
-  offerCounts: Record<string, number>;
+  offerMetaByProduct: Record<string, OfferMeta>;
 }) {
   return (
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {products.map((product) => {
         const imageUrl = getProductImageUrl(product.imageId);
-        const offerCount = offerCounts[product.id] ?? 0;
+        const meta = offerMetaByProduct[product.id];
+        const offerCount = meta?.count ?? 0;
 
         return (
           <SurfaceSection key={product.id} className="h-full">
@@ -245,24 +363,47 @@ function CardsView({
                     {product.name}
                     {product.sorte ? ` – ${product.sorte}` : ""}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <CardDescription>
                     {displayValueLabel(product.unterkategorie) ||
                       "Keine Unterkategorie"}
-                  </p>
+                  </CardDescription>
                 </div>
               </div>
+              <CardAction>
+                <Badge variant={offerCount > 0 ? "secondary" : "outline"}>
+                  {offerCount === 0
+                    ? "Noch kein Angebot"
+                    : `${offerCount} ${offerCount === 1 ? "Angebot" : "Angebote"}`}
+                </Badge>
+              </CardAction>
             </CardHeader>
 
             <CardContent className="flex flex-col gap-4 px-5 py-4 sm:px-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={offerCount > 0 ? "secondary" : "outline"}>
-                  {offerCount === 0
-                    ? "Keine Angebote"
-                    : `${offerCount} ${offerCount === 1 ? "Angebot" : "Angebote"}`}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  Aktuelle Verfügbarkeit im Überblick
-                </span>
+              <div className="grid gap-3">
+                <InfoRow
+                  icon={<Store className="size-4" />}
+                  label={
+                    meta
+                      ? `${meta.availableAmount} Einheiten insgesamt verfügbar`
+                      : "Angebote folgen im Marktplatz"
+                  }
+                />
+                <InfoRow
+                  icon={<Calendar className="size-4" />}
+                  label={
+                    meta?.nextHarvest
+                      ? `Nächste Ernte: ${meta.nextHarvest}`
+                      : "Nächste Ernte: Noch offen"
+                  }
+                />
+                <InfoRow
+                  icon={<Sprout className="size-4" />}
+                  label={
+                    meta?.lowestPrice !== null
+                      ? `Ab ${formatEuro(meta.lowestPrice)}`
+                      : "Preis folgt mit dem ersten Angebot"
+                  }
+                />
               </div>
 
               <Separator />
@@ -271,8 +412,14 @@ function CardsView({
                 <p className="text-sm font-medium">Saisonalität</p>
                 <Seasonality months={product.saisonalitaet} />
               </div>
+            </CardContent>
 
-              <div className="pt-1">
+            <CardFooter className="flex flex-col items-stretch gap-3 border-t px-5 py-4 sm:px-6">
+              <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                <span>{displayValueLabel(product.hauptkategorie)}</span>
+                <span>{offerCount > 0 ? "Live" : "In Vorbereitung"}</span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <AngeboteModal
                   produktId={product.id}
                   produktName={product.name}
@@ -281,27 +428,13 @@ function CardsView({
                   triggerVariant="outline"
                   triggerSize="default"
                   triggerClassName="w-full justify-center"
-                  triggerLabel={
-                    offerCount === 0
-                      ? "Keine Angebote verfügbar"
-                      : offerCount === 1
-                        ? "1 Angebot ansehen"
-                        : `${offerCount} Angebote ansehen`
-                  }
                 />
+                <Button asChild className="w-full">
+                  <Link to="/signup" search={{ redirect: "/produkte" }}>
+                    Neuigkeiten erhalten
+                  </Link>
+                </Button>
               </div>
-            </CardContent>
-
-            <CardFooter className="flex items-center justify-between gap-3 border-t px-5 py-4 sm:px-6">
-              <p className="text-sm text-muted-foreground">
-                {displayValueLabel(product.hauptkategorie)}
-              </p>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/marktplatz">
-                  Zum Marktplatz
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
             </CardFooter>
           </SurfaceSection>
         );
@@ -312,10 +445,10 @@ function CardsView({
 
 function TableView({
   products,
-  offerCounts,
+  offerMetaByProduct,
 }: {
   products: Produkt[];
-  offerCounts: Record<string, number>;
+  offerMetaByProduct: Record<string, OfferMeta>;
 }) {
   return (
     <SurfaceSection className="overflow-hidden">
@@ -324,23 +457,27 @@ function TableView({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Kategorie</TableHead>
-            <TableHead>Unterkategorie</TableHead>
             <TableHead>Angebote</TableHead>
-            <TableHead className="w-[360px]">Saisonalität</TableHead>
+            <TableHead>Ab Preis</TableHead>
+            <TableHead className="w-[300px]">Saisonalität</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {products.map((product) => {
-            const count = offerCounts[product.id] ?? 0;
+            const meta = offerMetaByProduct[product.id];
+            const count = meta?.count ?? 0;
+
             return (
               <TableRow key={product.id}>
                 <TableCell className="font-medium">
                   {product.name}
                   {product.sorte ? ` – ${product.sorte}` : ""}
                 </TableCell>
-                <TableCell>{displayValueLabel(product.hauptkategorie)}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {displayValueLabel(product.unterkategorie) || "–"}
+                <TableCell>
+                  {displayValueLabel(product.hauptkategorie)}
+                  <div className="text-sm text-muted-foreground">
+                    {displayValueLabel(product.unterkategorie) || "–"}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <AngeboteModal
@@ -349,6 +486,9 @@ function TableView({
                     produktSorte={product.sorte}
                     produktAngebote={count}
                   />
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {meta?.lowestPrice !== null ? formatEuro(meta.lowestPrice) : "–"}
                 </TableCell>
                 <TableCell>
                   <Seasonality months={product.saisonalitaet} />
@@ -407,6 +547,21 @@ function CatalogStat({
   );
 }
 
+function InfoRow({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      {icon}
+      <span>{label}</span>
+    </div>
+  );
+}
+
 function CatalogCardsSkeleton() {
   return (
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -421,18 +576,26 @@ function CatalogCardsSkeleton() {
               </div>
             </div>
             <CardAction>
-              <Skeleton className="h-8 w-28 rounded-lg" />
+              <Skeleton className="h-5 w-24 rounded-full" />
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 px-5 py-4 sm:px-6">
-            <Skeleton className="h-5 w-40" />
+            <div className="grid gap-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
             <Skeleton className="h-px w-full" />
-            <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-5 w-12 rounded-full" />
-              <Skeleton className="h-5 w-12 rounded-full" />
-              <Skeleton className="h-5 w-12 rounded-full" />
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
             </div>
           </CardContent>
+          <CardFooter className="flex flex-col gap-3 border-t px-5 py-4 sm:px-6">
+            <Skeleton className="h-8 w-full rounded-lg" />
+            <Skeleton className="h-8 w-full rounded-lg" />
+          </CardFooter>
         </SurfaceSection>
       ))}
     </section>
@@ -442,20 +605,34 @@ function CatalogCardsSkeleton() {
 function CatalogTableSkeleton() {
   return (
     <SurfaceSection className="overflow-hidden">
-      <div className="flex flex-col gap-4 p-5 sm:p-6">
+      <div className="grid gap-3 p-5">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            key={index}
-            className="grid gap-3 md:grid-cols-[1.3fr_0.8fr_1fr_0.8fr_1.2fr]"
-          >
+          <div key={index} className="grid grid-cols-5 gap-4">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <Skeleton className="h-8 w-28 rounded-lg" />
+            <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-full" />
           </div>
         ))}
       </div>
     </SurfaceSection>
   );
+}
+
+function applyRealtimeRecord<T extends { id: string }>(
+  records: T[],
+  type: "create" | "update" | "delete",
+  record: T,
+): T[] {
+  if (type === "delete") {
+    return records.filter((entry) => entry.id !== record.id);
+  }
+
+  const existingIndex = records.findIndex((entry) => entry.id === record.id);
+  if (existingIndex === -1) {
+    return [...records, record];
+  }
+
+  return records.map((entry) => (entry.id === record.id ? record : entry));
 }

@@ -1,44 +1,33 @@
 "use client";
 
-import { Link, useLocation } from "@tanstack/react-router";
-import { Sprout } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Sprout } from "lucide-react";
 
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useAuthStore } from "@/store/Auth";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthStore } from "@/features/auth/auth-store";
 
 const navigationItems = [
   {
-    label: "Marktplatz",
-    to: "/marktplatz" as const,
-    href: "/marktplatz",
+    label: "Start",
+    to: "/" as const,
+    href: "/",
   },
   {
     label: "Produkte",
     to: "/produkte" as const,
     href: "/produkte",
   },
-  {
-    label: "Blog",
-    to: "/blog" as const,
-    href: "/blog",
-  },
 ];
 
 export default function Navbar() {
   const { user } = useAuthStore();
   const pathname = useLocation({ select: (state) => state.pathname });
+  const navigate = useNavigate();
+  const activeTab = pathname.startsWith("/produkte") ? "/produkte" : "/";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center justify-between gap-3">
@@ -46,69 +35,63 @@ export default function Navbar() {
               to="/"
               className="inline-flex items-center gap-3 text-foreground no-underline"
             >
-              <span className="flex size-10 items-center justify-center rounded-full bg-secondary text-primary">
+              <span className="flex size-10 items-center justify-center rounded-full bg-[var(--color-forest-50)] text-[var(--color-forest-700)]">
                 <Sprout className="size-5" />
               </span>
               <span className="flex flex-col gap-0.5">
                 <span className="text-sm font-semibold">Agroforst Frank Fege</span>
                 <span className="text-xs text-muted-foreground">
-                  Direktvermarktung aus Brandenburg
+                  Frisch aus der Prignitz
                 </span>
               </span>
             </Link>
-            <Badge variant="secondary" className="sm:hidden">
-              Beta
-            </Badge>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <NavigationMenu className="hidden md:flex" align="center">
-              <NavigationMenuList className="gap-1">
+          <div className="flex flex-1 flex-col gap-3 lg:max-w-4xl lg:flex-row lg:items-center lg:justify-end">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) =>
+                void navigate({ to: value as "/" | "/produkte" })
+              }
+              className="w-full lg:max-w-[16rem]"
+            >
+              <TabsList variant="line" className="grid w-full grid-cols-2">
                 {navigationItems.map((item) => (
-                  <NavigationMenuItem key={item.href}>
-                    <NavigationMenuLink
-                      className={cn(
-                        pathname === item.href && "bg-muted text-foreground",
-                      )}
-                    >
-                      <Link
-                        to={item.to}
-                        className={cn(
-                          "text-muted-foreground no-underline transition-colors",
-                          pathname === item.href && "text-foreground",
-                        )}
-                      >
-                        {item.label}
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
+                  <TabsTrigger key={item.href} value={item.href}>
+                    {item.label}
+                  </TabsTrigger>
                 ))}
-              </NavigationMenuList>
-            </NavigationMenu>
+              </TabsList>
+            </Tabs>
 
-            <nav className="flex flex-wrap items-center gap-2 md:hidden">
-              {navigationItems.map((item) => (
-                <Button
-                  key={item.href}
-                  asChild
-                  variant={pathname === item.href ? "secondary" : "ghost"}
-                  size="sm"
-                >
-                  <Link to={item.to}>{item.label}</Link>
+            <div className="flex items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button asChild variant="ghost" size="sm" className="rounded-full">
+                  <Link to={user ? "/konto" : "/login"}>
+                    {user ? "Konto" : "Anmelden"}
+                  </Link>
                 </Button>
-              ))}
-            </nav>
-
-            <div className="hidden items-center gap-3 lg:flex">
-              <Badge variant="secondary">Beta</Badge>
-              <Separator orientation="vertical" className="h-6" />
+                {!user ? (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="rounded-full bg-[var(--color-harvest-500)] px-4 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-[#2b1608] hover:bg-[var(--color-harvest-400)]"
+                  >
+                    <Link to="/signup" search={{ redirect: "/" }}>
+                      Erntepost
+                    </Link>
+                  </Button>
+                ) : null}
+                {user?.labels?.includes("admin") ? (
+                  <Button asChild variant="secondary" size="sm" className="rounded-full">
+                    <Link to="/zentrale">
+                      Zentrale
+                      <ArrowRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
             </div>
-
-            <Button asChild variant="secondary" size="sm">
-              <Link to={user ? "/konto" : "/login"}>
-                {user ? "Mein Konto" : "Anmelden"}
-              </Link>
-            </Button>
           </div>
         </div>
       </div>

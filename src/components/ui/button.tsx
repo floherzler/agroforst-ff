@@ -74,7 +74,9 @@ function Button({
       className={asChild ? undefined : cn(buttonVariants({ variant, size, className }))}
       render={render}
       {...props}
-    />
+    >
+      {asChild && child ? child.props.children : children}
+    </ButtonPrimitive>
   )
 }
 

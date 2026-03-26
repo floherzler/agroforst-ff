@@ -139,6 +139,35 @@ export function useZentraleAdmin({
   }, [selectedProduct]);
 
   useEffect(() => {
+    if (selectedProductId === null) {
+      return;
+    }
+
+    const stillExists = produkte.some((product) => product.id === selectedProductId);
+    if (stillExists) {
+      return;
+    }
+
+    setSelectedProductId(produkte[0]?.id ?? null);
+    setSelectedOfferId(null);
+    setProductStatus({ state: "idle" });
+  }, [produkte, selectedProductId]);
+
+  useEffect(() => {
+    if (selectedOfferId === null) {
+      return;
+    }
+
+    const stillExists = staffeln.some((offer) => offer.id === selectedOfferId);
+    if (stillExists) {
+      return;
+    }
+
+    setSelectedOfferId(null);
+    setOfferStatus({ state: "idle" });
+  }, [staffeln, selectedOfferId]);
+
+  useEffect(() => {
     if (selectedOffer) {
       setOfferForm(offerToFormState(selectedOffer));
       return;
@@ -162,8 +191,7 @@ export function useZentraleAdmin({
     };
   }, []);
 
-  async function saveProduct(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function publishProduct() {
     setProductStatus({ state: "loading" });
 
     try {
@@ -197,15 +225,24 @@ export function useZentraleAdmin({
       setActivePanel("produkte");
       setProductStatus({
         state: "success",
-        message: selectedProductId ? "Produkt wurde aktualisiert." : "Produkt wurde angelegt und kann sofort für Angebote verwendet werden.",
+        message: selectedProductId
+          ? "Produkt wurde veröffentlicht."
+          : "Produkt wurde angelegt und veröffentlicht.",
       });
+      return saved;
     } catch (rawError) {
       const message =
         rawError instanceof Error
           ? rawError.message
           : String(rawError ?? "Produkt konnte nicht gespeichert werden.");
       setProductStatus({ state: "error", message });
+      return null;
     }
+  }
+
+  async function saveProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await publishProduct();
   }
 
   async function saveOffer(event: FormEvent<HTMLFormElement>) {
@@ -334,6 +371,7 @@ export function useZentraleAdmin({
     setOfferFilter,
     setActivePanel,
     saveProduct,
+    publishProduct,
     saveOffer,
     resetProductForm,
     resetOfferForm,
