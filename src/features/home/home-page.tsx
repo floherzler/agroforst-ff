@@ -49,6 +49,7 @@ import type { CarouselApi } from "@/components/ui/carousel";
 import { Label } from "@/components/ui/label";
 import { InView } from "@/components/motion-primitives/in-view";
 import { TextLoop } from "@/components/motion-primitives/text-loop";
+import { YearWheelSection } from "@/features/home/year-wheel-section";
 
 const processSteps = [
   {
@@ -790,6 +791,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <YearWheelSection />
 
       <section className="landing-reveal home-promise-panel px-5 py-10 sm:px-8 sm:py-12 lg:px-10">
         <div className="home-promise-shell flex flex-col items-center gap-6 text-center">
