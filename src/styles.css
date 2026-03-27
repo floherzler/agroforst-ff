@@ -382,74 +382,14 @@ body {
   box-shadow: 0 30px 74px -48px rgba(35, 22, 15, 0.32);
 }
 
-.home-permdal-certificate {
-  display: block;
-}
-
-.home-permdal-certificate-sheet {
-  position: relative;
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  gap: 1.25rem;
-  border-radius: 1.8rem;
-  border: 1px solid rgba(35, 22, 15, 0.08);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(252, 247, 240, 0.9)),
-    rgba(255, 255, 255, 0.86);
-  padding: 1.4rem;
-  box-shadow: 0 24px 60px -44px rgba(35, 22, 15, 0.34);
-  transition:
-    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 320ms ease;
-}
-
-.home-permdal-certificate:hover .home-permdal-certificate-sheet {
-  transform: translateY(-4px) rotate(-0.3deg);
-  box-shadow: 0 34px 78px -46px rgba(35, 22, 15, 0.42);
-  border-color: rgba(240, 91, 40, 0.14);
-}
-
-.home-permdal-certificate-preview {
-  position: relative;
-  display: grid;
-  min-height: 15rem;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 1.35rem;
-  border: 1px solid rgba(35, 22, 15, 0.08);
-  background:
-    linear-gradient(180deg, rgba(253, 249, 242, 0.98), rgba(247, 239, 229, 0.95));
-  padding: 0.9rem;
-}
-
 .home-permdal-certificate-image {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 0.95rem;
-  border: 1px solid rgba(35, 22, 15, 0.08);
+  border-radius: 1.2rem;
   background: white;
-  box-shadow: 0 18px 34px -26px rgba(35, 22, 15, 0.26);
-}
-
-.home-permdal-dialog-frame {
-  border-radius: 1.35rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(250, 245, 237, 0.96));
-  padding: 0.2rem;
-}
-
-.home-permdal-dialog-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 80vh;
-  object-fit: contain;
-  border-radius: 1.15rem;
   border: 1px solid rgba(35, 22, 15, 0.08);
-  background: white;
+  box-shadow: 0 28px 70px -42px rgba(35, 22, 15, 0.34);
 }
 
 .home-team-script {
