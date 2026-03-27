@@ -4,6 +4,7 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, Loader2, UserRoundPlus } from "lucide-react";
 
+import { BrandCard } from "@/components/brand/brand-card";
 import { AuthFormField } from "@/features/auth/auth-form-field";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <Card className="w-full border border-surface-outline bg-surface-card-strong shadow-brand-strong backdrop-blur">
+    <BrandCard tone="strong" className="w-full">
       <CardHeader className="space-y-4 text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-lilac-200 text-lilac-700 shadow-accent-lilac">
           <UserRoundPlus className="size-6" />
@@ -117,7 +118,6 @@ export default function SignUpPage() {
               type="text"
               autoComplete="name"
               placeholder="Dein Name"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
             />
           </AuthFormField>
           <AuthFormField>
@@ -129,7 +129,6 @@ export default function SignUpPage() {
               autoComplete="email"
               defaultValue={prefilledEmail}
               placeholder="email@beispiel.de"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
             />
           </AuthFormField>
           <AuthFormField>
@@ -141,7 +140,7 @@ export default function SignUpPage() {
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 placeholder="Mindestens 8 Zeichen"
-                className="border border-permdal-300 bg-surface-card pr-11 text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
+                className="pr-11"
               />
               <button
                 type="button"
@@ -164,7 +163,6 @@ export default function SignUpPage() {
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               placeholder="Passwort wiederholen"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
             />
           </AuthFormField>
           <Button
@@ -183,18 +181,18 @@ export default function SignUpPage() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col items-center gap-3 text-sm text-[#1f2021]">
+      <CardFooter className="flex flex-col items-center gap-3 text-sm text-foreground">
         <p>
           Schon registriert?{" "}
           <Link
             to="/login"
             search={{ redirect: redirectTo }}
-            className="font-semibold text-primary hover:text-lilac-600"
+            className="font-semibold text-primary hover:text-lilac-700"
           >
             Zum Login
           </Link>
         </p>
       </CardFooter>
-    </Card>
+    </BrandCard>
   );
 }

@@ -4,6 +4,7 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Loader2, LockKeyhole } from "lucide-react";
 
+import { BrandCard } from "@/components/brand/brand-card";
 import { AuthFormField } from "@/features/auth/auth-form-field";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="w-full border border-surface-outline bg-surface-card-strong shadow-brand-strong backdrop-blur">
+    <BrandCard tone="strong" className="w-full">
       <CardHeader className="space-y-4 text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-lilac-200 text-lilac-700 shadow-accent-lilac">
           <LockKeyhole className="size-6" />
@@ -79,7 +80,6 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               placeholder="email@beispiel.de"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
             />
           </AuthFormField>
           <AuthFormField>
@@ -90,7 +90,6 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               placeholder="••••••••"
-              className="border border-permdal-300 bg-surface-card text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-ring/40 focus-visible:ring-offset-background"
             />
           </AuthFormField>
           <Button
@@ -109,13 +108,13 @@ export default function LoginPage() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col items-center gap-3 text-sm text-[#1f2021]">
+      <CardFooter className="flex flex-col items-center gap-3 text-sm text-foreground">
         <p>
           Noch kein Profil?{" "}
           <Link
             to="/signup"
             search={{ redirect: redirectTo }}
-            className="font-semibold text-primary hover:text-lilac-600"
+            className="font-semibold text-primary hover:text-lilac-700"
           >
             Jetzt registrieren
           </Link>
@@ -125,6 +124,6 @@ export default function LoginPage() {
           zu schicken, wenn du zustimmst.
         </p>
       </CardFooter>
-    </Card>
+    </BrandCard>
   );
 }

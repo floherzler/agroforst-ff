@@ -3,24 +3,48 @@
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
   Loader2,
   Mail,
   MapPin,
+  Quote,
+  Sprout,
 } from "lucide-react";
 
 import { PageShell } from "@/components/base/page-shell";
+import { displayValueLabel } from "@/features/zentrale/admin-domain";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
 } from "@/components/ui/carousel";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/features/auth/auth-store";
-import { submitFeedbackMessage } from "@/lib/appwrite/appwriteProducts";
+import {
+  getProduktImagePreviewUrl,
+  listAngebote,
+  listProdukte,
+  submitFeedbackMessage,
+  subscribeToAngebote,
+  subscribeToProdukte,
+} from "@/lib/appwrite/appwriteProducts";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Label } from "@/components/ui/label";
 import { InView } from "@/components/motion-primitives/in-view";
@@ -85,6 +109,118 @@ const galleryImages = [
 
 const permdalCertificatePdfUrl = encodeURI("/img/statut_Permdal_öko.pdf");
 const permdalCertificateImageUrl = encodeURI("/img/statut_Permdal_öko.png");
+const monthInitials = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+const currentMonthIndex = new Date().getMonth();
+const liveProductCategories = ["Alle", "Obst", "Gemuese", "Kraeuter"] as const;
+type LiveProductCategory = (typeof liveProductCategories)[number];
+
+function isPerennialProduct(product: Produkt) {
+  return product.lebensdauer.trim().toLowerCase().includes("mehr");
+}
+
+function applyRealtimeProducts(
+  current: Produkt[],
+  change: { type: "create" | "update" | "delete"; record: Produkt },
+) {
+  if (change.type === "delete") {
+    return current.filter((entry) => entry.id !== change.record.id);
+  }
+
+  if (change.type === "create") {
+    return [...current, change.record].sort((left, right) =>
+      left.name.localeCompare(right.name, "de"),
+    );
+  }
+
+  return current
+    .map((entry) => (entry.id === change.record.id ? change.record : entry))
+    .sort((left, right) => left.name.localeCompare(right.name, "de"));
+}
+
+function applyRealtimeOffers(
+  current: Angebot[],
+  change: { type: "create" | "update" | "delete"; record: Angebot },
+) {
+  if (change.type === "delete") {
+    return current.filter((entry) => entry.id !== change.record.id);
+  }
+
+  if (change.type === "create") {
+    return [change.record, ...current.filter((entry) => entry.id !== change.record.id)];
+  }
+
+  return current.map((entry) => (entry.id === change.record.id ? change.record : entry));
+}
+
+function buildProductInfoText(product: Produkt) {
+  if (product.notes?.trim()) {
+    return product.notes.trim();
+  }
+
+  const category = displayValueLabel(product.unterkategorie || product.hauptkategorie) || "Sortiment";
+  const lifespan = displayValueLabel(product.lebensdauer);
+
+  if (product.sorte && lifespan) {
+    return `${product.sorte} ist als ${category.toLowerCase()} bei uns ${lifespan.toLowerCase()} eingeplant.`;
+  }
+
+  if (product.sorte) {
+    return `${product.sorte} ist als ${category.toLowerCase()} Teil unseres saisonalen Sortiments.`;
+  }
+
+  if (lifespan) {
+    return `${category} aus unserem Hofsortiment, ${lifespan.toLowerCase()} kultiviert.`;
+  }
+
+  return `${category} aus unserem aktuellen Hofsortiment.`;
+}
+
+function formatOfferPreview(offer: Angebot) {
+  const amount = Number.isFinite(offer.mengeVerfuegbar) ? offer.mengeVerfuegbar : offer.menge;
+  const price = Number.isFinite(offer.euroPreis)
+    ? `${offer.euroPreis.toFixed(2).replace(".", ",")} €`
+    : null;
+  const unit = offer.einheit || "";
+  const year = offer.year ? ` · ${offer.year}` : "";
+
+  return {
+    headline: `${amount} ${unit} verfügbar${year}`,
+    detail: price ? `${price} / ${unit}` : null,
+  };
+}
+
+function ProductAvatar({
+  imageUrl,
+  alt,
+}: {
+  imageUrl?: string;
+  alt: string;
+}) {
+  const [isLoaded, setIsLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsLoaded(false);
+  }, [imageUrl]);
+
+  return (
+    <Avatar className="size-14 shrink-0 ring-4 ring-background/80">
+      {imageUrl ? (
+        <>
+          {!isLoaded ? <Skeleton className="absolute inset-0 rounded-full" /> : null}
+          <AvatarImage
+            src={imageUrl}
+            alt={alt}
+            className={isLoaded ? undefined : "opacity-0"}
+            onLoad={() => setIsLoaded(true)}
+          />
+        </>
+      ) : null}
+      <AvatarFallback className="bg-background/90 text-[var(--color-forest-700)]">
+        <Sprout />
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export default function HomePage() {
   const { user, createAccount, login } = useAuthStore();
@@ -96,6 +232,67 @@ export default function HomePage() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [carouselApi, setCarouselApi] = React.useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = React.useState(0);
+  const [liveProducts, setLiveProducts] = React.useState<Produkt[]>([]);
+  const [liveOffers, setLiveOffers] = React.useState<Angebot[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
+  const [productsError, setProductsError] = React.useState(false);
+  const [liveCategory, setLiveCategory] = React.useState<LiveProductCategory>("Alle");
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadLiveProducts() {
+      try {
+        setIsLoadingProducts(true);
+        setProductsError(false);
+        const [products, offers] = await Promise.all([
+          listProdukte({ limit: 16 }),
+          listAngebote({ limit: 200 }),
+        ]);
+        if (!cancelled) {
+          setLiveProducts(products);
+          setLiveOffers(offers);
+        }
+      } catch (error) {
+        console.error("Failed to load live products", error);
+        if (!cancelled) {
+          setProductsError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingProducts(false);
+        }
+      }
+    }
+
+    void loadLiveProducts();
+
+    let unsubscribe = () => {};
+
+    try {
+      unsubscribe = subscribeToProdukte(({ type, record }) => {
+        setLiveProducts((current) => applyRealtimeProducts(current, { type, record }));
+      });
+    } catch (error) {
+      console.error("Failed to subscribe to live products", error);
+    }
+
+    let unsubscribeOffers = () => {};
+
+    try {
+      unsubscribeOffers = subscribeToAngebote(({ type, record }) => {
+        setLiveOffers((current) => applyRealtimeOffers(current, { type, record }));
+      });
+    } catch (error) {
+      console.error("Failed to subscribe to live offers", error);
+    }
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      unsubscribeOffers();
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!carouselApi) {
@@ -114,6 +311,35 @@ export default function HomePage() {
       carouselApi.off("select", handleSelect);
     };
   }, [carouselApi]);
+
+  const filteredLiveProducts = React.useMemo(() => {
+    if (liveCategory === "Alle") {
+      return liveProducts;
+    }
+
+    return liveProducts.filter((product) => product.hauptkategorie === liveCategory);
+  }, [liveCategory, liveProducts]);
+
+  const liveOfferProductIds = React.useMemo(
+    () => new Set(liveOffers.map((offer) => offer.produktId).filter(Boolean)),
+    [liveOffers],
+  );
+
+  const liveOffersByProductId = React.useMemo(() => {
+    const entries = new Map<string, Angebot[]>();
+
+    for (const offer of liveOffers) {
+      if (!offer.produktId || offer.mengeVerfuegbar <= 0) {
+        continue;
+      }
+
+      const existing = entries.get(offer.produktId) ?? [];
+      existing.push(offer);
+      entries.set(offer.produktId, existing);
+    }
+
+    return entries;
+  }, [liveOffers]);
 
   async function handleInlineSignup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -204,7 +430,7 @@ export default function HomePage() {
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_top,rgba(240,91,40,0.20),transparent_40%),radial-gradient(circle_at_18%_18%,rgba(217,166,37,0.18),transparent_26%),linear-gradient(180deg,#f8efe1_0%,#f6f1e6_45%,#f4efe6_100%)]"
+        className="brand-top-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem]"
       />
 
       <section className="landing-reveal home-hero relative overflow-hidden rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
@@ -226,7 +452,7 @@ export default function HomePage() {
 
         <div className="relative flex flex-col items-center gap-8 text-center">
           <div className="flex max-w-4xl flex-col items-center gap-5 lg:max-w-[56rem]">
-            <h1 className="font-display text-[3rem] leading-[0.92] tracking-[-0.04em] text-balance text-white sm:text-[4.4rem] lg:max-w-[11ch] lg:text-[5.6rem]">
+            <h1 className="text-display-brand text-balance text-white lg:max-w-[11ch]">
               Prignitzer Permakultur Produkte.
             </h1>
             <p className="max-w-2xl text-base leading-7 text-white/78 sm:text-lg">
@@ -234,32 +460,240 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+          <div className="flex flex-col items-center gap-3">
             <Button
-              asChild
+              type="button"
               size="lg"
-              className="h-12 rounded-full border border-white/20 bg-[rgba(234,220,190,0.92)] px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-soil-900)] shadow-[0_18px_38px_-22px_rgba(16,29,23,0.45)] hover:bg-[rgba(244,233,209,0.96)]"
+              variant="secondary"
+              disabled
+              className="home-hero-downcue rounded-full px-6"
             >
-              <Link to="/produkte">
-                Produkte entdecken
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-full border-white/18 bg-[rgba(255,248,239,0.08)] px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-white/92 hover:bg-[rgba(255,248,239,0.14)] hover:text-white"
-            >
-              <Link to="/signup" search={{ redirect: "/" }}>
-                Erntepost erhalten
-              </Link>
+              Produkte entdecken
+              <ArrowDown data-icon="inline-end" />
             </Button>
           </div>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[2rem] border border-[var(--color-soil-900)]/8 bg-white/42 px-5 py-3 shadow-[0_26px_60px_-50px_rgba(35,22,15,0.22)] backdrop-blur-[10px] sm:px-8 sm:py-4">
+      <Card tone="strong" className="home-live-products-panel overflow-hidden rounded-[2rem]">
+        <CardHeader className="gap-3 border-b border-border/70">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex max-w-2xl flex-col gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-soil-700)]">
+                <span className="relative flex size-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-lilac-500)] opacity-60" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-[var(--color-lilac-600)]" />
+                </span>
+                Sorgfaltig gepflegt
+              </div>
+              <CardTitle className="font-display text-[2rem] leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
+                Aktuelle Produkte im Hofsystem.
+              </CardTitle>
+              <CardDescription className="text-base leading-7 text-[var(--color-soil-700)]">
+                Eine kompakte Auswahl der aktuell gepflegten Produkte, direkt im Überblick.
+              </CardDescription>
+              <div>
+                <Button asChild size="sm" variant="outline" className="rounded-full">
+                  <Link to="/produkte">
+                    Alle Produkte
+                    <ArrowRight data-icon="inline-end" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <Badge variant="outline" className="w-fit">
+                {isLoadingProducts ? "Lädt…" : `${filteredLiveProducts.length} Produkte`}
+              </Badge>
+              <Tabs
+                value={liveCategory}
+                onValueChange={(value) => setLiveCategory(value as LiveProductCategory)}
+                className="w-full sm:w-auto"
+              >
+                <TabsList variant="pill" className="grid w-full grid-cols-4 p-1 sm:w-auto">
+                  {liveProductCategories.map((category) => (
+                    <TabsTrigger key={category} value={category} className="px-3 text-xs sm:text-sm">
+                      {displayValueLabel(category) || category}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoadingProducts ? (
+            <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4 sm:px-6">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="surface-card flex aspect-square flex-col gap-4 rounded-[1.5rem] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-5 w-28" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <div className="mt-auto grid grid-cols-12 gap-1">
+                    {Array.from({ length: 12 }).map((__, monthIndex) => (
+                      <Skeleton key={monthIndex} className="h-7 rounded-md" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : productsError ? (
+            <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
+              Die Live-Produkte konnten gerade nicht geladen werden.
+            </div>
+          ) : filteredLiveProducts.length === 0 ? (
+            <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
+              Für diese Kategorie sind aktuell keine Produkte gepflegt.
+            </div>
+          ) : (
+            <div className="px-5 py-5 sm:px-6">
+              <Carousel
+                opts={{ align: "start", loop: filteredLiveProducts.length > 3 }}
+                className="mx-auto w-full max-w-[78rem] px-12 sm:px-14"
+              >
+                <CarouselContent>
+                  {filteredLiveProducts.map((product) => (
+                    <CarouselItem
+                      key={product.id}
+                      className="basis-[88%] sm:basis-1/2 xl:basis-1/3"
+                    >
+                      {(() => {
+                        const productOffers = liveOffersByProductId.get(product.id) ?? [];
+                        const hasLiveOffer = liveOfferProductIds.has(product.id) && productOffers.length > 0;
+                        const productImageUrl = product.imageId
+                          ? getProduktImagePreviewUrl({ imageId: product.imageId, width: 96, height: 96 })
+                          : undefined;
+                        const metaParts = [
+                          product.unterkategorie ? displayValueLabel(product.unterkategorie) : null,
+                          isPerennialProduct(product) ? "mehrjährig" : null,
+                        ].filter(Boolean);
+
+                        return (
+                          <Card
+                            tone="strong"
+                            className="flex aspect-square flex-col rounded-[1.6rem] border-border/70"
+                          >
+                            <CardHeader className="gap-2 pb-2">
+                              <div className="flex items-start gap-3">
+                                <ProductAvatar imageUrl={productImageUrl} alt={product.name} />
+                                <div className="min-w-0 flex-1">
+                                  {metaParts.length > 0 ? (
+                                    <p className="mb-1 text-[0.72rem] uppercase tracking-[0.14em] text-muted-foreground">
+                                      {metaParts.join(" · ")}
+                                    </p>
+                                  ) : null}
+                                  <CardTitle className="line-clamp-2 text-[1.02rem] leading-[1.02] text-foreground">
+                                    {product.name}
+                                  </CardTitle>
+                                  {product.sorte ? (
+                                    <CardDescription className="mt-0.5 line-clamp-1 text-[0.8rem] leading-5">
+                                      {product.sorte}
+                                    </CardDescription>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="flex min-h-0 flex-1 flex-col gap-3 text-left">
+                              <div className="flex items-start gap-3">
+                                <Quote className="mt-0.5 shrink-0 text-[var(--color-soil-500)]" />
+                                <p className="line-clamp-4 text-left text-sm leading-6 text-foreground/78 italic">
+                                  “{buildProductInfoText(product)}”
+                                </p>
+                              </div>
+
+                              {hasLiveOffer ? (
+                                <div
+                                  className="group/offer relative text-[0.72rem] text-muted-foreground"
+                                  tabIndex={0}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="relative flex size-2 rounded-full bg-[var(--color-permdal-500)]">
+                                      <span className="absolute inset-0 rounded-full bg-[var(--color-permdal-500)]/50 animate-[pulse_2.8s_ease-in-out_infinite]" />
+                                    </span>
+                                    <span>
+                                      {productOffers.length} {productOffers.length === 1 ? "Angebot" : "Angebote"} verfügbar
+                                    </span>
+                                  </div>
+                                  <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-60 rounded-[1rem] border border-border/80 bg-background/96 p-3 opacity-0 shadow-brand-soft backdrop-blur transition duration-200 group-hover/offer:translate-y-0 group-hover/offer:opacity-100 group-focus-within/offer:translate-y-0 group-focus-within/offer:opacity-100 translate-y-1">
+                                    <p className="mb-2 text-[0.68rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                      Aktuelle Angebote
+                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                      {productOffers.slice(0, 3).map((offer) => {
+                                        const preview = formatOfferPreview(offer);
+                                        return (
+                                          <div key={offer.id} className="rounded-[0.85rem] bg-muted/60 px-2.5 py-2">
+                                            <div className="text-[0.72rem] font-medium text-foreground">
+                                              {preview.headline}
+                                            </div>
+                                            {preview.detail ? (
+                                              <div className="text-[0.68rem] text-muted-foreground">
+                                                {preview.detail}
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-[0.72rem] text-muted-foreground">
+                                  <span className="flex size-2 rounded-full bg-border" />
+                                  <span>Noch kein aktuelles Angebot</span>
+                                </div>
+                              )}
+
+                              <div className="mt-auto rounded-[1.1rem] bg-muted/60 p-2.5">
+                                <div className="mb-2 flex items-center gap-2">
+                                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                    Saison
+                                  </p>
+                                </div>
+                                <div className="grid grid-cols-12 gap-1">
+                                  {monthInitials.map((month, monthIndex) => {
+                                    const isActive = product.saisonalitaet.includes(monthIndex + 1);
+                                    const isCurrentMonth = monthIndex === currentMonthIndex;
+                                    return (
+                                      <div
+                                        key={`${product.id}-${month}-${monthIndex}`}
+                                        className={
+                                          isActive
+                                            ? "relative flex h-5 items-center justify-center rounded-sm bg-accent text-[0.62rem] font-semibold text-accent-foreground"
+                                            : "relative flex h-5 items-center justify-center rounded-sm bg-background text-[0.62rem] font-medium text-muted-foreground"
+                                        }
+                                        aria-label={isCurrentMonth ? `${month} ist der aktuelle Monat` : undefined}
+                                      >
+                                        {isCurrentMonth ? (
+                                          <span className="absolute inset-[-2px] rounded-md border border-[var(--color-harvest-500)]/80 animate-[pulse_3.6s_ease-in-out_infinite]" />
+                                        ) : null}
+                                        {month}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })()}
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="left-0 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 bg-background/92 shadow-brand-soft backdrop-blur" />
+                <CarouselNext className="right-0 top-1/2 z-10 translate-x-1/2 -translate-y-1/2 bg-background/92 shadow-brand-soft backdrop-blur" />
+              </Carousel>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <section className="home-process-shell overflow-hidden rounded-[2rem] px-5 py-3 sm:px-8 sm:py-4">
         {processSteps.map((step, index) => {
           const stepContent = (
             <div className="flex flex-col items-center gap-4 text-center">
@@ -267,11 +701,11 @@ export default function HomePage() {
                 <span className="font-display text-4xl leading-none tracking-[-0.05em] text-[var(--color-harvest-600)] sm:text-5xl">
                   {step.number}
                 </span>
-                <h2 className="max-w-4xl font-display text-3xl leading-[1.02] tracking-[-0.03em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
+                <h2 className="home-process-title max-w-4xl">
                   {step.title}
                 </h2>
               </div>
-              <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
+              <p className="home-process-copy max-w-2xl text-base leading-7 sm:text-lg">
                 {step.text}
               </p>
             </div>
@@ -405,7 +839,7 @@ export default function HomePage() {
         </div>
       </InView>
 
-      <section className="landing-reveal overflow-hidden rounded-[2rem] border border-[var(--color-soil-900)]/8 bg-white/58 px-5 py-6 shadow-[0_30px_70px_-52px_rgba(35,22,15,0.36)] sm:px-8 sm:py-8">
+      <section className="home-gallery-shell landing-reveal overflow-hidden rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
           <div className="max-w-4xl px-1 text-center">
             <h2 className="font-display text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.6rem]">

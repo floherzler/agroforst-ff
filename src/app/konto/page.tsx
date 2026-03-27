@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useAuthStore } from "@/store/Auth";
+import { BrandCard } from "@/components/brand/brand-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -433,23 +434,23 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#f7f1e8] to-[#ede5d9] flex items-center justify-center px-4">
-        <Card className="max-w-md w-full border-2 border-permdal-200 bg-white/80 backdrop-blur shadow-xl">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <BrandCard tone="strong" className="max-w-md w-full">
           <CardHeader className="text-center space-y-3">
-            <CardTitle className="text-2xl text-[#2c3e2d]">Anmeldung erforderlich</CardTitle>
-            <CardDescription className="text-base text-[#5a5a5a]">
+            <CardTitle className="text-2xl text-foreground">Anmeldung erforderlich</CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
               Bitte melde dich an, um dein Konto zu verwalten
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            <Button asChild className="w-full rounded-full bg-[#2c3e2d] hover:bg-[#3a523b]">
+            <Button asChild className="w-full rounded-full">
               <Link to="/login" search={{ redirect: "/konto" }}>Zum Login</Link>
             </Button>
-            <Button asChild variant="outline" className="w-full rounded-full border-permdal-300">
+            <Button asChild variant="outline" className="w-full rounded-full">
               <Link to="/signup" search={{ redirect: "/konto" }}>Konto erstellen</Link>
             </Button>
           </CardContent>
-        </Card>
+        </BrandCard>
       </div>
     );
   }
@@ -489,7 +490,7 @@ export default function AccountPage() {
     : null;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#f7f1e8] to-[#ede5d9]">
+    <main className="min-h-screen bg-background">
       {/* Floating logout button */}
       <div className="fixed bottom-6 right-6 z-50 sm:bottom-8 sm:right-8">
         <Button
@@ -507,23 +508,23 @@ export default function AccountPage() {
         <div className="mx-auto max-w-5xl">
           {/* Header */}
           <div className="mb-8 sm:mb-12 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#2c3e2d] mb-3">Dein Konto</h1>
-            <p className="text-[#5a5a5a] text-base sm:text-lg max-w-2xl mx-auto">Verwalte deine Mitgliedschaft, Bestellungen und Kontoeinstellungen</p>
+            <h1 className="text-headline-brand mb-3 text-foreground">Dein Konto</h1>
+            <p className="mx-auto max-w-2xl text-base text-muted-foreground sm:text-lg">Verwalte deine Mitgliedschaft, Bestellungen und Kontoeinstellungen</p>
           </div>
 
 
           {/* Tabs */}
           <Tabs defaultValue="settings" className="space-y-6 sm:space-y-8">
-            <TabsList className="grid w-full grid-cols-2 bg-white/60 backdrop-blur-sm border border-permdal-200 p-1 rounded-full">
-              <TabsTrigger value="settings" className="text-sm sm:text-base rounded-full data-[state=active]:bg-[#2c3e2d] data-[state=active]:text-white">Mitgliedschaft</TabsTrigger>
-              <TabsTrigger value="orders" className="text-sm sm:text-base rounded-full data-[state=active]:bg-[#2c3e2d] data-[state=active]:text-white">Bestellungen</TabsTrigger>
+            <TabsList variant="pill" className="grid w-full grid-cols-2 p-1">
+              <TabsTrigger value="settings" className="text-sm sm:text-base">Mitgliedschaft</TabsTrigger>
+              <TabsTrigger value="orders" className="text-sm sm:text-base">Bestellungen</TabsTrigger>
             </TabsList>
 
             <TabsContent value="settings" className="space-y-6 sm:space-y-8">
-              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
+              <Card tone="strong">
                 <CardHeader>
-                  <CardTitle className="text-2xl text-[#2c3e2d]">Deine Mitgliedschaften</CardTitle>
-                  <CardDescription className="text-base text-[#5a5a5a]">
+                  <CardTitle className="text-2xl text-foreground">Deine Mitgliedschaften</CardTitle>
+                  <CardDescription className="text-base text-muted-foreground">
                     Übersicht und Verwaltung deiner aktiven und ausstehenden Mitgliedschaften.
                   </CardDescription>
                 </CardHeader>
@@ -535,12 +536,12 @@ export default function AccountPage() {
                       size="sm"
                       onClick={refreshMemberships}
                       disabled={loadingMemberships}
-                      className="rounded-full border-permdal-300 hover:bg-permdal-50"
+                      className="rounded-full"
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
                       {loadingMemberships ? "Aktualisiere…" : "Aktualisieren"}
                     </Button>
-                    <span className="text-sm text-[#5a5a5a]">
+                    <span className="text-sm text-muted-foreground">
                       {loadingMemberships
                         ? "Lade Mitgliedschaften…"
                         : memberships.length > 0
@@ -556,7 +557,7 @@ export default function AccountPage() {
                           setMembershipStatus({ state: "idle" });
                         }}
                         disabled={membershipStatus.state === "loading"}
-                        className="rounded-full bg-permdal-500 hover:bg-permdal-400 text-white shadow-md"
+                        className="rounded-full"
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         Neue Mitgliedschaft
@@ -776,7 +777,7 @@ export default function AccountPage() {
                       );
                     })}
                     {canAddMoreMemberships && showApplicationForm && (
-                      <Card className="relative flex min-h-[220px] flex-col justify-between border border-dashed border-gray-300 bg-gray-50/80 text-gray-600 shadow-inner transition duration-200 hover:scale-[1.01] hover:border-gray-400 hover:shadow-lg">
+                      <Card className="relative flex min-h-[220px] flex-col justify-between border border-dashed border-border bg-muted/40 text-muted-foreground shadow-inner transition duration-200 hover:scale-[1.01] hover:border-border hover:shadow-lg">
                         <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
                           <div className="space-y-3">
                             <div className="flex items-center gap-3">
@@ -788,8 +789,8 @@ export default function AccountPage() {
                                 />
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-gray-700">Mitgliedschaft hinzufügen</p>
-                                <p className="text-xs text-gray-500">Wählen Sie den passenden Typ und stellen Sie Ihren Antrag.</p>
+                                <p className="text-sm font-semibold text-foreground">Mitgliedschaft hinzufügen</p>
+                                <p className="text-xs text-muted-foreground">Wählen Sie den passenden Typ und stellen Sie Ihren Antrag.</p>
                               </div>
                             </div>
                             {membershipLoadError && (
@@ -852,17 +853,17 @@ export default function AccountPage() {
                   )}
                 </CardContent>
               </Card>
-              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
+              <Card tone="strong">
                 <CardHeader>
-                  <CardTitle className="text-2xl text-[#2c3e2d]">Dein Profil</CardTitle>
-                  <CardDescription className="text-base text-[#5a5a5a]">
+                  <CardTitle className="text-2xl text-foreground">Dein Profil</CardTitle>
+                  <CardDescription className="text-base text-muted-foreground">
                     Persönliche Informationen und Kontoeinstellungen
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                   <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
                     <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                      <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-4 border-permdal-200 shadow-md">
+                      <Avatar className="h-20 w-20 border-4 border-border shadow-brand-soft sm:h-24 sm:w-24">
                         <AvatarImage src="" alt={user.name} />
                         <AvatarFallback className="bg-gradient-to-br from-permdal-400 to-permdal-600 text-2xl text-white font-bold">
                           {user.name?.charAt(0).toUpperCase()}
@@ -870,17 +871,17 @@ export default function AccountPage() {
                       </Avatar>
                       <div className="space-y-3 text-center sm:text-left">
                         <div className="space-y-1">
-                          <p className="text-xs uppercase tracking-wide text-[#5a5a5a] font-semibold">Mitglied</p>
-                          <p className="text-2xl font-bold text-[#2c3e2d] break-words">{user.name}</p>
+                          <p className="text-label-brand text-muted-foreground">Mitglied</p>
+                          <p className="break-words text-2xl font-bold text-foreground">{user.name}</p>
                         </div>
-                        <div className="flex items-center justify-center gap-2 text-sm text-[#5a5a5a] sm:justify-start">
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground sm:justify-start">
                           <span className="break-all sm:break-normal">{user.email}</span>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={handleCopyEmail}
-                            className="h-8 w-8 hover:bg-permdal-100"
+                            className="h-8 w-8"
                           >
                             {copiedEmail ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                             <span className="sr-only">E-Mail kopieren</span>
@@ -890,12 +891,7 @@ export default function AccountPage() {
                     </div>
                     <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto md:justify-end">
                       <Badge
-                        variant={isEmailVerified ? "default" : "secondary"}
-                        className={
-                          isEmailVerified
-                            ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
-                            : "border border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200"
-                        }
+                        variant={isEmailVerified ? "success" : "warning"}
                       >
                         {isEmailVerified ? "Verifiziert" : "E-Mail bestätigen"}
                       </Badge>
@@ -907,17 +903,17 @@ export default function AccountPage() {
                         </Badge>
                       )}
                       {roleLabels.map((label) => (
-                        <Badge key={label} className="bg-permdal-600 text-white text-xs capitalize border-permdal-700">
+                        <Badge key={label} variant="admin" className="text-xs capitalize">
                           {label}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                  <Separator className="bg-permdal-200" />
+                  <Separator />
                   <Tabs defaultValue="security" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2 bg-permdal-50 border border-permdal-200 rounded-full p-1">
-                      <TabsTrigger value="security" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Sicherheit</TabsTrigger>
-                      <TabsTrigger value="preferences" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Präferenzen</TabsTrigger>
+                    <TabsList variant="pill" className="grid w-full max-w-md grid-cols-2 p-1">
+                      <TabsTrigger value="security" className="rounded-full">Sicherheit</TabsTrigger>
+                      <TabsTrigger value="preferences" className="rounded-full">Präferenzen</TabsTrigger>
                     </TabsList>
                     {/* <TabsContent value="overview" className="space-y-4 pt-4">
                       <div className="grid gap-4 sm:grid-cols-2">
@@ -961,12 +957,7 @@ export default function AccountPage() {
                             </p>
                           </div>
                           <Badge
-                            variant={isEmailVerified ? "default" : "secondary"}
-                            className={
-                              isEmailVerified
-                                ? undefined
-                                : "border border-amber-500/40 bg-amber-100 text-amber-900"
-                            }
+                            variant={isEmailVerified ? "success" : "warning"}
                           >
                             {isEmailVerified ? "Aktiv" : "Offen"}
                           </Badge>
@@ -1070,10 +1061,10 @@ export default function AccountPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
+              <Card tone="strong">
                 <CardHeader>
-                  <CardTitle className="text-2xl text-[#2c3e2d]">Benachrichtigungen</CardTitle>
-                  <CardDescription className="text-base text-[#5a5a5a]">
+                  <CardTitle className="text-2xl text-foreground">Benachrichtigungen</CardTitle>
+                  <CardDescription className="text-base text-muted-foreground">
                     Verwalte deine Einstellungen für E-Mail-Benachrichtigungen
                   </CardDescription>
                 </CardHeader>
@@ -1084,7 +1075,7 @@ export default function AccountPage() {
                         <p className="font-medium text-foreground">Bestellbestätigungen</p>
                         <p className="text-sm text-muted-foreground">Erhalte E-Mails bei neuen Bestellungen</p>
                       </div>
-                      <Badge className="bg-green-100 text-green-800 border-green-300">Aktiviert</Badge>
+                      <Badge variant="success">Aktiviert</Badge>
                     </div>
                   </div>
                   <div className="rounded-lg border bg-muted/20 p-4">
@@ -1093,7 +1084,7 @@ export default function AccountPage() {
                         <p className="font-medium text-foreground">Marktplatz-Updates</p>
                         <p className="text-sm text-muted-foreground">Benachrichtigungen über neue Angebote</p>
                       </div>
-                      <Badge className="bg-green-100 text-green-800 border-green-300">Aktiviert</Badge>
+                      <Badge variant="success">Aktiviert</Badge>
                     </div>
                   </div>
                   <div className="rounded-lg border bg-muted/20 p-4">
@@ -1102,7 +1093,7 @@ export default function AccountPage() {
                         <p className="font-medium text-foreground">Newsletter</p>
                         <p className="text-sm text-muted-foreground">Regelmäßige Updates über Permdal</p>
                       </div>
-                      <Badge variant="outline" className="border-gray-300 text-gray-600">Deaktiviert</Badge>
+                      <Badge variant="outline">Deaktiviert</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -1110,17 +1101,17 @@ export default function AccountPage() {
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6">
-              <Card className="border-2 border-permdal-200 bg-white/60 backdrop-blur-sm shadow-lg">
+              <Card tone="strong">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <CardTitle className="text-2xl text-[#2c3e2d]">Deine Bestellungen</CardTitle>
-                      <CardDescription className="text-base text-[#5a5a5a]">
+                      <CardTitle className="text-2xl text-foreground">Deine Bestellungen</CardTitle>
+                      <CardDescription className="text-base text-muted-foreground">
                         Übersicht deiner aktuellen und vergangenen Bestellungen
                       </CardDescription>
                     </div>
                     {!loadingOrders && orders && (
-                      <Badge className="shrink-0 bg-permdal-100 text-permdal-800 border-permdal-300">
+                      <Badge variant="community" className="shrink-0">
                         {orders.length} {orders.length === 1 ? "Bestellung" : "Bestellungen"}
                       </Badge>
                     )}
@@ -1128,7 +1119,7 @@ export default function AccountPage() {
                 </CardHeader>
                 <CardContent>
                   {loadingOrders ? (
-                    <div className="text-center py-12 text-[#5a5a5a]">Lädt Bestellungen…</div>
+                    <div className="py-12 text-center text-muted-foreground">Lädt Bestellungen…</div>
                   ) : orders && orders.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {orders.map((o) => {
@@ -1137,14 +1128,14 @@ export default function AccountPage() {
                         const isGram = unitRaw === 'gramm' || unitRaw === 'g';
                         const displayAsKg = isGram && Number.isFinite(mengeNum) && Math.round(mengeNum) === 1000;
                         return (
-                          <Card key={o.id} className="border-2 border-permdal-200 bg-white hover:shadow-md transition-shadow">
+                          <Card key={o.id} tone="strong" className="transition-shadow hover:shadow-brand-soft">
                             <CardHeader className="pb-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <CardTitle className="text-base font-semibold text-[#2c3e2d]">
+                                  <CardTitle className="text-base font-semibold text-foreground">
                                     {o.produktName || `Bestellung ${o.id.slice(0, 6)}`}
                                   </CardTitle>
-                                  <CardDescription className="text-sm text-[#5a5a5a]">
+                                  <CardDescription className="text-sm text-muted-foreground">
                                     {formatDate(o.createdAt)}
                                   </CardDescription>
                                 </div>
@@ -1188,13 +1179,13 @@ export default function AccountPage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <div className="text-gray-400 mb-4">
+                      <div className="mb-4 text-muted-foreground">
                         <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Noch keine Bestellungen</h3>
-                      <p className="text-gray-600 mb-4">
+                      <h3 className="mb-2 text-lg font-medium text-foreground">Noch keine Bestellungen</h3>
+                      <p className="mb-4 text-muted-foreground">
                         Besuchen Sie unseren Marktplatz, um Produkte zu bestellen.
                       </p>
                       <Button asChild>

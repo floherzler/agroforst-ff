@@ -3,6 +3,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 
+import { CTAButton } from "@/components/brand/cta-button";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -60,7 +61,7 @@ export default function Navbar() {
               }
               className="w-full lg:max-w-[16rem]"
             >
-              <TabsList variant="line" className="grid w-full grid-cols-2">
+              <TabsList variant="pill" className="grid w-full grid-cols-2">
                 {navigationItems.map((item) => (
                   <TabsTrigger key={item.href} value={item.href}>
                     {item.label}
@@ -77,15 +78,15 @@ export default function Navbar() {
                   </Link>
                 </Button>
                 {!user ? (
-                  <Button
+                  <CTAButton
                     asChild
                     size="sm"
-                    className="rounded-full bg-[var(--color-harvest-500)] px-4 text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-[#2b1608] hover:bg-[var(--color-harvest-400)]"
+                    className="rounded-full px-4 tracking-[0.14em]"
                   >
                     <Link to="/signup" search={{ redirect: "/" }}>
                       Erntepost
                     </Link>
-                  </Button>
+                  </CTAButton>
                 ) : null}
                 {user?.labels?.includes("admin") ? (
                   <Button asChild variant="secondary" size="sm" className="rounded-full">
