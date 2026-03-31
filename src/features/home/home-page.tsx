@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowRight,
   Loader2,
   Mail,
@@ -29,6 +28,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -268,7 +268,7 @@ export default function HomePage() {
 
     void loadLiveProducts();
 
-    let unsubscribe = () => {};
+    let unsubscribe = () => { };
 
     try {
       unsubscribe = subscribeToProdukte(({ type, record }) => {
@@ -278,7 +278,7 @@ export default function HomePage() {
       console.error("Failed to subscribe to live products", error);
     }
 
-    let unsubscribeOffers = () => {};
+    let unsubscribeOffers = () => { };
 
     try {
       unsubscribeOffers = subscribeToAngebote(({ type, record }) => {
@@ -671,7 +671,7 @@ export default function HomePage() {
                                         aria-label={isCurrentMonth ? `${month} ist der aktuelle Monat` : undefined}
                                       >
                                         {isCurrentMonth ? (
-                                          <span className="absolute inset-[-2px] rounded-md border border-[var(--color-harvest-500)]/80 animate-[pulse_3.6s_ease-in-out_infinite]" />
+                                          <span className="absolute inset-[-2px] rounded-md border border-[var(--color-lilac-400)]/80 animate-[pulse_3.6s_ease-in-out_infinite]" />
                                         ) : null}
                                         {month}
                                       </div>
@@ -763,31 +763,31 @@ export default function HomePage() {
       </InView>
 
       <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
-        <div className="grid gap-6 lg:grid-cols-[1.18fr_0.82fr] lg:items-center">
-          <div className="home-schema-wrap">
-            <img
-              src="/schema.svg"
-              alt="Handgezeichnete Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
-              className="home-schema-image w-full bg-white object-contain"
-            />
+        <div className="home-vision-copy mx-auto flex max-w-3xl justify-center text-center">
+          <div className="home-vision-copy-line">
+            <p className="home-vision-copy-text max-w-2xl">
+              Gemeinsam wollen wir lokale Landwirtschaft zirkulärer gestalten.
+            </p>
           </div>
+        </div>
+      </section>
 
-          <div className="home-vision-copy flex flex-col gap-5 text-center lg:text-left">
-            <div className="home-vision-copy-line">
-              <p className="max-w-xl font-display text-[2rem] leading-[0.98] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
-                Gemeinsam wollen wir Landwirtschaft zirkulärer und lokaler gestalten.
-              </p>
-            </div>
-            <div className="home-vision-copy-line">
-              <p className="max-w-xl font-display text-[2rem] leading-[0.98] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
-                Mit den Jahreszeiten entstehen neue Produkte, neue Wünsche und neue Möglichkeiten für die Gemeinschaft.
-              </p>
-            </div>
-            <div className="home-vision-copy-line">
-              <p className="max-w-xl font-display text-[2rem] leading-[0.98] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
-                Aus Anbau, Angebot, Austausch und Bestellung soll ein Kreislauf wachsen, der Hof, Region und Menschen stärker verbindet.
-              </p>
-            </div>
+      <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
+        <div className="home-schema-wrap mx-auto w-full max-w-3xl">
+          <img
+            src="/schema.svg"
+            alt="Handgezeichnete Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
+            className="home-schema-image w-full bg-white object-contain"
+          />
+        </div>
+      </section>
+
+      <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
+        <div className="home-vision-copy mx-auto flex max-w-3xl justify-center text-center">
+          <div className="home-vision-copy-line">
+            <p className="home-vision-copy-text max-w-2xl">
+              Mit den Jahreszeiten wachsen neue Produkte, Wünsche und Möglichkeiten.
+            </p>
           </div>
         </div>
       </section>
@@ -844,7 +844,7 @@ export default function HomePage() {
 
       <section className="home-gallery-shell landing-reveal overflow-hidden rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
-          <div className="max-w-4xl px-1 text-center">
+          <div className="max-w-4xl self-center px-1 text-center">
             <h2 className="font-display text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.6rem]">
               Ein Blick auf den Hof.
             </h2>
@@ -864,40 +864,45 @@ export default function HomePage() {
             <CarouselContent>
               {galleryImages.map((image) => (
                 <CarouselItem key={image.src} className="basis-full">
-                  <figure className="overflow-hidden rounded-[1.9rem] border border-[var(--color-soil-900)]/8 bg-white/70">
-                    <img
-                      src={image.src}
-                      alt={image.alt}
-                      className="h-[18rem] w-full object-cover sm:h-[23rem] lg:h-[28rem]"
-                    />
-                    <figcaption className="flex items-center justify-between gap-4 px-4 py-3 text-sm text-[var(--color-soil-700)] sm:px-5">
-                      <span>{image.label}</span>
-                      <span className="font-accent text-[0.72rem] uppercase tracking-[0.18em] text-[var(--color-soil-500)]">
-                        {currentSlide + 1}/{galleryImages.length}
+                  <Card
+                    tone="strong"
+                    className="overflow-hidden rounded-[2rem] border-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(249,244,236,0.94))] shadow-[0_24px_52px_-38px_rgba(35,22,15,0.22)] ring-0"
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <figure className="overflow-hidden rounded-[1.7rem] bg-[var(--color-surface-plain)]">
+                        <img
+                          src={image.src}
+                          alt={image.alt}
+                          className="h-[18rem] w-full object-cover sm:h-[23rem] lg:h-[28rem]"
+                        />
+                      </figure>
+                    </CardContent>
+                    <CardFooter className="flex flex-col items-center justify-center gap-2 border-t-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(244,238,229,0.92))] px-6 py-4 text-center sm:py-5">
+                      <span className="text-sm font-medium text-[var(--color-soil-700)] sm:text-base">
+                        {image.label}
                       </span>
-                    </figcaption>
-                  </figure>
+                      <span className="font-accent text-[0.72rem] uppercase tracking-[0.22em] text-[var(--color-soil-500)]">
+                        {currentSlide + 1} / {galleryImages.length}
+                      </span>
+                    </CardFooter>
+                  </Card>
                 </CarouselItem>
               ))}
             </CarouselContent>
 
-            <button
-              type="button"
+            <CarouselPrevious
               aria-label="Vorheriges Bild"
-              onClick={() => carouselApi?.scrollPrev()}
-              className="absolute left-4 top-[58%] z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--color-soil-900)]/12 bg-[rgba(247,241,231,0.96)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.55)] backdrop-blur transition hover:bg-white"
-            >
-              <ArrowLeft className="size-5" />
-            </button>
+              variant="outline"
+              size="icon"
+              className="left-4 top-[58%] z-20 size-12 -translate-y-1/2 rounded-full border border-[var(--color-soil-900)]/12 bg-[rgba(247,241,231,0.96)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.55)] backdrop-blur transition hover:bg-white disabled:opacity-40"
+            />
 
-            <button
-              type="button"
+            <CarouselNext
               aria-label="Nächstes Bild"
-              onClick={() => carouselApi?.scrollNext()}
-              className="absolute right-4 top-[58%] z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--color-soil-900)]/12 bg-[rgba(247,241,231,0.96)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.55)] backdrop-blur transition hover:bg-white"
-            >
-              <ArrowRight className="size-5" />
-            </button>
+              variant="outline"
+              size="icon"
+              className="right-4 top-[58%] z-20 size-12 -translate-y-1/2 rounded-full border border-[var(--color-soil-900)]/12 bg-[rgba(247,241,231,0.96)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.55)] backdrop-blur transition hover:bg-white disabled:opacity-40"
+            />
           </Carousel>
         </div>
       </section>
@@ -905,11 +910,10 @@ export default function HomePage() {
       <section className="landing-reveal home-feedback-panel rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
           <div className="max-w-4xl self-center text-center">
-            <p className="font-accent text-[0.72rem] uppercase tracking-[0.22em] text-[var(--color-harvest-600)]">
-              Erntepost & Nachricht
-            </p>
-            <h2 className="mt-3 font-display text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.3rem]">
-              Sag uns, was du{" "}
+            <h2 className="mt-3 flex flex-col items-center gap-2 font-display text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.3rem]">
+              <span>
+                Sag uns, was <span className="text-[var(--color-harvest-600)]">du</span>
+              </span>
               <TextLoop
                 className="home-word-rotator"
                 interval={2.6}
@@ -986,7 +990,7 @@ export default function HomePage() {
                       type="submit"
                       size="lg"
                       disabled={isSigningUp}
-                      className="h-12 rounded-full bg-[var(--color-forest-700)] px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-white hover:bg-[var(--color-forest-800)]"
+                      className="h-12 rounded-full bg-primary px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-primary-foreground hover:bg-primary/90"
                     >
                       {isSigningUp ? (
                         <>
@@ -1020,7 +1024,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-3 rounded-[1.2rem] border border-[var(--color-soil-900)]/10 bg-white/80 px-4 py-3 text-sm text-[var(--color-soil-700)]">
-                  <MapPin className="size-4 shrink-0 text-[var(--color-harvest-600)]" />
+                  <MapPin className="size-4 shrink-0 text-[var(--color-lilac-700)]" />
                   Erst anmelden, dann senden.
                 </div>
               )}
@@ -1033,7 +1037,7 @@ export default function HomePage() {
                   value={feedbackText}
                   onChange={(event) => setFeedbackText(event.target.value)}
                   placeholder="Wonach hältst du Ausschau? Welche Produkte oder Informationen wären für dich besonders interessant?"
-                  className="min-h-[12rem] rounded-[1.5rem] border-[var(--color-soil-900)]/10 bg-white px-5 py-4 text-base shadow-none"
+                  className="min-h-[12rem] rounded-[1.5rem] border-[var(--color-soil-900)]/10 bg-white px-5 py-4 text-base shadow-none placeholder:text-center"
                 />
 
                 <div className="flex flex-col items-center gap-3">
@@ -1041,7 +1045,7 @@ export default function HomePage() {
                     type="submit"
                     size="lg"
                     disabled={!user || isSubmitting || !feedbackText.trim()}
-                    className="h-12 rounded-full bg-[var(--color-harvest-500)] px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[#2b1608] hover:bg-[var(--color-harvest-400)] disabled:opacity-50"
+                    className="h-12 rounded-full bg-[var(--color-lilac-400)] px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-earth-700)] hover:bg-[var(--color-lilac-300)] disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>
@@ -1093,17 +1097,17 @@ export default function HomePage() {
       <section className="landing-reveal home-team-panel overflow-hidden rounded-[2rem] px-5 py-7 sm:px-8 sm:py-9">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-5 text-center">
           <h2 className="font-display text-4xl leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.5rem]">
-            Frank & Family.
+            Frank & Family
           </h2>
 
           <p className="max-w-3xl font-display text-[1.7rem] leading-[1.02] tracking-[-0.035em] text-[var(--color-soil-900)] sm:text-[2.25rem]">
-            Ein kleiner Familienbetrieb, auf dem Feld und hinter dem Shop.
+            Familienbetrieb auf dem Feld und im Shop.
           </p>
 
           <p className="max-w-3xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
             Bald kommen auch <span className="home-team-script">Newsletter</span>,{" "}
             <span className="home-team-script">Blog</span> und{" "}
-            <span className="home-team-script">Rezepte</span> dazu.
+            <span className="home-team-script">Rezepte</span> dazu!
           </p>
         </div>
       </section>

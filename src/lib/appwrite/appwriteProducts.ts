@@ -86,9 +86,11 @@ const previewImageInputSchema = z.object({
 });
 
 const upsertProduktInputSchema = z.object({
+  mode: z.enum(["create", "update"]).default("create"),
   id: z.string().trim().optional(),
   name: z.string().trim().min(1),
   sorte: z.string().trim().optional(),
+  imageId: z.string().trim().optional(),
   hauptkategorie: z.string().trim().min(1),
   unterkategorie: z.string().trim().optional(),
   lebensdauer: z.string().trim().optional(),
@@ -323,9 +325,11 @@ export async function listBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function upsertProdukt(input: {
+  mode?: "create" | "update";
   id?: string;
   name: string;
   sorte?: string;
+  imageId?: string;
   hauptkategorie: string;
   unterkategorie?: string;
   lebensdauer?: string;
@@ -338,27 +342,47 @@ export async function upsertProdukt(input: {
 }): Promise<Produkt> {
   const parsedInput = upsertProduktInputSchema.parse(input);
   const documentId = parsedInput.id || ID.unique();
+  const payload = {
+    name: parsedInput.name,
+    sorte: parsedInput.sorte?.trim() || "",
+    hauptkategorie: parsedInput.hauptkategorie,
+    unterkategorie: parsedInput.unterkategorie?.trim() || "",
+    lebensdauer: parsedInput.lebensdauer?.trim() || "",
+    fruchtfolge_vor: parsedInput.fruchtfolgeVor ?? [],
+    fruchtfolge_nach: parsedInput.fruchtfolgeNach ?? [],
+    bodenansprueche: parsedInput.bodenansprueche ?? [],
+    begleitpflanzen: parsedInput.begleitpflanzen ?? [],
+    saisonalitaet: parsedInput.saisonalitaet ?? [],
+    bild_datei_id: parsedInput.imageId?.trim() || null,
+    notizen: parsedInput.notes?.trim() || undefined,
+  };
 
-  const response = await databases.upsertDocument(
-    ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
-    documentId,
-    {
-      name: parsedInput.name,
-      sorte: parsedInput.sorte?.trim() || "",
-      hauptkategorie: parsedInput.hauptkategorie,
-      unterkategorie: parsedInput.unterkategorie?.trim() || "",
-      lebensdauer: parsedInput.lebensdauer?.trim() || "",
-      fruchtfolge_vor: parsedInput.fruchtfolgeVor ?? [],
-      fruchtfolge_nach: parsedInput.fruchtfolgeNach ?? [],
-      bodenansprueche: parsedInput.bodenansprueche ?? [],
-      begleitpflanzen: parsedInput.begleitpflanzen ?? [],
-      saisonalitaet: parsedInput.saisonalitaet ?? [],
-      notizen: parsedInput.notes?.trim() || undefined,
-    },
-  );
+  const response =
+    parsedInput.mode === "update"
+      ? await databases.updateDocument(
+          ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
+          ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
+          z.string().trim().min(1).parse(documentId),
+          payload,
+        )
+      : await databases.createDocument(
+          ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
+          ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
+          documentId,
+          payload,
+        );
 
   return normalizeProdukt(response);
+}
+
+export async function uploadProduktImage(file: File): Promise<string> {
+  const response = await storage.createFile(
+    ensureConfigured(appwriteConfig.storageId, "Storage-Bucket"),
+    ID.unique(),
+    file,
+  );
+
+  return response.$id;
 }
 
 export async function upsertAngebot(input: {

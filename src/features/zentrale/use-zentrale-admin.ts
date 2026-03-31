@@ -1,5 +1,6 @@
 "use client";
 
+import { AppwriteException } from "appwrite";
 import { FormEvent, useEffect, useState } from "react";
 
 import {
@@ -7,6 +8,8 @@ import {
   subscribeToStaffeln,
   upsertProdukt,
   upsertStaffel,
+  uploadProduktImage,
+  getProduktImagePreviewUrl,
 } from "@/lib/appwrite/appwriteProducts";
 
 import {
@@ -21,6 +24,7 @@ import {
   parseOptionalNumberField,
   parseRequiredNumber,
   productToFormState,
+  slugifyProduktId,
   splitList,
   splitMonths,
   type FunctionStatus,
@@ -47,6 +51,8 @@ export function useZentraleAdmin({
   const [productFilter, setProductFilter] = useState("");
   const [offerFilter, setOfferFilter] = useState("");
   const [activePanel, setActivePanel] = useState<"produkte" | "angebote">("produkte");
+  const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const [productImageObjectUrl, setProductImageObjectUrl] = useState<string | null>(null);
 
   const productById = new Map(produkte.map((product) => [product.id, product]));
   const selectedProduct =
@@ -57,6 +63,11 @@ export function useZentraleAdmin({
     selectedOfferId === null
       ? null
       : staffeln.find((offer) => offer.id === selectedOfferId) ?? null;
+  const generatedProductId = selectedProduct?.id ?? slugifyProduktId(productForm.name, productForm.sorte);
+  const productImagePreviewUrl = productImageObjectUrl
+    ?? (productForm.imageId.trim()
+      ? getProduktImagePreviewUrl({ imageId: productForm.imageId.trim(), width: 320, height: 320 })
+      : undefined);
 
   const visibleProducts = [...produkte]
     .filter((product) => {
@@ -132,11 +143,27 @@ export function useZentraleAdmin({
   useEffect(() => {
     if (selectedProduct) {
       setProductForm(productToFormState(selectedProduct));
+      setProductImageFile(null);
       return;
     }
 
     setProductForm(emptyProductForm());
+    setProductImageFile(null);
   }, [selectedProduct]);
+
+  useEffect(() => {
+    if (!productImageFile) {
+      setProductImageObjectUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(productImageFile);
+    setProductImageObjectUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [productImageFile]);
 
   useEffect(() => {
     if (selectedProductId === null) {
@@ -196,7 +223,10 @@ export function useZentraleAdmin({
 
     try {
       const name = productForm.name.trim();
+      const sorte = productForm.sorte.trim();
       const hauptkategorie = productForm.hauptkategorie.trim();
+      const isEditing = Boolean(selectedProduct);
+      const documentId = isEditing ? selectedProduct?.id ?? "" : slugifyProduktId(name, sorte);
 
       if (!name) {
         throw new Error("Produktname ist erforderlich.");
@@ -206,10 +236,15 @@ export function useZentraleAdmin({
         throw new Error("Hauptkategorie ist erforderlich.");
       }
 
-      const saved = await upsertProdukt({
-        id: productForm.id.trim() || undefined,
+      if (!documentId) {
+        throw new Error("Aus Name und Sorte konnte keine Produkt-ID erzeugt werden.");
+      }
+
+      const productPayload = {
+        id: documentId,
         name,
-        sorte: productForm.sorte.trim() || undefined,
+        sorte: sorte || undefined,
+        imageId: productForm.imageId.trim() || undefined,
         hauptkategorie,
         unterkategorie: productForm.unterkategorie.trim() || undefined,
         lebensdauer: productForm.lebensdauer.trim() || undefined,
@@ -219,22 +254,46 @@ export function useZentraleAdmin({
         begleitpflanzen: splitList(productForm.begleitpflanzen),
         saisonalitaet: splitMonths(productForm.saisonalitaet),
         notes: productForm.notes.trim() || undefined,
+      };
+
+      let saved = await upsertProdukt({
+        mode: isEditing ? "update" : "create",
+        ...productPayload,
+        imageId: productImageFile ? undefined : productPayload.imageId,
       });
 
+      if (productImageFile) {
+        try {
+          const uploadedImageId = await uploadProduktImage(productImageFile);
+          saved = await upsertProdukt({
+            mode: "update",
+            ...productPayload,
+            imageId: uploadedImageId,
+          });
+        } catch (rawError) {
+          setSelectedProductId(saved.id);
+          setProductForm(productToFormState(saved));
+          setProductStatus({
+            state: "error",
+            message: `Produkt wurde gespeichert, aber das Bild konnte nicht hochgeladen werden: ${toErrorMessage(rawError)}`,
+          });
+          return saved;
+        }
+      }
+
       setSelectedProductId(saved.id);
+      setProductForm(productToFormState(saved));
+      setProductImageFile(null);
       setActivePanel("produkte");
       setProductStatus({
         state: "success",
-        message: selectedProductId
+        message: selectedProduct
           ? "Produkt wurde veröffentlicht."
           : "Produkt wurde angelegt und veröffentlicht.",
       });
       return saved;
     } catch (rawError) {
-      const message =
-        rawError instanceof Error
-          ? rawError.message
-          : String(rawError ?? "Produkt konnte nicht gespeichert werden.");
+      const message = formatProductSaveError(rawError, generatedProductId);
       setProductStatus({ state: "error", message });
       return null;
     }
@@ -305,6 +364,7 @@ export function useZentraleAdmin({
     setSelectedProductId(null);
     setProductStatus({ state: "idle" });
     setProductForm(emptyProductForm());
+    setProductImageFile(null);
   }
 
   function resetOfferForm() {
@@ -333,6 +393,7 @@ export function useZentraleAdmin({
     setSelectedProductId(null);
     setProductStatus({ state: "idle" });
     setProductForm(emptyProductForm());
+    setProductImageFile(null);
     setActivePanel("produkte");
   }
 
@@ -365,11 +426,15 @@ export function useZentraleAdmin({
     totalAvailableQuantity,
     totalExpectedRevenue,
     activeSeasonOffers,
+    generatedProductId,
+    productImageFileName: productImageFile?.name ?? "",
+    productImagePreviewUrl,
     setProductForm,
     setOfferForm,
     setProductFilter,
     setOfferFilter,
     setActivePanel,
+    setProductImageFile,
     saveProduct,
     publishProduct,
     saveOffer,
@@ -381,4 +446,20 @@ export function useZentraleAdmin({
     selectOffer,
     formatCurrency,
   };
+}
+
+function toErrorMessage(rawError: unknown): string {
+  if (rawError instanceof Error) {
+    return rawError.message;
+  }
+
+  return String(rawError ?? "Unbekannter Fehler");
+}
+
+function formatProductSaveError(rawError: unknown, desiredId: string): string {
+  if (rawError instanceof AppwriteException && rawError.code === 409) {
+    return `Die Produkt-ID "${desiredId}" existiert bereits. Bitte Name oder Sorte anpassen oder den bestehenden Datensatz bearbeiten.`;
+  }
+
+  return toErrorMessage(rawError) || "Produkt konnte nicht gespeichert werden.";
 }

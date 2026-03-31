@@ -17,17 +17,17 @@
 }
 
 :root {
-  --color-soil-900: #23160f;
-  --color-soil-700: #5c4b41;
-  --color-soil-500: #8f7867;
-  --color-forest-50: #ebf4ea;
-  --color-forest-700: #214b36;
-  --color-forest-800: #163626;
-  --color-gold-300: #f3cf67;
-  --color-gold-500: #d6a625;
-  --color-harvest-400: #ff875f;
-  --color-harvest-500: #f05b28;
-  --color-harvest-600: #c94717;
+  --color-soil-900: var(--color-earth-600);
+  --color-soil-700: color-mix(in srgb, var(--color-earth-400) 72%, var(--color-earth-500) 28%);
+  --color-soil-500: color-mix(in srgb, var(--color-earth-300) 74%, var(--color-lilac-200) 26%);
+  --color-forest-50: color-mix(in srgb, var(--color-permdal-50) 82%, white 18%);
+  --color-forest-700: var(--color-permdal-700);
+  --color-forest-800: var(--color-permdal-800);
+  --color-gold-300: color-mix(in srgb, var(--color-earth-100) 74%, var(--color-grain-50) 26%);
+  --color-gold-500: var(--color-earth-300);
+  --color-harvest-400: var(--color-lilac-300);
+  --color-harvest-500: var(--color-lilac-400);
+  --color-harvest-600: var(--color-lilac-700);
 }
 
 html {
@@ -36,8 +36,14 @@ html {
 
 body {
   background:
-    radial-gradient(circle at top, rgba(240, 91, 40, 0.06), transparent 24%),
-    linear-gradient(180deg, #f8efe1 0%, #f6f1e6 46%, #f5f0e8 100%);
+    radial-gradient(circle at top, color-mix(in srgb, var(--color-earth-200) 30%, transparent) 0%, transparent 26%),
+    radial-gradient(circle at 84% 10%, color-mix(in srgb, var(--color-lilac-200) 26%, transparent) 0%, transparent 20%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-background) 96%, white 4%) 0%,
+      var(--color-background) 54%,
+      color-mix(in srgb, var(--color-background) 92%, var(--color-grain-100) 8%) 100%
+    );
 }
 
 .font-display {
@@ -54,10 +60,15 @@ body {
 
 .brand-top-glow {
   background:
-    radial-gradient(circle at top, rgba(240, 91, 40, 0.2), transparent 40%),
-    radial-gradient(circle at 82% 14%, rgba(166, 153, 211, 0.18), transparent 24%),
-    radial-gradient(circle at 18% 18%, rgba(217, 166, 37, 0.18), transparent 26%),
-    linear-gradient(180deg, #f8efe1 0%, #f6f1e6 45%, #f4efe6 100%);
+    radial-gradient(circle at top, color-mix(in srgb, var(--color-earth-200) 36%, transparent) 0%, transparent 38%),
+    radial-gradient(circle at 82% 14%, color-mix(in srgb, var(--color-lilac-200) 34%, transparent) 0%, transparent 24%),
+    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--color-permdal-100) 22%, transparent) 0%, transparent 24%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-background) 95%, white 5%) 0%,
+      var(--color-background) 45%,
+      color-mix(in srgb, var(--color-background) 92%, var(--color-grain-100) 8%) 100%
+    );
 }
 
 .brand-cta-primary {
@@ -95,15 +106,16 @@ body {
 
 .home-live-products-panel {
   background:
-    radial-gradient(circle at 86% 16%, rgba(166, 153, 211, 0.14), transparent 24%),
-    radial-gradient(circle at 14% 18%, rgba(118, 174, 120, 0.1), transparent 22%),
-    radial-gradient(circle at top left, rgba(214, 166, 37, 0.08), transparent 22%),
-    linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(248, 242, 232, 0.84));
+    radial-gradient(circle at 86% 16%, color-mix(in srgb, var(--color-lilac-200) 26%, transparent) 0%, transparent 24%),
+    radial-gradient(circle at 14% 18%, color-mix(in srgb, var(--color-permdal-100) 18%, transparent) 0%, transparent 22%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-earth-100) 16%, transparent) 0%, transparent 22%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.92), color-mix(in srgb, var(--color-background) 82%, white 18%));
 }
 
 .home-process-shell {
   background:
-    radial-gradient(circle at 88% 18%, rgba(166, 153, 211, 0.12), transparent 22%),
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--color-lilac-200) 22%, transparent) 0%, transparent 22%),
+    radial-gradient(circle at 12% 14%, color-mix(in srgb, var(--color-earth-100) 14%, transparent) 0%, transparent 20%),
     color-mix(in srgb, var(--color-surface-plain) 74%, #ffffff 26%);
   border: 1px solid color-mix(in srgb, var(--color-surface-outline) 92%, #ffffff 8%);
   box-shadow: 0 26px 60px -50px rgba(35, 22, 15, 0.22);
@@ -258,9 +270,13 @@ body {
 
 .home-vision-panel {
   background:
-    radial-gradient(circle at 88% 18%, rgba(166, 153, 211, 0.16), transparent 20%),
-    radial-gradient(circle at top left, rgba(214, 166, 37, 0.08), transparent 22%),
-    linear-gradient(180deg, rgba(255, 252, 247, 0.32), rgba(247, 241, 231, 0.2));
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--color-lilac-200) 34%, transparent) 0%, transparent 20%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-earth-100) 18%, transparent) 0%, transparent 22%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, white 28%, transparent) 0%,
+      color-mix(in srgb, var(--color-background) 26%, transparent) 100%
+    );
   border: 0;
   box-shadow: none;
 }
@@ -292,19 +308,17 @@ body {
 }
 
 .home-vision-copy-line {
-  position: relative;
-  padding-left: 1.25rem;
+  width: fit-content;
+  margin-inline: auto;
 }
 
-.home-vision-copy-line::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.45rem;
-  height: calc(100% - 0.9rem);
-  width: 2px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(240, 91, 40, 0.65), rgba(214, 166, 37, 0.12));
+.home-vision-copy-text {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 400;
+  color: var(--color-soil-900);
 }
 
 .home-promise-panel {
@@ -370,43 +384,24 @@ body {
 .year-wheel-section {
   --year-wheel-accent: #f4d37d;
   --year-wheel-muted: rgba(255, 249, 239, 0.64);
-  background:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.08), transparent 24%),
-    radial-gradient(circle at 84% 18%, rgba(255, 226, 157, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(18, 28, 25, 0.96), rgba(13, 20, 18, 0.98));
-  box-shadow: 0 28px 60px -44px rgba(15, 23, 18, 0.6);
+  background: transparent;
+  box-shadow: none;
 }
 
 .year-wheel-section-winter {
   --year-wheel-accent: #d7efff;
-  background:
-    radial-gradient(circle at 18% 14%, rgba(214, 238, 255, 0.18), transparent 26%),
-    radial-gradient(circle at 84% 12%, rgba(255, 255, 255, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(18, 35, 48, 0.97), rgba(11, 20, 28, 0.98));
 }
 
 .year-wheel-section-spring {
   --year-wheel-accent: #b7e182;
-  background:
-    radial-gradient(circle at 16% 12%, rgba(196, 233, 151, 0.16), transparent 26%),
-    radial-gradient(circle at 88% 18%, rgba(246, 224, 176, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(25, 48, 34, 0.96), rgba(15, 27, 20, 0.98));
 }
 
 .year-wheel-section-summer {
   --year-wheel-accent: #ffd474;
-  background:
-    radial-gradient(circle at 20% 8%, rgba(255, 220, 122, 0.24), transparent 24%),
-    radial-gradient(circle at 84% 18%, rgba(255, 168, 92, 0.14), transparent 26%),
-    linear-gradient(180deg, rgba(55, 36, 20, 0.96), rgba(25, 19, 13, 0.98));
 }
 
 .year-wheel-section-autumn {
   --year-wheel-accent: #ebb07a;
-  background:
-    radial-gradient(circle at 16% 8%, rgba(234, 172, 114, 0.16), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(165, 180, 201, 0.14), transparent 26%),
-    linear-gradient(180deg, rgba(42, 29, 22, 0.97), rgba(20, 17, 16, 0.98));
 }
 
 .year-wheel-stage {
@@ -415,7 +410,11 @@ body {
   overflow: hidden;
   border-radius: 1.8rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 11, 10, 0.18);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(82, 108, 74, 0.22), transparent 34%),
+    radial-gradient(circle at 16% 22%, rgba(114, 151, 96, 0.12), transparent 26%),
+    radial-gradient(circle at 84% 18%, rgba(95, 129, 86, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(29, 49, 37, 0.92), rgba(17, 31, 22, 0.96));
 }
 
 .year-wheel-stage::after {
@@ -604,15 +603,21 @@ body {
   background: rgba(255, 252, 246, 0.12);
 }
 
+.year-wheel-badge-page {
+  border-color: color-mix(in srgb, var(--color-lilac-200) 56%, var(--color-border) 44%);
+  background: color-mix(in srgb, var(--color-background) 78%, white 22%);
+  color: var(--color-soil-900);
+}
+
 .year-wheel-nearby-button {
   display: grid;
   gap: 0.25rem;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid color-mix(in srgb, var(--color-border) 86%, white 14%);
+  background: color-mix(in srgb, var(--color-background) 72%, white 28%);
   padding: 0.8rem 0.95rem;
   text-align: center;
-  color: rgba(255, 252, 246, 0.9);
+  color: var(--color-soil-900);
   transition:
     transform 220ms var(--ease-emphasized),
     background-color 220ms var(--ease-emphasized),
@@ -621,8 +626,8 @@ body {
 
 .year-wheel-nearby-button:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--color-accent) 24%, white 76%);
+  border-color: color-mix(in srgb, var(--color-lilac-300) 64%, var(--color-border) 36%);
 }
 
 .year-wheel-nearby-date {
@@ -630,37 +635,13 @@ body {
   font-size: 0.67rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--year-wheel-accent);
+  color: var(--color-soil-500);
 }
 
 .year-wheel-nearby-title {
   font-size: 0.96rem;
   line-height: 1.4;
-}
-
-.year-wheel-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.6rem 1rem;
-  max-width: 42rem;
-  padding-top: 0.2rem;
-}
-
-.year-wheel-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: rgba(255, 252, 246, 0.78);
-  font-size: 0.84rem;
-}
-
-.year-wheel-legend-dot {
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 999px;
-  background: var(--year-wheel-accent);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+  color: var(--color-soil-900);
 }
 
 @media (max-width: 1023px) {
@@ -761,16 +742,23 @@ body {
 }
 
 .home-word-rotator {
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
   min-height: 1.08em;
   max-width: 100%;
+  color: var(--color-soil-900);
+  text-align: center;
   vertical-align: baseline;
 }
 
 .home-word-rotator-option {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 1.08em;
-  color: var(--color-harvest-600);
+  color: inherit;
+  text-align: center;
 }
 
 .home-team-panel {

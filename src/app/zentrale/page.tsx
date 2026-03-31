@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, CircleAlert, PencilLine, Plus, Sparkles, Sprout, Upload, Boxes } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, Sparkles, Sprout, Upload, Boxes } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ import {
   hauptkategorieValues,
   lebensdauerValues,
   productToFormState,
+  slugifyProduktId,
   splitMonths,
   type ProductFormState,
   unterkategorieValues,
@@ -38,6 +40,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
 import { cn } from "@/lib/utils";
+import { statusToneRecipes, surfaceRecipes, textRecipes } from "@/theme/recipes";
 
 const PRODUCT_DRAFT_STORAGE_KEY = "zentrale-product-drafts-v1";
 const NEW_PRODUCT_KEY = "__new_product__";
@@ -66,7 +69,7 @@ type ProductStatusTone = {
 
 function AdminLoading() {
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(182,209,164,0.18),transparent_26%),radial-gradient(circle_at_top_right,rgba(190,176,235,0.14),transparent_22%),linear-gradient(180deg,var(--color-background),color-mix(in_srgb,var(--color-surface-soft)_42%,white_58%))] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <Skeleton className="h-20 rounded-[1.5rem]" />
         <Skeleton className="h-10 rounded-full" />
@@ -78,10 +81,10 @@ function AdminLoading() {
 
 function AdminError({ message }: { message: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-lg border-destructive/40 bg-card/95 shadow-brand-strong">
+    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(182,209,164,0.18),transparent_26%),linear-gradient(180deg,var(--color-background),color-mix(in_srgb,var(--color-surface-soft)_42%,white_58%))] px-4 py-8">
+      <Card className={cn("w-full max-w-lg border-destructive/40 shadow-brand-strong", surfaceRecipes({ tone: "strong" }))}>
         <CardHeader>
-          <CardTitle className="text-destructive">Fehler beim Laden</CardTitle>
+          <CardTitle className={cn(textRecipes({ role: "title" }), "text-destructive")}>Fehler beim Laden</CardTitle>
           <CardDescription>{message}</CardDescription>
         </CardHeader>
       </Card>
@@ -106,10 +109,10 @@ function RowButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition",
+        "inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm transition",
         active
-          ? "border-transparent bg-primary text-primary-foreground"
-          : "border-border bg-background text-foreground hover:bg-muted",
+          ? cn(statusToneRecipes({ tone: "seasonal" }), "border-transparent")
+          : "border-border bg-surface-card text-foreground hover:bg-surface-soft",
         disabled && "pointer-events-none opacity-50",
       )}
     >
@@ -120,9 +123,9 @@ function RowButton({
 
 function EmptyCategoryState({ categoryLabel }: { categoryLabel: string }) {
   return (
-    <Card className="border-dashed border-border/80 bg-background/70">
+    <Card className={cn("border-dashed border-border/80", surfaceRecipes({ tone: "default" }))}>
       <CardHeader>
-        <CardTitle className="text-base text-earth-700">Keine Produkte in {categoryLabel}</CardTitle>
+        <CardTitle className={cn(textRecipes({ role: "title" }), "text-base")}>Keine Produkte in {categoryLabel}</CardTitle>
       </CardHeader>
     </Card>
   );
@@ -130,8 +133,8 @@ function EmptyCategoryState({ categoryLabel }: { categoryLabel: string }) {
 
 function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid gap-1 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
-      <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
+    <div className="grid gap-1 rounded-xl border border-border/60 bg-surface-soft px-3 py-2">
+      <span className={cn(textRecipes({ role: "meta" }), "text-[11px] uppercase tracking-[0.16em]")}>{label}</span>
       <div className="text-sm text-foreground">{value}</div>
     </div>
   );
@@ -150,7 +153,9 @@ function RadioOption({
     <label
       className={cn(
         "flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition",
-        checked ? "border-earth-500 bg-earth-50/70" : "border-border/70 bg-background/60",
+        checked
+          ? "border-transparent bg-accent text-accent-foreground shadow-brand-soft"
+          : "border-border/70 bg-surface-soft",
       )}
     >
       <RadioGroupItem value={value} />
@@ -171,9 +176,9 @@ function SwitchRow({
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-border/70 bg-background/60 px-4 py-3">
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-border/70 bg-surface-soft px-4 py-3">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-foreground">{title}</span>
+        <span className={cn(textRecipes({ role: "label" }), "text-sm text-foreground")}>{title}</span>
         <span className="text-sm text-muted-foreground">{description}</span>
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
@@ -267,33 +272,43 @@ function readStoredDrafts(): Record<string, ProductDraftRecord> {
 function InlineProductEditor({
   title,
   description,
+  idMode,
   form,
   meta,
+  imagePreviewUrl,
+  imageFileName,
   productStatusMessage,
   isPublishing,
   onCancel,
   onSaveDraft,
   onPublishIntent,
   onFieldChange,
+  onImageFileChange,
   onMetaChange,
 }: {
   title: string;
   description: string;
+  idMode: "auto" | "fixed";
   form: ProductFormState;
   meta: ProductDraftMeta;
+  imagePreviewUrl?: string;
+  imageFileName?: string;
   productStatusMessage?: string;
   isPublishing: boolean;
   onCancel: () => void;
   onSaveDraft: () => void;
   onPublishIntent: () => void;
   onFieldChange: <K extends keyof ProductFormState>(field: K, value: ProductFormState[K]) => void;
+  onImageFileChange: (file: File | null) => void;
   onMetaChange: (patch: Partial<ProductDraftMeta>, preferred?: ProductWorkflowState) => void;
 }) {
   const canPublish = meta.readyToPublish && (meta.workflowState === "dirty" || meta.workflowState === "draftSaved");
+  const [showImageControls, setShowImageControls] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <Card className="border-earth-500/20 bg-card/95 shadow-brand-soft">
-      <CardHeader className="gap-4 border-b border-border/70">
+    <Card className={cn("border-0 shadow-none", surfaceRecipes({ tone: "default" }))}>
+      <CardHeader className="gap-4 border-b border-border/70 bg-surface-card">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -303,7 +318,7 @@ function InlineProductEditor({
               {form.hauptkategorie ? <Badge variant="outline">{displayValueLabel(form.hauptkategorie)}</Badge> : null}
             </div>
             <div>
-              <CardTitle className="text-xl text-earth-700">{title}</CardTitle>
+              <CardTitle className={cn(textRecipes({ role: "headline" }), "text-xl")}>{title}</CardTitle>
               <CardDescription className="mt-1">{description}</CardDescription>
             </div>
           </div>
@@ -322,7 +337,7 @@ function InlineProductEditor({
           </div>
         </div>
 
-        <Alert variant={meta.workflowState === "dirty" ? "destructive" : "default"}>
+        <Alert variant={meta.workflowState === "dirty" ? "destructive" : "default"} className="bg-surface-soft">
           {meta.workflowState === "dirty" ? <CircleAlert /> : <CheckCircle2 />}
           <AlertTitle>
             {meta.workflowState === "dirty"
@@ -342,57 +357,8 @@ function InlineProductEditor({
         </Alert>
       </CardHeader>
 
-      <CardContent className="grid gap-5 p-5">
+      <CardContent className="grid gap-5 bg-surface-plain p-5">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <SwitchRow
-            title="Für Marktplatz sichtbar"
-            description="Signalisiert, dass dieses Produkt öffentlich sichtbar sein soll."
-            checked={meta.isVisible}
-            onCheckedChange={(checked) =>
-              onMetaChange(
-                {
-                  isVisible: checked,
-                  draftUpdatedAt: new Date().toISOString(),
-                },
-                "dirty",
-              )
-            }
-          />
-          <SwitchRow
-            title="Als saisonal aktiv markieren"
-            description="Zeigt an, dass der Entwurf aktuell saisonal hervorgehoben werden soll."
-            checked={meta.seasonalActive}
-            onCheckedChange={(checked) =>
-              onMetaChange(
-                {
-                  seasonalActive: checked,
-                  draftUpdatedAt: new Date().toISOString(),
-                },
-                "dirty",
-              )
-            }
-          />
-          <SwitchRow
-            title="Zur Veröffentlichung vormerken"
-            description="Ohne diese bewusste Freigabe bleibt Veröffentlichen gesperrt."
-            checked={meta.readyToPublish}
-            onCheckedChange={(checked) =>
-              onMetaChange(
-                {
-                  readyToPublish: checked,
-                  draftUpdatedAt: new Date().toISOString(),
-                },
-                checked ? "draftSaved" : "dirty",
-              )
-            }
-          />
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <div className="grid gap-2">
-            <Label htmlFor="produkt-id">Produkt-ID</Label>
-            <Input id="produkt-id" value={form.id} onChange={(event) => onFieldChange("id", event.target.value)} />
-          </div>
           <div className="grid gap-2">
             <Label htmlFor="produkt-name">Name</Label>
             <Input id="produkt-name" value={form.name} onChange={(event) => onFieldChange("name", event.target.value)} />
@@ -401,9 +367,170 @@ function InlineProductEditor({
             <Label htmlFor="produkt-sorte">Sorte</Label>
             <Input id="produkt-sorte" value={form.sorte} onChange={(event) => onFieldChange("sorte", event.target.value)} />
           </div>
+          <div className="grid gap-2">
+            <Label htmlFor="produkt-id">Produkt-ID</Label>
+            <Input
+              id="produkt-id"
+              value={form.id}
+              readOnly
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              {idMode === "auto"
+                ? "Auto: wird beim Tippen aus Name und Sorte abgeleitet."
+                : "Bestehende Produkte behalten ihre aktuelle Dokument-ID."}
+            </p>
+          </div>
         </div>
 
-        <Accordion type="multiple" defaultValue={["klassifikation", "veroeffentlichung"]} className="w-full rounded-[1.25rem] border border-border/70 bg-background/50 px-4">
+        <div className="rounded-[1.25rem] border border-border/70 bg-surface-soft p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShowImageControls((current) => !current)}
+                className="cursor-pointer rounded-full"
+              >
+                <Avatar className="size-18 border border-border/70 bg-muted/35 shadow-sm">
+                  {imagePreviewUrl ? (
+                    <AvatarImage src={imagePreviewUrl} alt={form.name || "Produktbild"} className="rounded-full object-cover" />
+                  ) : null}
+                  <AvatarFallback className="bg-muted/60 text-muted-foreground">
+                    <ImagePlus className="size-6" />
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium text-foreground">Produktbild</h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Avatar anklicken oder mit den Aktionen unten Bild hochladen, ersetzen oder eine Datei-ID verknüpfen.
+                </p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {imageFileName
+                    ? `Ausgewählt: ${imageFileName}`
+                    : form.imageId.trim()
+                      ? `Verknüpfte Datei-ID: ${form.imageId.trim()}`
+                      : "Aktuell ist noch kein Bild verknüpft."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={imageInputRef}
+                id="produkt-image-file"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/avif"
+                className="hidden"
+                onChange={(event) => onImageFileChange(event.target.files?.[0] ?? null)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <Upload data-icon="inline-start" />
+                {imagePreviewUrl || imageFileName || form.imageId.trim() ? "Bild ersetzen" : "Bild hochladen"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowImageControls((current) => !current)}
+              >
+                <Link2 data-icon="inline-start" />
+                Datei-ID
+              </Button>
+            </div>
+          </div>
+
+          {showImageControls ? (
+            <div className="mt-4 grid gap-3 rounded-[1rem] border border-dashed border-border/70 bg-surface-plain p-3">
+              <div className="grid gap-2">
+                <Label htmlFor="produkt-image-id">Appwrite Datei-ID manuell verknüpfen</Label>
+                <Input
+                  id="produkt-image-id"
+                  value={form.imageId}
+                  onChange={(event) => onFieldChange("imageId", event.target.value)}
+                  placeholder="z. B. 67fd2f4f0012abcd1234"
+                />
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Upload funktioniert über den Button
+                {" "}
+                <span className="font-medium text-foreground">Bild hochladen</span>
+                {" "}
+                und wird beim nächsten Speichern in den Bucket
+                {" "}
+                <span className="font-mono text-foreground">produkt_bilder</span>
+                {" "}
+                hochgeladen.
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <Accordion type="multiple" defaultValue={["sichtbarkeit", "freigabe", "klassifikation", "veroeffentlichung"]} className="w-full rounded-[1.25rem] border border-border/70 bg-surface-soft px-4">
+          <AccordionItem value="sichtbarkeit">
+            <AccordionTrigger>Marktplatzsichtbarkeit</AccordionTrigger>
+            <AccordionContent className="pt-2">
+              <SwitchRow
+                title="Für Marktplatz sichtbar"
+                description="Signalisiert, dass dieses Produkt öffentlich sichtbar sein soll."
+                checked={meta.isVisible}
+                onCheckedChange={(checked) =>
+                  onMetaChange(
+                    {
+                      isVisible: checked,
+                      draftUpdatedAt: new Date().toISOString(),
+                    },
+                    "dirty",
+                  )
+                }
+              />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="saisonal_aktiv">
+            <AccordionTrigger>Saisonale Hervorhebung</AccordionTrigger>
+            <AccordionContent className="pt-2">
+              <SwitchRow
+                title="Als saisonal aktiv markieren"
+                description="Zeigt an, dass der Entwurf aktuell saisonal hervorgehoben werden soll."
+                checked={meta.seasonalActive}
+                onCheckedChange={(checked) =>
+                  onMetaChange(
+                    {
+                      seasonalActive: checked,
+                      draftUpdatedAt: new Date().toISOString(),
+                    },
+                    "dirty",
+                  )
+                }
+              />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="freigabe">
+            <AccordionTrigger>Freigabe zur Veröffentlichung</AccordionTrigger>
+            <AccordionContent className="pt-2">
+              <SwitchRow
+                title="Zur Veröffentlichung vormerken"
+                description="Ohne diese bewusste Freigabe bleibt Veröffentlichen gesperrt."
+                checked={meta.readyToPublish}
+                onCheckedChange={(checked) =>
+                  onMetaChange(
+                    {
+                      readyToPublish: checked,
+                      draftUpdatedAt: new Date().toISOString(),
+                    },
+                    checked ? "draftSaved" : "dirty",
+                  )
+                }
+              />
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="klassifikation">
             <AccordionTrigger>Klassifikation</AccordionTrigger>
             <AccordionContent className="grid gap-4 pt-2">
@@ -705,6 +832,12 @@ function ZentraleWorkspace({
 
     state.setProductForm((current) => {
       const next = { ...current, [field]: value };
+      if (activeDraftKey === NEW_PRODUCT_KEY && (field === "name" || field === "sorte")) {
+        next.id = slugifyProduktId(
+          field === "name" ? String(value) : next.name,
+          field === "sorte" ? String(value) : next.sorte,
+        );
+      }
       persistDraft(activeDraftKey, next, { draftUpdatedAt: new Date().toISOString() }, "dirty");
       return next;
     });
@@ -824,10 +957,12 @@ function ZentraleWorkspace({
       ? "Produkt zuerst als Entwurf anlegen, dann bewusst veröffentlichen."
       : "Änderungen bleiben intern, bis du sie ausdrücklich veröffentlichst.";
 
+  const editorOpen = editorTarget !== null;
+
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.6)),linear-gradient(130deg,rgba(245,250,245,0.88),rgba(243,239,226,0.88))] px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(182,209,164,0.18),transparent_24%),radial-gradient(circle_at_top_right,rgba(190,176,235,0.14),transparent_22%),linear-gradient(180deg,var(--color-background),color-mix(in_srgb,var(--color-surface-soft)_44%,white_56%))] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className={cn("flex flex-wrap items-center gap-3 rounded-[1.6rem] px-4 py-4", surfaceRecipes({ tone: "band" }))}>
           <RowButton active>
             <Sprout className="size-4" />
             Produkte
@@ -849,7 +984,7 @@ function ZentraleWorkspace({
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className={cn("flex flex-wrap items-center gap-3 rounded-[1.4rem] px-4 py-3", surfaceRecipes({ tone: "default" }))}>
           {availableCategories.map((category) => (
             <RowButton
               key={category}
@@ -865,62 +1000,58 @@ function ZentraleWorkspace({
           <EmptyCategoryState categoryLabel={displayValueLabel(activeCategory)} />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {editorTarget?.kind === "new" && activeMeta ? (
-              <div className="md:col-span-2">
-                <InlineProductEditor
-                  title={editorTitle}
-                  description={editorDescription}
-                  form={state.productForm}
-                  meta={activeMeta}
-                  productStatusMessage={state.productStatus.message}
-                  isPublishing={state.productStatus.state === "loading"}
-                  onCancel={closeEditor}
-                  onSaveDraft={saveDraft}
-                  onPublishIntent={() => setPublishOpen(true)}
-                  onFieldChange={updateProductField}
-                  onMetaChange={updateMeta}
-                />
-              </div>
-            ) : null}
-
             {productsForActiveCategory.map((product) => {
               const statusTone = productStatusForCard(product);
-              const showEditor = editorTarget?.kind === "existing" && editorTarget.id === product.id && activeMeta;
 
               return (
-                <div key={product.id} className="contents">
+                <div key={product.id}>
                   <ProductCard
                     product={product}
                     selected={editorTarget?.kind === "existing" && editorTarget.id === product.id}
                     statusLabel={statusTone.label}
                     statusVariant={statusTone.variant}
-                    onSelect={() => state.selectProduct(product.id)}
+                    onSelect={() => openExistingEditor(product.id)}
                     onEdit={() => openExistingEditor(product.id)}
                   />
-
-                  {showEditor ? (
-                    <div className="md:col-span-2">
-                      <InlineProductEditor
-                        title={editorTitle}
-                        description={editorDescription}
-                        form={state.productForm}
-                        meta={activeMeta}
-                        productStatusMessage={state.productStatus.message}
-                        isPublishing={state.productStatus.state === "loading"}
-                        onCancel={closeEditor}
-                        onSaveDraft={saveDraft}
-                        onPublishIntent={() => setPublishOpen(true)}
-                        onFieldChange={updateProductField}
-                        onMetaChange={updateMeta}
-                      />
-                    </div>
-                  ) : null}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <Dialog
+        open={editorOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEditor();
+          }
+        }}
+      >
+        <DialogContent className={cn("w-[min(1320px,calc(100vw-2rem))] !bg-surface-plain [background:var(--color-surface-plain)] [backdrop-filter:none] sm:max-w-[min(1320px,calc(100vw-2rem))] overflow-hidden p-0 shadow-[0_32px_90px_-32px_rgba(0,0,0,0.38)]", textRecipes({ role: "label" }))}>
+          <div className="max-h-[92vh] overflow-y-auto">
+            {activeMeta ? (
+              <InlineProductEditor
+                title={editorTitle}
+                description={editorDescription}
+                idMode={editorTarget?.kind === "new" ? "auto" : "fixed"}
+                form={state.productForm}
+                meta={activeMeta}
+                imagePreviewUrl={state.productImagePreviewUrl}
+                imageFileName={state.productImageFileName}
+                productStatusMessage={state.productStatus.message}
+                isPublishing={state.productStatus.state === "loading"}
+                onCancel={closeEditor}
+                onSaveDraft={saveDraft}
+                onPublishIntent={() => setPublishOpen(true)}
+                onFieldChange={updateProductField}
+                onImageFileChange={state.setProductImageFile}
+                onMetaChange={updateMeta}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
         <DialogContent>

@@ -58,6 +58,7 @@ export type ProductFormState = {
   id: string;
   name: string;
   sorte: string;
+  imageId: string;
   hauptkategorie: string;
   unterkategorie: string;
   lebensdauer: string;
@@ -212,6 +213,7 @@ export function emptyProductForm(): ProductFormState {
     id: "",
     name: "",
     sorte: "",
+    imageId: "",
     hauptkategorie: "",
     unterkategorie: "",
     lebensdauer: "",
@@ -250,6 +252,7 @@ export function productToFormState(product: Produkt): ProductFormState {
     id: product.id,
     name: product.name,
     sorte: product.sorte,
+    imageId: product.imageId ?? "",
     hauptkategorie: product.hauptkategorie,
     unterkategorie: product.unterkategorie,
     lebensdauer: product.lebensdauer,
@@ -260,6 +263,21 @@ export function productToFormState(product: Produkt): ProductFormState {
     saisonalitaet: (product.saisonalitaet ?? []).join(", "),
     notes: product.notes ?? "",
   };
+}
+
+export function slugifyProduktId(name: string, sorte?: string): string {
+  return [name, sorte]
+    .map((value) => (value ?? "").trim())
+    .filter((value) => value.length > 0)
+    .join(" ")
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " und ")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
 }
 
 export function offerToFormState(offer: Staffel): OfferFormState {

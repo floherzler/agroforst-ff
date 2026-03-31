@@ -47,28 +47,16 @@ const SEASON_LABELS = {
   autumn: "Herbst",
 } as const;
 
-function wrapDay(day: number) {
-  const normalized = ((Math.round(day) - 1) % TOTAL_DAYS + TOTAL_DAYS) % TOTAL_DAYS;
-  return normalized + 1;
+function clampDay(day: number) {
+  return Math.min(TOTAL_DAYS, Math.max(1, Math.round(day)));
 }
 
 function dayToAngle(day: number) {
   return ((day - 1) / TOTAL_DAYS) * 360;
 }
 
-function normalizeAngle(angle: number) {
-  if (angle > 180) {
-    return angle - 360;
-  }
-  if (angle < -180) {
-    return angle + 360;
-  }
-  return angle;
-}
-
 function dayDistance(a: number, b: number) {
-  const diff = Math.abs(a - b);
-  return Math.min(diff, TOTAL_DAYS - diff);
+  return Math.abs(a - b);
 }
 
 function getSeasonForDay(day: number): YearWheelSeason {
@@ -132,7 +120,7 @@ function getEventAnchorDay(event: YearWheelEvent) {
 }
 
 function getRelativeAngle(day: number, selectedDay: number) {
-  return normalizeAngle(dayToAngle(day) - dayToAngle(selectedDay));
+  return dayToAngle(day) - dayToAngle(selectedDay);
 }
 
 function isVisibleAngle(angle: number) {
@@ -177,7 +165,13 @@ export function YearWheelSection() {
     }
 
     const interval = window.setInterval(() => {
-      setSelectedDay((current) => wrapDay(current + 1));
+      setSelectedDay((current) => {
+        if (current >= TOTAL_DAYS) {
+          setIsAutoTurning(false);
+          return TOTAL_DAYS;
+        }
+        return clampDay(current + 1);
+      });
     }, 1000);
 
     return () => window.clearInterval(interval);
@@ -198,7 +192,7 @@ export function YearWheelSection() {
 
   function moveBy(days: number) {
     setIsAutoTurning(false);
-    setSelectedDay((current) => wrapDay(current + days));
+    setSelectedDay((current) => clampDay(current + days));
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
@@ -217,7 +211,7 @@ export function YearWheelSection() {
     }
 
     const deltaX = event.clientX - dragState.current.startX;
-    setSelectedDay(wrapDay(dragState.current.startDay - deltaX / 10));
+    setSelectedDay(clampDay(dragState.current.startDay - deltaX / 10));
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
@@ -240,16 +234,16 @@ export function YearWheelSection() {
       <div className="relative z-10 flex flex-col gap-8">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="max-w-3xl">
-            <h2 className="max-w-4xl font-display text-[2.2rem] leading-[0.94] tracking-[-0.04em] text-white sm:text-[3rem]">
+            <h2 className="max-w-4xl font-display text-[2.2rem] leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3rem]">
               Unser 2026
             </h2>
-            <p className="mt-2 max-w-2xl text-base leading-7 text-white/74">
-              Arbeiten und Ernten im Jahreslauf.
+            <p className="mt-2 max-w-2xl text-base leading-7 text-[var(--color-soil-700)]">
+              Hier wollen wir euch unser Jahr zeigen!
             </p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-2">
-            <Badge className="year-wheel-badge">{SEASON_LABELS[selectedSeason]}</Badge>
+            <Badge className="year-wheel-badge year-wheel-badge-page">{SEASON_LABELS[selectedSeason]}</Badge>
           </div>
         </div>
 
@@ -460,32 +454,32 @@ export function YearWheelSection() {
 
           <div className="year-wheel-info-panel">
             <div className="year-wheel-info-block">
-              <p className="font-accent text-[0.72rem] uppercase tracking-[0.2em] text-[var(--year-wheel-muted)]">
+              <p className="font-accent text-[0.72rem] uppercase tracking-[0.2em] text-[var(--color-soil-500)]">
                 Aktiv am {formatDay(selectedDay)}
               </p>
-              <h3 className="mt-2 font-display text-[1.8rem] leading-[0.96] tracking-[-0.03em] text-white">
+              <h3 className="mt-2 font-display text-[1.8rem] leading-[0.96] tracking-[-0.03em] text-[var(--color-soil-900)]">
                 {primaryEvent.title}
               </h3>
 
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <Badge className="year-wheel-badge year-wheel-badge-soft">
+                <Badge className="year-wheel-badge year-wheel-badge-page">
                   {CATEGORY_LABELS[primaryEvent.category]}
                 </Badge>
-                <Badge className="year-wheel-badge year-wheel-badge-soft">{primaryEvent.crop}</Badge>
-                <Badge className="year-wheel-badge year-wheel-badge-soft">
+                <Badge className="year-wheel-badge year-wheel-badge-page">{primaryEvent.crop}</Badge>
+                <Badge className="year-wheel-badge year-wheel-badge-page">
                   {primaryEvent.kind === "span" && primaryEvent.endDay
                     ? `${formatDay(primaryEvent.startDay)} bis ${formatDay(primaryEvent.endDay)}`
                     : formatDay(primaryEvent.startDay)}
                 </Badge>
               </div>
 
-              <p className="mt-5 mx-auto max-w-2xl text-base leading-7 text-white/78">
+              <p className="mt-5 mx-auto max-w-2xl text-base leading-7 text-[var(--color-soil-700)]">
                 {primaryEvent.summary}
               </p>
             </div>
 
             <div className="year-wheel-info-block">
-              <p className="font-accent text-[0.72rem] uppercase tracking-[0.2em] text-[var(--year-wheel-muted)]">
+              <p className="font-accent text-[0.72rem] uppercase tracking-[0.2em] text-[var(--color-soil-500)]">
                 In der Nähe
               </p>
               <div className="mt-4 flex flex-col gap-2">
@@ -506,14 +500,6 @@ export function YearWheelSection() {
               </div>
             </div>
 
-            <div className="year-wheel-legend">
-              {Object.values(CATEGORY_LABELS).map((label) => (
-                <span key={label} className="year-wheel-legend-item">
-                  <span className="year-wheel-legend-dot" />
-                  {label}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       </div>

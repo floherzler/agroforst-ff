@@ -10,6 +10,7 @@ import {
   CalendarRange,
   ClipboardList,
   Euro,
+  ImagePlus,
   Layers3,
   Package2,
   ReceiptText,
@@ -61,11 +62,15 @@ type SharedAdminState = {
   totalAvailableQuantity: number;
   totalExpectedRevenue: number;
   activeSeasonOffers: number;
+  generatedProductId: string;
+  productImageFileName: string;
+  productImagePreviewUrl?: string;
   setProductForm: React.Dispatch<React.SetStateAction<any>>;
   setOfferForm: React.Dispatch<React.SetStateAction<any>>;
   setProductFilter: (value: string) => void;
   setOfferFilter: (value: string) => void;
   setActivePanel: (value: "produkte" | "angebote") => void;
+  setProductImageFile: (file: File | null) => void;
   saveProduct: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   saveOffer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   resetProductForm: () => void;
@@ -110,17 +115,7 @@ export function ProductEditor({
       </CardHeader>
       <CardContent className={compact ? "px-4 pb-4 pt-0" : undefined}>
         <form className="flex flex-col gap-4" onSubmit={state.saveProduct}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Produkt-ID
-              <Input
-                value={productForm.id}
-                onChange={(event) =>
-                  state.setProductForm((current: any) => ({ ...current, id: event.target.value }))
-                }
-                placeholder="z. B. kartoffel_linda oder salbei_common"
-              />
-            </label>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <label className="flex flex-col gap-2 text-sm font-medium">
               Name
               <Input
@@ -131,6 +126,23 @@ export function ProductEditor({
                 placeholder="z. B. Kartoffel, Salbei oder Apfel"
               />
             </label>
+            <div className="rounded-[1.35rem] border border-border/70 bg-background/70 p-4">
+              <div className="text-[0.72rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Technische Produkt-ID
+              </div>
+              <div className="mt-2 font-mono text-sm text-foreground">
+                {state.generatedProductId || "wird aus Name und Sorte erzeugt"}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Neue Produkte bekommen die ID automatisch, zum Beispiel aus
+                {" "}
+                <span className="font-medium text-foreground">Apfel + Elstar</span>
+                {" "}
+                wird
+                {" "}
+                <span className="font-mono text-foreground">apfel_elstar</span>.
+              </p>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -164,6 +176,70 @@ export function ProductEditor({
                 </SelectContent>
               </Select>
             </label>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[20rem_minmax(0,1fr)]">
+            <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/70">
+              {state.productImagePreviewUrl ? (
+                <img
+                  src={state.productImagePreviewUrl}
+                  alt={productForm.name || "Produktbild Vorschau"}
+                  className="aspect-square w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-square items-center justify-center bg-muted/60 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <ImagePlus className="size-7" />
+                    <span className="max-w-[12rem] text-sm leading-5">
+                      Noch kein Bild verknüpft
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-[1.5rem] border border-border/70 bg-background/60 p-4">
+              <div className="flex flex-col gap-1">
+                <div className="text-sm font-medium">Produktbild</div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Vorhandenes Bild per Appwrite-Datei-ID verknüpfen oder eine neue Datei direkt in den Bucket
+                  {" "}
+                  <span className="font-mono text-foreground">produkt_bilder</span>
+                  {" "}
+                  hochladen.
+                </p>
+              </div>
+
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Vorhandene Datei-ID
+                <Input
+                  value={productForm.imageId}
+                  onChange={(event) =>
+                    state.setProductForm((current: any) => ({ ...current, imageId: event.target.value }))
+                  }
+                  placeholder="z. B. 67fd2f4f0012abcd1234"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Neues Bild hochladen
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/avif"
+                  onChange={(event) =>
+                    state.setProductImageFile(event.target.files?.[0] ?? null)
+                  }
+                />
+              </label>
+
+              <div className="rounded-[1rem] border border-dashed border-border/80 bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                {state.productImageFileName
+                  ? `Beim Speichern wird "${state.productImageFileName}" hochgeladen und mit dem Produkt verknüpft.`
+                  : productForm.imageId.trim()
+                    ? `Aktuell verknüpft: ${productForm.imageId.trim()}`
+                    : "Ohne Upload bleibt nur die eingetragene Datei-ID verknüpft."}
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
