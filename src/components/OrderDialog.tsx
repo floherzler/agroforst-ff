@@ -1,13 +1,15 @@
 "use client";
 
 import React from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 import { placeOrderRequest } from "@/lib/appwrite/appwriteFunctions";
 import { listMembershipsByUserId, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
 import { useAuthStore } from "@/store/Auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 type Props = {
   angebot: Angebot;
@@ -33,10 +35,10 @@ function getPendingMembership(memberships: MembershipRecord[]) {
 
 export default function OrderDialog({ angebot }: Props) {
   const { user, hydrated } = useAuthStore();
+  const navigate = useNavigate();
   const [displayedAmount, setDisplayedAmount] = React.useState<string>("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
   const [staffelSelection, setStaffelSelection] = React.useState<StaffelSelection>({});
   const [memberships, setMemberships] = React.useState<MembershipRecord[]>([]);
   const [membershipsLoading, setMembershipsLoading] = React.useState(false);
@@ -47,7 +49,6 @@ export default function OrderDialog({ angebot }: Props) {
 
   React.useEffect(() => {
     setError(null);
-    setSuccess(null);
     setDisplayedAmount("1");
     setStaffelSelection(
       Object.fromEntries(angebot.preisStaffeln.map((staffel) => [String(staffel.teilung), 0])),
@@ -124,7 +125,6 @@ export default function OrderDialog({ angebot }: Props) {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    setSuccess(null);
 
     if (!user) {
       setError("Bitte melde dich an, um eine Bestellung anzufragen.");
@@ -166,11 +166,12 @@ export default function OrderDialog({ angebot }: Props) {
         userMail,
       });
 
-      setSuccess("Anfrage gesendet. Wir melden uns zeitnah!");
       setDisplayedAmount(hasPreisStaffeln ? "1" : "");
       setStaffelSelection(
         Object.fromEntries(angebot.preisStaffeln.map((staffel) => [String(staffel.teilung), 0])),
       );
+      toast.success("Bestellung erfolgreich angefragt. Du wirst zum Produktkatalog weitergeleitet.");
+      await navigate({ to: "/produkte" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Senden.");
     } finally {
@@ -358,18 +359,19 @@ export default function OrderDialog({ angebot }: Props) {
                 </p>
               ) : null}
 
-              {success ? (
-                <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700" aria-live="polite">
-                  {success}
-                </p>
-              ) : null}
-
               <Button
                 type="submit"
                 disabled={submitting || exceedsAvailable}
-                className="mt-5 w-full rounded-full bg-[var(--color-soil-500)] px-6 text-white hover:bg-[var(--color-soil-600)]"
+                className="mt-5 w-full rounded-full border border-[var(--color-permdal-800)]/10 bg-[var(--color-permdal-700)] px-6 text-white shadow-[0_18px_44px_-26px_rgba(35,58,42,0.55)] hover:bg-[var(--color-permdal-800)] hover:text-white focus-visible:ring-[var(--color-permdal-400)]"
               >
-                {submitting ? "Sende..." : "Bestellung senden"}
+                {submitting ? (
+                  <>
+                    <Spinner data-icon="inline-start" />
+                    Sende Anfrage...
+                  </>
+                ) : (
+                  "Bestellung senden"
+                )}
               </Button>
             </aside>
           </div>

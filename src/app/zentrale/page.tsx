@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, ReceiptText, Sprout, Upload, Boxes } from "lucide-react";
+import { BriefcaseBusiness, CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, ReceiptText, Sprout, Upload, Boxes } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -48,6 +48,7 @@ import {
   type MembershipRecord,
 } from "@/lib/appwrite/appwriteMemberships";
 import { verifyPayment } from "@/lib/appwrite/appwriteFunctions";
+import { listBackofficeEvents } from "@/lib/appwrite/appwriteEvents";
 import { cn } from "@/lib/utils";
 import { statusToneRecipes, surfaceRecipes, textRecipes } from "@/theme/recipes";
 
@@ -76,7 +77,7 @@ type ProductStatusTone = {
   variant: "default" | "secondary" | "outline";
 };
 
-type AdminPanel = "produkte" | "angebote" | "zahlungen";
+type AdminPanel = "produkte" | "angebote" | "zahlungen" | "office";
 type PaymentFilter = "alle" | "offen" | "warten" | "teilbezahlt" | "bezahlt" | "fehlgeschlagen" | "storniert";
 
 function formatAdminDate(value?: string | null, withTime = false) {
@@ -172,6 +173,126 @@ function membershipTypeLabel(value?: string | null) {
   return value || "—";
 }
 
+function backofficeEventTypeMeta(value?: string | null) {
+  const normalized = (value ?? "").trim().toLowerCase();
+
+  if (normalized.includes("payment") || normalized.includes("bezahl")) {
+    return {
+      label: "Bezahlung",
+      className: "border-emerald-300/80 bg-emerald-100 text-emerald-900",
+    };
+  }
+  if (normalized.includes("order") || normalized.includes("bestell")) {
+    return {
+      label: "Bestellung",
+      className: "border-sky-300/80 bg-sky-100 text-sky-900",
+    };
+  }
+  if (normalized.includes("mail") || normalized.includes("email") || normalized.includes("nachricht")) {
+    return {
+      label: "Nachricht",
+      className: "border-amber-300/80 bg-amber-100 text-amber-900",
+    };
+  }
+  if (normalized.includes("error") || normalized.includes("fehl")) {
+    return {
+      label: "Fehler",
+      className: "border-rose-300/80 bg-rose-100 text-rose-900",
+    };
+  }
+  if (normalized.includes("cancel") || normalized.includes("storno")) {
+    return {
+      label: "Storno",
+      className: "border-stone-300/80 bg-stone-100 text-stone-800",
+    };
+  }
+
+  return {
+    label: "Sonstiges",
+    className: "border-border bg-muted text-foreground",
+  };
+}
+
+function deliveryStatusMeta(delivered: boolean) {
+  return delivered
+    ? {
+      label: "Zugestellt",
+      className: "border-emerald-300/80 bg-emerald-100 text-emerald-900",
+    }
+    : {
+      label: "Offen",
+      className: "border-amber-300/80 bg-amber-100 text-amber-900",
+    };
+}
+
+function eventReferenceLabel(event: BackofficeEvent) {
+  const entries = [
+    event.bestellungId ? `Best. ${event.bestellungId.slice(0, 8)}` : null,
+    event.angebotId ? `Ang. ${event.angebotId.slice(0, 8)}` : null,
+    event.benutzerEmail ?? (event.benutzerId ? `User ${event.benutzerId.slice(0, 8)}` : null),
+  ].filter(Boolean);
+
+  return entries.length > 0 ? entries.join(" · ") : "—";
+}
+
+function BackofficeEventsTable({
+  events,
+}: {
+  events: BackofficeEvent[];
+}) {
+  return (
+    <div className="overflow-hidden rounded-[1.4rem] border border-border/70 bg-surface-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Zeit</TableHead>
+            <TableHead>Typ</TableHead>
+            <TableHead>Betreff</TableHead>
+            <TableHead>Text</TableHead>
+            <TableHead>Bezug</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {events.length > 0 ? (
+            events.map((event) => {
+              const type = backofficeEventTypeMeta(event.ereignistyp);
+              const delivery = deliveryStatusMeta(event.zugestellt);
+
+              return (
+                <TableRow key={event.id}>
+                  <TableCell className="w-[10rem] whitespace-nowrap">{formatAdminDate(event.createdAt, true)}</TableCell>
+                  <TableCell>
+                    <Badge className={type.className} variant="outline">{type.label}</Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[14rem]">
+                    <div className="truncate font-medium">{event.betreff || "Ohne Betreff"}</div>
+                  </TableCell>
+                  <TableCell className="max-w-[20rem]">
+                    <p className="line-clamp-2 text-sm text-muted-foreground">{event.nachricht}</p>
+                  </TableCell>
+                  <TableCell className="max-w-[12rem] truncate text-sm text-muted-foreground">
+                    {eventReferenceLabel(event)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={delivery.className} variant="outline">{delivery.label}</Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                Keine Backoffice-Ereignisse gefunden.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 function PaymentsTable({
   payments,
   membershipsById,
@@ -231,14 +352,17 @@ function PaymentsTable({
                   <TableCell>{formatAdminDate(payment.createdAt, true)}</TableCell>
                   <TableCell className="max-w-[14rem] truncate">{payment.ref || "—"}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant={isPaid ? "outline" : "default"}
-                      disabled={isPending}
-                      onClick={() => void onConfirmPayment(payment)}
-                    >
-                      {isPending ? "Synchronisiere..." : isPaid ? "Guthaben synchronisieren" : "Als bezahlt markieren"}
-                    </Button>
+                    {isPaid ? (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() => void onConfirmPayment(payment)}
+                      >
+                        {isPending ? "Bestätige..." : "Als bezahlt markieren"}
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );
@@ -870,11 +994,13 @@ function ZentraleWorkspace({
   initialStaffeln,
   initialPayments,
   initialMemberships,
+  initialBackofficeEvents,
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
   initialPayments: MembershipPayment[];
   initialMemberships: MembershipRecord[];
+  initialBackofficeEvents: BackofficeEvent[];
 }) {
   const state = useZentraleAdmin({
     initialProdukte,
@@ -887,6 +1013,7 @@ function ZentraleWorkspace({
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("alle");
   const [payments, setPayments] = useState<MembershipPayment[]>(initialPayments);
   const [memberships, setMemberships] = useState<MembershipRecord[]>(initialMemberships);
+  const [backofficeEvents] = useState<BackofficeEvent[]>(initialBackofficeEvents);
   const [paymentActionState, setPaymentActionState] = useState<{
     paymentId: string | null;
     message?: string;
@@ -948,7 +1075,6 @@ function ZentraleWorkspace({
 
   async function handleConfirmPayment(payment: MembershipPayment) {
     setPaymentActionState({ paymentId: payment.id });
-    const wasPaid = (payment.status ?? "").toLowerCase() === "bezahlt";
 
     try {
       await verifyPayment({
@@ -956,16 +1082,13 @@ function ZentraleWorkspace({
         status: "bezahlt",
         membershipId: payment.membershipId,
         amount: paymentAmount(payment) ?? undefined,
-        force: wasPaid,
       });
 
       await reloadPaymentData();
       setPaymentActionState({
         paymentId: null,
         tone: "success",
-        message: wasPaid
-          ? `Zahlung ${payment.id} wurde erneut synchronisiert. Guthaben und Mitgliedschaftsdaten sind aktualisiert.`
-          : `Zahlung ${payment.id} wurde bestätigt. Die Mitgliedschaft ist jetzt freigeschaltet.`,
+        message: `Zahlung ${payment.id} wurde bestätigt. Die Mitgliedschaft ist jetzt freigeschaltet.`,
       });
     } catch (error) {
       setPaymentActionState({
@@ -1263,6 +1386,10 @@ function ZentraleWorkspace({
             <ReceiptText className="size-4" />
             Zahlungen
           </RowButton>
+          <RowButton active={activePanel === "office"} onClick={() => setActivePanel("office")}>
+            <BriefcaseBusiness className="size-4" />
+            Office
+          </RowButton>
         </div>
 
         {activePanel === "produkte" ? (
@@ -1324,9 +1451,9 @@ function ZentraleWorkspace({
             <OfferTable state={state} caption="Angebote nach Produkt, Jahr, Preis und Verfügbarkeit." />
             <OfferEditor state={state} />
           </>
-        ) : (
+        ) : activePanel === "zahlungen" ? (
           <section className="grid gap-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <SummaryRow label="Zahlungen gesamt" value={paymentCounts.alle} />
               <SummaryRow label="Offen" value={paymentCounts.offen} />
               <SummaryRow label="Wartet" value={paymentCounts.warten} />
@@ -1337,7 +1464,7 @@ function ZentraleWorkspace({
               <CardHeader className="gap-2">
                 <CardTitle>Zahlungsübersicht</CardTitle>
                 <CardDescription>
-                  Alle Mitgliedschaftszahlungen mit Statusfilter. "Als bezahlt markieren" ruft `verifyPayment` auf und schaltet die Mitgliedschaft frei.
+                  Alle Mitgliedschaftszahlungen mit Statusfilter. Offene Zahlungen können hier bestätigt und damit direkt freigeschaltet werden.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1402,6 +1529,20 @@ function ZentraleWorkspace({
                   activePaymentId={paymentActionState.paymentId}
                   onConfirmPayment={handleConfirmPayment}
                 />
+              </CardContent>
+            </Card>
+          </section>
+        ) : (
+          <section className="grid gap-4">
+            <Card className="border-border/80 bg-card/95 shadow-brand-soft">
+              <CardHeader className="gap-2">
+                <CardTitle>Office-Ereignisse</CardTitle>
+                <CardDescription>
+                  Backoffice-Log aus Appwrite mit Typ, Bezug und Zustellstatus.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BackofficeEventsTable events={backofficeEvents} />
               </CardContent>
             </Card>
           </section>
@@ -1479,6 +1620,7 @@ export default function Page() {
   const [staffeln, setStaffeln] = useState<Staffel[] | null>(null);
   const [payments, setPayments] = useState<MembershipPayment[] | null>(null);
   const [memberships, setMemberships] = useState<MembershipRecord[] | null>(null);
+  const [backofficeEvents, setBackofficeEvents] = useState<BackofficeEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1486,11 +1628,12 @@ export default function Page() {
 
     async function load() {
       try {
-        const [produkteResponse, staffelnResponse, paymentsResponse, membershipsResponse] = await Promise.all([
+        const [produkteResponse, staffelnResponse, paymentsResponse, membershipsResponse, backofficeEventsResponse] = await Promise.all([
           listAlleProdukte(),
           listStaffeln(),
           listAdminMembershipPayments({ limit: 200 }),
           listAdminMemberships({ limit: 200 }),
+          listBackofficeEvents({ limit: 100 }),
         ]);
 
         if (!active) {
@@ -1501,6 +1644,7 @@ export default function Page() {
         setStaffeln(staffelnResponse as unknown as Staffel[]);
         setPayments(paymentsResponse);
         setMemberships(membershipsResponse);
+        setBackofficeEvents(backofficeEventsResponse);
       } catch (rawError) {
         if (!active) {
           return;
@@ -1521,7 +1665,7 @@ export default function Page() {
     return <AdminError message={error} />;
   }
 
-  if (!produkte || !staffeln || !payments || !memberships) {
+  if (!produkte || !staffeln || !payments || !memberships || !backofficeEvents) {
     return <AdminLoading />;
   }
 
@@ -1531,6 +1675,7 @@ export default function Page() {
       initialStaffeln={staffeln}
       initialPayments={payments}
       initialMemberships={memberships}
+      initialBackofficeEvents={backofficeEvents}
     />
   );
 }

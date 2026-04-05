@@ -110,11 +110,6 @@ const galleryImages = [
     label: "Herbst im Agroforst",
   },
   {
-    src: "/img/kartoffel-hänger.jpeg",
-    alt: "Frisch geerntete Kartoffeln auf dem Anhänger",
-    label: "Ernte direkt vom Feld",
-  },
-  {
     src: "/img/erdbeer-körbe.jpeg",
     alt: "Frisch geerntete Erdbeeren in Holzkörben",
     label: "Saisonale Früchte",
@@ -123,6 +118,16 @@ const galleryImages = [
     src: "/img/garten-nebel.jpeg",
     alt: "Nebel über dem Feld in der Prignitz",
     label: "Morgens im Agroforst",
+  },
+  {
+    src: "/img/hummel-lavendel.JPG",
+    alt: "Hummel auf Lavendelblüten im Agroforst",
+    label: "Bestäuber im Sommer",
+  },
+  {
+    src: "/img/lupine-feld.jpg",
+    alt: "Lupinen am Feldrand des Agroforsts",
+    label: "Blüte am Ackerrand",
   },
 ];
 
@@ -250,7 +255,7 @@ export default function HomePage() {
       video.currentTime = 0;
       const playPromise = video.play();
       if (playPromise) {
-        void playPromise.catch(() => {});
+        void playPromise.catch(() => { });
       }
     };
 
@@ -260,7 +265,7 @@ export default function HomePage() {
       }
       const playPromise = video.play();
       if (playPromise) {
-        void playPromise.catch(() => {});
+        void playPromise.catch(() => { });
       }
     };
 
@@ -887,23 +892,19 @@ export default function HomePage() {
       <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
         <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10">
           <div className="flex flex-col items-center gap-4 text-center lg:items-start lg:text-left">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-soil-700)]">
-              Kreislauf
-            </span>
             <h2 className="font-display text-[2.1rem] leading-[0.95] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.8rem]">
               Gemeinsam wollen wir lokale Landwirtschaft zirkulärer gestalten.
             </h2>
             <p className="max-w-xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Der Hof soll nicht nur Produkte liefern, sondern Beziehungen zwischen
-              Anbau, Angebot, Mitgliedschaft und Bestellung sichtbar machen. Das
-              Schema zeigt, wie diese Teile zusammenhängen.
+              Unser Agroforst soll nicht nur Produkte liefern, sondern Beziehungen zwischen
+              Anbau, Angebot, Mitgliedschaft und Bestellung sichtbar machen.
             </p>
           </div>
 
           <div className="home-schema-wrap mx-auto w-full max-w-3xl">
             <img
               src="/schema.svg"
-              alt="Handgezeichnete Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
+              alt="Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
               className="home-schema-image w-full bg-white object-contain"
             />
           </div>
@@ -913,9 +914,6 @@ export default function HomePage() {
       <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
           <div className="flex max-w-3xl flex-col items-center gap-3 text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-soil-700)]">
-              Grundlagen
-            </span>
             <h2 className="font-display text-[2.2rem] leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3rem]">
               Was ist ein Agroforst?
             </h2>
@@ -1064,18 +1062,14 @@ export default function HomePage() {
         </div>
       </InView>
 
-      <section className="home-gallery-shell landing-reveal overflow-hidden rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8">
-        <div className="flex flex-col gap-6">
-          <div className="max-w-4xl self-center px-1 text-center">
-            <h2 className="font-display text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.6rem]">
-              Ein Blick auf den Hof.
-            </h2>
-          </div>
-
-          <div className="max-w-3xl px-1 text-center self-center">
-            <p className="text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Ein paar erste Aufnahmen aus dem Aufbau des Agroforst!
-            </p>
+      <section className="home-gallery-shell landing-reveal px-1 py-6 sm:px-2 sm:py-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <h2 className="mt-3 font-display text-[2.7rem] leading-[0.94] tracking-[-0.05em] text-[var(--color-soil-900)] sm:text-[3.6rem]">
+                Bilder aus und um den Agroforst
+              </h2>
+            </div>
           </div>
 
           <Carousel
@@ -1086,21 +1080,15 @@ export default function HomePage() {
             <CarouselContent>
               {galleryImages.map((image) => (
                 <CarouselItem key={image.src} className="basis-full">
-                  <figure className="mx-auto flex max-w-5xl flex-col gap-4">
-                    <div className="overflow-hidden rounded-[1.8rem] bg-[var(--color-surface-plain)]/70">
-                      <img
-                        src={image.src}
-                        alt={image.alt}
-                        className="h-[18rem] w-full object-cover sm:h-[23rem] lg:h-[28rem]"
-                      />
-                    </div>
-                    <figcaption className="flex flex-col items-center justify-center gap-2 px-2 text-center">
-                      <span className="text-sm font-medium text-[var(--color-soil-700)] sm:text-base">
-                        {image.label}
-                      </span>
-                      <span className="font-accent text-[0.72rem] uppercase tracking-[0.22em] text-[var(--color-soil-500)]">
-                        {currentSlide + 1} / {galleryImages.length}
-                      </span>
+                  <figure className="home-gallery-frame">
+                    <img
+                      src={image.src}
+                      alt={image.alt}
+                      className="home-gallery-image"
+                    />
+                    <figcaption className="home-gallery-caption">
+                      <span className="home-gallery-caption-label">{image.label}</span>
+                      <span className="home-gallery-caption-copy">{image.alt}</span>
                     </figcaption>
                   </figure>
                 </CarouselItem>
@@ -1111,14 +1099,14 @@ export default function HomePage() {
               aria-label="Vorheriges Bild"
               variant="outline"
               size="icon"
-              className="left-4 top-[46%] z-20 size-12 -translate-y-1/2 rounded-full border-0 bg-[rgba(247,241,231,0.92)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.45)] backdrop-blur transition hover:bg-white disabled:opacity-40"
+              className="home-gallery-nav left-4 top-[44%] !translate-y-0 active:!translate-y-0 sm:left-6"
             />
 
             <CarouselNext
               aria-label="Nächstes Bild"
               variant="outline"
               size="icon"
-              className="right-4 top-[46%] z-20 size-12 -translate-y-1/2 rounded-full border-0 bg-[rgba(247,241,231,0.92)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.45)] backdrop-blur transition hover:bg-white disabled:opacity-40"
+              className="home-gallery-nav right-4 top-[44%] !translate-y-0 active:!translate-y-0 sm:right-6"
             />
           </Carousel>
         </div>

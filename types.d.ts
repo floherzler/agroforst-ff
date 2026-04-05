@@ -76,3 +76,16 @@ interface Bestellung {
   bestellteTeilungsAnzahlen: number[];
   bestellteTeilpreiseEur: number[];
 }
+
+interface BackofficeEvent {
+  id: string;
+  createdAt: string;
+  ereignistyp: string;
+  bestellungId?: string;
+  angebotId?: string;
+  benutzerId?: string;
+  benutzerEmail?: string;
+  betreff?: string;
+  nachricht: string;
+  zugestellt: boolean;
+}

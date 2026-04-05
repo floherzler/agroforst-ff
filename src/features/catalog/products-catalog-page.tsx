@@ -10,11 +10,11 @@ import {
   PageShell,
   SurfaceSection,
 } from "@/components/base/page-shell";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -211,8 +211,6 @@ export default function ProductsCatalogPage() {
     <PageShell>
       <PageHeader
         title="Produkte"
-        badge="Angebotsübersicht"
-        description="Hier stehen aktuelle Angebote und dazu passende Produkte im Vordergrund. Erntefenster werden direkt aus den Angebotsdaten gelesen, und Produktbilder geben der Liste mehr Orientierung."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">

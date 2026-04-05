@@ -18,6 +18,7 @@ export const appwriteConfig = {
   projectId: String(env.appwrite.project_id ?? "").trim(),
   databaseId: String(managedDatabase?.$id ?? "").trim(),
   storageId: String(managedBucket?.$id ?? "").trim(),
+  eventTableId: getManagedTableId("backoffice_ereignisse"),
   productTableId: getManagedTableId("produkte"),
   offerTableId: getManagedTableId("angebote"),
   orderTableId: getManagedTableId("bestellungen"),
