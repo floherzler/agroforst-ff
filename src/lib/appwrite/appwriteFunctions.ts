@@ -48,6 +48,7 @@ const verifyPaymentInputSchema = z.object({
   membershipId: z.string().trim().optional(),
   amount: z.number().finite().optional(),
   note: z.string().trim().optional(),
+  force: z.boolean().optional(),
 });
 
 type ExecutionPayload = {
@@ -74,6 +75,7 @@ async function executeValidatedFunction<TOutput = unknown>(
     await functions.createExecution(
       ensureConfigured(functionId, "Appwrite Function-ID"),
       JSON.stringify(payload),
+      false,
     ),
   );
 
@@ -91,7 +93,11 @@ async function executeValidatedFunction<TOutput = unknown>(
     );
   }
 
-  return (parsedResponse ?? null) as TOutput;
+  if (parsedResponse === null) {
+    throw new Error("Die Funktion hat keine auswertbare Antwort geliefert.");
+  }
+
+  return parsedResponse as TOutput;
 }
 
 export async function placeOrderRequest(input: {
@@ -125,7 +131,7 @@ export async function requestMembership(input: {
   );
 
   return {
-    membership: payload.membership
+    membership: payload?.membership
       ? normalizeMembership(payload.membership)
       : undefined,
   };
@@ -137,6 +143,7 @@ export async function verifyPayment(input: {
   membershipId?: string;
   amount?: number;
   note?: string;
+  force?: boolean;
 }): Promise<void> {
   const parsedInput = verifyPaymentInputSchema.parse(input);
   await executeValidatedFunction<void>(
@@ -147,6 +154,7 @@ export async function verifyPayment(input: {
       mitgliedschaft_id: parsedInput.membershipId,
       betrag: parsedInput.amount,
       notiz: parsedInput.note,
+      force: parsedInput.force,
     },
   );
 }

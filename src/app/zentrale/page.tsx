@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, Sprout, Upload, Boxes } from "lucide-react";
+import { CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, ReceiptText, Sprout, Upload, Boxes } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProductCard } from "@/features/zentrale/product-card";
 import { OfferEditor, OfferTable } from "@/features/zentrale/admin-ui";
 import {
@@ -35,11 +36,18 @@ import {
 } from "@/features/zentrale/admin-domain";
 import { useZentraleAdmin } from "@/features/zentrale/use-zentrale-admin";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
+import {
+  listAdminMembershipPayments,
+  listAdminMemberships,
+  type MembershipPayment,
+  type MembershipRecord,
+} from "@/lib/appwrite/appwriteMemberships";
+import { verifyPayment } from "@/lib/appwrite/appwriteFunctions";
 import { cn } from "@/lib/utils";
 import { statusToneRecipes, surfaceRecipes, textRecipes } from "@/theme/recipes";
 
@@ -67,6 +75,186 @@ type ProductStatusTone = {
   label: string;
   variant: "default" | "secondary" | "outline";
 };
+
+type AdminPanel = "produkte" | "angebote" | "zahlungen";
+type PaymentFilter = "alle" | "offen" | "warten" | "teilbezahlt" | "bezahlt" | "fehlgeschlagen" | "storniert";
+
+function formatAdminDate(value?: string | null, withTime = false) {
+  if (!value) {
+    return "—";
+  }
+
+  try {
+    return new Intl.DateTimeFormat("de-DE", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function formatAdminMoney(value?: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+  }).format(value);
+}
+
+function paymentStatusMeta(value?: string | null) {
+  const normalized = (value ?? "").toLowerCase();
+
+  if (normalized === "offen" || normalized === "open") {
+    return {
+      label: "Offen",
+      className: "border-amber-300/80 bg-amber-100 text-amber-900",
+    };
+  }
+  if (normalized === "warten" || normalized === "pending") {
+    return {
+      label: "Wartet",
+      className: "border-yellow-300/80 bg-yellow-100 text-yellow-900",
+    };
+  }
+  if (normalized === "teilbezahlt" || normalized === "partial") {
+    return {
+      label: "Teilbezahlt",
+      className: "border-lime-300/80 bg-lime-100 text-lime-900",
+    };
+  }
+  if (normalized === "bezahlt" || normalized === "paid") {
+    return {
+      label: "Bezahlt",
+      className: "border-emerald-300/80 bg-emerald-100 text-emerald-900",
+    };
+  }
+  if (normalized === "fehlgeschlagen" || normalized === "failed") {
+    return {
+      label: "Fehlgeschlagen",
+      className: "border-rose-300/80 bg-rose-100 text-rose-900",
+    };
+  }
+  if (normalized === "storniert" || normalized === "cancelled") {
+    return {
+      label: "Storniert",
+      className: "border-stone-300/80 bg-stone-100 text-stone-800",
+    };
+  }
+
+  return {
+    label: value || "Unbekannt",
+    className: "border-border bg-muted text-foreground",
+  };
+}
+
+function paymentAmount(payment: MembershipPayment) {
+  if (typeof payment.betragEur === "number" && Number.isFinite(payment.betragEur)) {
+    return payment.betragEur;
+  }
+
+  if (typeof payment.betrag === "number" && Number.isFinite(payment.betrag)) {
+    return payment.betrag;
+  }
+
+  return null;
+}
+
+function membershipTypeLabel(value?: string | null) {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "privat" || normalized === "private") return "Privat";
+  if (normalized === "betrieb" || normalized === "business") return "Betrieb";
+  return value || "—";
+}
+
+function PaymentsTable({
+  payments,
+  membershipsById,
+  activePaymentId,
+  onConfirmPayment,
+}: {
+  payments: MembershipPayment[];
+  membershipsById: Map<string, MembershipRecord>;
+  activePaymentId: string | null;
+  onConfirmPayment: (payment: MembershipPayment) => Promise<void>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-[1.4rem] border border-border/70 bg-surface-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Zahlung</TableHead>
+            <TableHead>Mitgliedschaft</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Betrag</TableHead>
+            <TableHead>Fällig</TableHead>
+            <TableHead>Erfasst</TableHead>
+            <TableHead>Referenz</TableHead>
+            <TableHead className="text-right">Aktion</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {payments.length > 0 ? (
+            payments.map((payment) => {
+              const membership = payment.membershipId ? membershipsById.get(payment.membershipId) : undefined;
+              const status = paymentStatusMeta(payment.status);
+              const isPaid = (payment.status ?? "").toLowerCase() === "bezahlt";
+              const isPending = activePaymentId === payment.id;
+
+              return (
+                <TableRow key={payment.id}>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{payment.id}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {membership?.membershipNumber || payment.membershipId || "—"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {membership ? membershipTypeLabel(membership.typ) : "Ohne Zuordnung"}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={status.className} variant="outline">{status.label}</Badge>
+                  </TableCell>
+                  <TableCell>{formatAdminMoney(paymentAmount(payment))}</TableCell>
+                  <TableCell>{formatAdminDate(payment.faelligAm)}</TableCell>
+                  <TableCell>{formatAdminDate(payment.createdAt, true)}</TableCell>
+                  <TableCell className="max-w-[14rem] truncate">{payment.ref || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant={isPaid ? "outline" : "default"}
+                      disabled={isPending}
+                      onClick={() => void onConfirmPayment(payment)}
+                    >
+                      {isPending ? "Synchronisiere..." : isPaid ? "Guthaben synchronisieren" : "Als bezahlt markieren"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                Keine Zahlungen für diesen Status gefunden.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
 
 function AdminLoading() {
   return (
@@ -680,9 +868,13 @@ function InlineProductEditor({
 function ZentraleWorkspace({
   initialProdukte,
   initialStaffeln,
+  initialPayments,
+  initialMemberships,
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
+  initialPayments: MembershipPayment[];
+  initialMemberships: MembershipRecord[];
 }) {
   const state = useZentraleAdmin({
     initialProdukte,
@@ -691,6 +883,98 @@ function ZentraleWorkspace({
   const [drafts, setDrafts] = useState<Record<string, ProductDraftRecord>>({});
   const [editorTarget, setEditorTarget] = useState<EditorTarget>(null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<AdminPanel>("produkte");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("alle");
+  const [payments, setPayments] = useState<MembershipPayment[]>(initialPayments);
+  const [memberships, setMemberships] = useState<MembershipRecord[]>(initialMemberships);
+  const [paymentActionState, setPaymentActionState] = useState<{
+    paymentId: string | null;
+    message?: string;
+    tone?: "success" | "error";
+  }>({ paymentId: null });
+
+  const membershipsById = useMemo(
+    () => new Map(memberships.map((membership) => [membership.id, membership])),
+    [memberships],
+  );
+
+  const paymentCounts = useMemo(() => {
+    const counts: Record<PaymentFilter, number> = {
+      alle: payments.length,
+      offen: 0,
+      warten: 0,
+      teilbezahlt: 0,
+      bezahlt: 0,
+      fehlgeschlagen: 0,
+      storniert: 0,
+    };
+
+    for (const payment of payments) {
+      const normalized = (payment.status ?? "").toLowerCase() as PaymentFilter;
+      if (normalized in counts && normalized !== "alle") {
+        counts[normalized] += 1;
+      }
+    }
+
+    return counts;
+  }, [payments]);
+
+  const visiblePayments = useMemo(() => {
+    if (paymentFilter === "alle") {
+      return payments;
+    }
+
+    return payments.filter((payment) => (payment.status ?? "").toLowerCase() === paymentFilter);
+  }, [payments, paymentFilter]);
+
+  const paymentFilterOptions = [
+    { value: "offen" as PaymentFilter, label: "Offen", count: paymentCounts.offen },
+    { value: "warten" as PaymentFilter, label: "Wartet", count: paymentCounts.warten },
+    { value: "teilbezahlt" as PaymentFilter, label: "Teilbezahlt", count: paymentCounts.teilbezahlt },
+    { value: "bezahlt" as PaymentFilter, label: "Bezahlt", count: paymentCounts.bezahlt },
+    { value: "fehlgeschlagen" as PaymentFilter, label: "Fehlgeschlagen", count: paymentCounts.fehlgeschlagen },
+    { value: "storniert" as PaymentFilter, label: "Storniert", count: paymentCounts.storniert },
+  ];
+
+  async function reloadPaymentData() {
+    const [paymentsResponse, membershipsResponse] = await Promise.all([
+      listAdminMembershipPayments({ limit: 200 }),
+      listAdminMemberships({ limit: 200 }),
+    ]);
+
+    setPayments(paymentsResponse);
+    setMemberships(membershipsResponse);
+  }
+
+  async function handleConfirmPayment(payment: MembershipPayment) {
+    setPaymentActionState({ paymentId: payment.id });
+    const wasPaid = (payment.status ?? "").toLowerCase() === "bezahlt";
+
+    try {
+      await verifyPayment({
+        paymentId: payment.id,
+        status: "bezahlt",
+        membershipId: payment.membershipId,
+        amount: paymentAmount(payment) ?? undefined,
+        force: wasPaid,
+      });
+
+      await reloadPaymentData();
+      setPaymentActionState({
+        paymentId: null,
+        tone: "success",
+        message: wasPaid
+          ? `Zahlung ${payment.id} wurde erneut synchronisiert. Guthaben und Mitgliedschaftsdaten sind aktualisiert.`
+          : `Zahlung ${payment.id} wurde bestätigt. Die Mitgliedschaft ist jetzt freigeschaltet.`,
+      });
+    } catch (error) {
+      setPaymentActionState({
+        paymentId: null,
+        tone: "error",
+        message: error instanceof Error ? error.message : "Die Zahlung konnte nicht bestätigt werden.",
+      });
+    }
+  }
 
   const availableCategories = useMemo(
     () =>
@@ -964,17 +1248,24 @@ function ZentraleWorkspace({
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(182,209,164,0.18),transparent_24%),radial-gradient(circle_at_top_right,rgba(190,176,235,0.14),transparent_22%),linear-gradient(180deg,var(--color-background),color-mix(in_srgb,var(--color-surface-soft)_44%,white_56%))] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <div className={cn("flex flex-wrap items-center gap-3 rounded-[1.6rem] px-4 py-4", surfaceRecipes({ tone: "band" }))}>
-          <RowButton active={state.activePanel === "produkte"} onClick={() => state.setActivePanel("produkte")}>
+          <RowButton active={activePanel === "produkte"} onClick={() => setActivePanel("produkte")}>
             <Sprout className="size-4" />
             Produkte
           </RowButton>
-          <RowButton active={state.activePanel === "angebote"} onClick={openOfferWorkspace}>
+          <RowButton active={activePanel === "angebote"} onClick={() => {
+            setActivePanel("angebote");
+            openOfferWorkspace();
+          }}>
             <Boxes className="size-4" />
             Angebote
           </RowButton>
+          <RowButton active={activePanel === "zahlungen"} onClick={() => setActivePanel("zahlungen")}>
+            <ReceiptText className="size-4" />
+            Zahlungen
+          </RowButton>
         </div>
 
-        {state.activePanel === "produkte" ? (
+        {activePanel === "produkte" ? (
           <>
             <div className="flex justify-start">
               <Button onClick={openNewProductEditor}>
@@ -1018,7 +1309,7 @@ function ZentraleWorkspace({
               </div>
             )}
           </>
-        ) : (
+        ) : activePanel === "angebote" ? (
           <>
             <div className="flex items-center justify-between gap-3 rounded-[1.4rem] border border-border/70 bg-surface-card px-4 py-3">
               <div>
@@ -1033,6 +1324,87 @@ function ZentraleWorkspace({
             <OfferTable state={state} caption="Angebote nach Produkt, Jahr, Preis und Verfügbarkeit." />
             <OfferEditor state={state} />
           </>
+        ) : (
+          <section className="grid gap-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <SummaryRow label="Zahlungen gesamt" value={paymentCounts.alle} />
+              <SummaryRow label="Offen" value={paymentCounts.offen} />
+              <SummaryRow label="Wartet" value={paymentCounts.warten} />
+              <SummaryRow label="Bezahlt" value={paymentCounts.bezahlt} />
+            </div>
+
+            <Card className="border-border/80 bg-card/95 shadow-brand-soft">
+              <CardHeader className="gap-2">
+                <CardTitle>Zahlungsübersicht</CardTitle>
+                <CardDescription>
+                  Alle Mitgliedschaftszahlungen mit Statusfilter. "Als bezahlt markieren" ruft `verifyPayment` auf und schaltet die Mitgliedschaft frei.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* TODO: E-Mail-Adressen bei Bedarf serverseitig on demand per benutzer_id aufloesen,
+                    statt sie dauerhaft in Mitgliedschaften zu speichern. */}
+                {paymentActionState.message ? (
+                  <div
+                    className={cn(
+                      "mb-4 rounded-2xl border px-4 py-3 text-sm",
+                      paymentActionState.tone === "success"
+                        ? "border-emerald-300/70 bg-emerald-50 text-emerald-900"
+                        : "border-rose-300/70 bg-rose-50 text-rose-900",
+                    )}
+                  >
+                    {paymentActionState.message}
+                  </div>
+                ) : null}
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentFilter("alle")}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition",
+                      paymentFilter === "alle"
+                        ? "border-transparent bg-foreground text-background shadow-sm"
+                        : "border-border bg-background text-foreground hover:bg-muted",
+                    )}
+                  >
+                    <span>Alle</span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-xs",
+                        paymentFilter === "alle" ? "bg-background/15 text-inherit" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {paymentCounts.alle}
+                    </span>
+                  </button>
+
+                  <Select
+                    value={paymentFilter === "alle" ? undefined : paymentFilter}
+                    onValueChange={(value) => setPaymentFilter(value as PaymentFilter)}
+                  >
+                    <SelectTrigger className="w-full sm:w-[18rem]">
+                      <SelectValue placeholder="Status auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {paymentFilterOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label} ({option.count})
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <PaymentsTable
+                  payments={visiblePayments}
+                  membershipsById={membershipsById}
+                  activePaymentId={paymentActionState.paymentId}
+                  onConfirmPayment={handleConfirmPayment}
+                />
+              </CardContent>
+            </Card>
+          </section>
         )}
       </div>
 
@@ -1105,6 +1477,8 @@ function ZentraleWorkspace({
 export default function Page() {
   const [produkte, setProdukte] = useState<Produkt[] | null>(null);
   const [staffeln, setStaffeln] = useState<Staffel[] | null>(null);
+  const [payments, setPayments] = useState<MembershipPayment[] | null>(null);
+  const [memberships, setMemberships] = useState<MembershipRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1112,7 +1486,12 @@ export default function Page() {
 
     async function load() {
       try {
-        const [produkteResponse, staffelnResponse] = await Promise.all([listAlleProdukte(), listStaffeln()]);
+        const [produkteResponse, staffelnResponse, paymentsResponse, membershipsResponse] = await Promise.all([
+          listAlleProdukte(),
+          listStaffeln(),
+          listAdminMembershipPayments({ limit: 200 }),
+          listAdminMemberships({ limit: 200 }),
+        ]);
 
         if (!active) {
           return;
@@ -1120,6 +1499,8 @@ export default function Page() {
 
         setProdukte(produkteResponse as unknown as Produkt[]);
         setStaffeln(staffelnResponse as unknown as Staffel[]);
+        setPayments(paymentsResponse);
+        setMemberships(membershipsResponse);
       } catch (rawError) {
         if (!active) {
           return;
@@ -1140,9 +1521,16 @@ export default function Page() {
     return <AdminError message={error} />;
   }
 
-  if (!produkte || !staffeln) {
+  if (!produkte || !staffeln || !payments || !memberships) {
     return <AdminLoading />;
   }
 
-  return <ZentraleWorkspace initialProdukte={produkte} initialStaffeln={staffeln} />;
+  return (
+    <ZentraleWorkspace
+      initialProdukte={produkte}
+      initialStaffeln={staffeln}
+      initialPayments={payments}
+      initialMemberships={memberships}
+    />
+  );
 }

@@ -117,6 +117,11 @@ function compactObject(value) {
     );
 }
 
+function parseAmount(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function parseRelationId(value) {
     if (typeof value === "string" && value.trim()) {
         return value.trim();
@@ -210,6 +215,19 @@ export default async ({ req, res, log, error }) => {
                     end.setFullYear(end.getFullYear() + durationYears);
                     return end.toISOString();
                 })();
+                const paymentAmount =
+                    parseAmount(body.betrag ?? body.amount) ??
+                    parseAmount(existing.betrag_eur);
+                const currentStartCredit = parseAmount(membership.guthaben_start_eur) ?? 0;
+                const currentBalance = parseAmount(membership.guthaben_aktuell_eur) ?? 0;
+                const nextStartCredit =
+                    status === "bezahlt" && paymentAmount !== undefined
+                        ? (currentStartCredit > 0 ? currentStartCredit : paymentAmount)
+                        : undefined;
+                const nextBalance =
+                    status === "bezahlt" && paymentAmount !== undefined
+                        ? (currentBalance > 0 ? currentBalance : paymentAmount)
+                        : undefined;
 
                 await tables.updateRow({
                     databaseId,
@@ -225,6 +243,8 @@ export default async ({ req, res, log, error }) => {
                                   bezahlt_am: nowIso,
                                   startet_am: startsAt,
                                   endet_am: endsAt,
+                                  guthaben_start_eur: nextStartCredit,
+                                  guthaben_aktuell_eur: nextBalance,
                               }
                             : {}),
                     }),
