@@ -1,9 +1,8 @@
 "use client";
 
 import { Link, useLocation } from "@tanstack/react-router";
-import { ArrowRight, Clock3, ShieldCheck, Sprout, UserRound } from "lucide-react";
+import { Clock3, UserRound } from "lucide-react";
 
-import { CTAButton } from "@/components/brand/cta-button";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/auth-store";
 
@@ -11,7 +10,6 @@ export default function Navbar() {
   const { user } = useAuthStore();
   const pathname = useLocation({ select: (state) => state.pathname });
   const isProductsPage = pathname.startsWith("/produkte");
-  const isAdmin = user?.labels?.includes("admin");
 
   return (
     <header className="sticky top-0 z-50 bg-background">
@@ -35,7 +33,7 @@ export default function Navbar() {
               </span>
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-lg font-semibold tracking-[-0.03em] text-foreground sm:text-xl">
-                  Agroforst Frank Fege
+                  Agroforstbetrieb Frank Fege
                 </span>
               </span>
             </Link>
@@ -45,11 +43,10 @@ export default function Navbar() {
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
                   <Link
                     to="/produkte"
-                    className={`inline-flex min-h-10 items-center justify-center rounded-full border px-4 py-2 text-sm font-medium no-underline transition-colors lg:self-auto ${
-                      isProductsPage
+                    className={`inline-flex min-h-10 items-center justify-center rounded-full border px-4 py-2 text-sm font-medium no-underline transition-colors lg:self-auto ${isProductsPage
                         ? "border-lilac-300 bg-[color:var(--color-accent)] text-lilac-900 shadow-accent-lilac"
                         : "border-lilac-200/60 bg-background/80 text-foreground hover:bg-[color:var(--color-accent)]/80"
-                    }`}
+                      }`}
                   >
                     Produkte
                   </Link>
@@ -60,9 +57,7 @@ export default function Navbar() {
                       className="inline-flex min-h-10 cursor-help flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border/75 bg-muted/80 px-3 py-2 text-[0.77rem] font-medium text-muted-foreground transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--duration-base)] ease-[var(--ease-emphasized)] group-hover/soon:border-lilac-300/80 group-hover/soon:bg-[color:var(--color-accent)] group-hover/soon:text-lilac-900 group-hover/soon:shadow-accent-lilac"
                     >
                       <Clock3 className="size-3.5 shrink-0" />
-                      <span>Marktplatz</span>
-                      <span className="text-border/90 group-hover/soon:text-lilac-400/90">•</span>
-                      <span>Schwarzes Brett</span>
+                      <span>Biete/Suche</span>
                       <span className="text-border/90 group-hover/soon:text-lilac-400/90">•</span>
                       <span>Blog</span>
                     </span>
@@ -73,37 +68,13 @@ export default function Navbar() {
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                  {isAdmin ? (
-                    <Link
-                      to="/zentrale"
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-lilac-300/80 bg-[color:var(--color-accent)] px-3 py-2 text-[0.78rem] font-medium tracking-[0.14em] text-lilac-900 no-underline shadow-accent-lilac transition-colors hover:bg-lilac-200"
-                    >
-                      <ShieldCheck className="size-3.5" />
-                      Adminbereich
-                      <ArrowRight className="size-3.5" />
-                    </Link>
-                  ) : null}
-
                   <div className="flex items-center justify-end gap-2">
                     <Button asChild variant="ghost" size="sm" className="rounded-full px-3">
                       <Link to={user ? "/konto" : "/login"}>
                         <UserRound className="size-3.5" />
-                        {user ? "Konto" : "Anmelden"}
+                        {user ? "Mein Konto" : "Anmelden"}
                       </Link>
                     </Button>
-
-                    {!user ? (
-                      <CTAButton
-                        asChild
-                        size="sm"
-                        className="rounded-full border border-lilac-200/70 bg-lilac-200 px-4 text-lilac-900 shadow-accent-lilac hover:bg-lilac-100"
-                      >
-                        <Link to="/signup" search={{ redirect: "/" }}>
-                          <Sprout className="size-3.5" />
-                          Erntepost
-                        </Link>
-                      </CTAButton>
-                    ) : null}
                   </div>
                 </div>
               </div>

@@ -2,21 +2,12 @@
 
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowRight,
-  Loader2,
-  Mail,
-  MapPin,
-  Quote,
-  Sprout,
-} from "lucide-react";
+import { ArrowDown, ArrowRight, Loader2, Mail, MapPin } from "lucide-react";
 
 import { PageShell } from "@/components/base/page-shell";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Carousel,
   CarouselContent,
@@ -34,11 +25,18 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/features/auth/auth-store";
 import {
-  getProduktImagePreviewUrl,
   listAngebote,
   listProdukte,
   submitFeedbackMessage,
@@ -110,14 +108,8 @@ const galleryImages = [
 
 const permdalCertificatePdfUrl = encodeURI("/img/statut_Permdal_öko.pdf");
 const permdalCertificateImageUrl = encodeURI("/img/statut_Permdal_öko.png");
-const monthInitials = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-const currentMonthIndex = new Date().getMonth();
 const liveProductCategories = ["Alle", "Obst", "Gemuese", "Kraeuter"] as const;
 type LiveProductCategory = (typeof liveProductCategories)[number];
-
-function isPerennialProduct(product: Produkt) {
-  return product.lebensdauer.trim().toLowerCase().includes("mehr");
-}
 
 function applyRealtimeProducts(
   current: Produkt[],
@@ -153,74 +145,30 @@ function applyRealtimeOffers(
   return current.map((entry) => (entry.id === change.record.id ? change.record : entry));
 }
 
-function buildProductInfoText(product: Produkt) {
-  if (product.notes?.trim()) {
-    return product.notes.trim();
-  }
-
-  const category = displayValueLabel(product.unterkategorie || product.hauptkategorie) || "Sortiment";
-  const lifespan = displayValueLabel(product.lebensdauer);
-
-  if (product.sorte && lifespan) {
-    return `${product.sorte} ist als ${category.toLowerCase()} bei uns ${lifespan.toLowerCase()} eingeplant.`;
-  }
-
-  if (product.sorte) {
-    return `${product.sorte} ist als ${category.toLowerCase()} Teil unseres saisonalen Sortiments.`;
-  }
-
-  if (lifespan) {
-    return `${category} aus unserem Hofsortiment, ${lifespan.toLowerCase()} kultiviert.`;
-  }
-
-  return `${category} aus unserem aktuellen Hofsortiment.`;
+function formatCurrency(value: number) {
+  return `${value.toFixed(2).replace(".", ",")} €`;
 }
 
-function formatOfferPreview(offer: Angebot) {
-  const amount = Number.isFinite(offer.mengeVerfuegbar) ? offer.mengeVerfuegbar : offer.menge;
-  const price = Number.isFinite(offer.euroPreis)
-    ? `${offer.euroPreis.toFixed(2).replace(".", ",")} €`
-    : null;
-  const unit = offer.einheit || "";
-  const year = offer.year ? ` · ${offer.year}` : "";
-
-  return {
-    headline: `${amount} ${unit} verfügbar${year}`,
-    detail: price ? `${price} / ${unit}` : null,
-  };
+function formatAvailability(offer: Angebot) {
+  return `${offer.mengeVerfuegbar} ${offer.einheit}`;
 }
 
-function ProductAvatar({
-  imageUrl,
-  alt,
-}: {
-  imageUrl?: string;
-  alt: string;
-}) {
-  const [isLoaded, setIsLoaded] = React.useState(false);
+function formatPickupDate(value?: string | null) {
+  if (!value) {
+    return "Nach Absprache";
+  }
 
-  React.useEffect(() => {
-    setIsLoaded(false);
-  }, [imageUrl]);
+  const parsedDate = new Date(value);
 
-  return (
-    <Avatar className="size-14 shrink-0 ring-4 ring-background/80">
-      {imageUrl ? (
-        <>
-          {!isLoaded ? <Skeleton className="absolute inset-0 rounded-full" /> : null}
-          <AvatarImage
-            src={imageUrl}
-            alt={alt}
-            className={isLoaded ? undefined : "opacity-0"}
-            onLoad={() => setIsLoaded(true)}
-          />
-        </>
-      ) : null}
-      <AvatarFallback className="bg-background/90 text-[var(--color-forest-700)]">
-        <Sprout />
-      </AvatarFallback>
-    </Avatar>
-  );
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsedDate);
 }
 
 export default function HomePage() {
@@ -313,34 +261,41 @@ export default function HomePage() {
     };
   }, [carouselApi]);
 
-  const filteredLiveProducts = React.useMemo(() => {
-    if (liveCategory === "Alle") {
-      return liveProducts;
-    }
+  const liveProductsById = React.useMemo(() => {
+    return new Map(liveProducts.map((product) => [product.id, product] as const));
+  }, [liveProducts]);
 
-    return liveProducts.filter((product) => product.hauptkategorie === liveCategory);
-  }, [liveCategory, liveProducts]);
+  const filteredLiveOffers = React.useMemo(() => {
+    return liveOffers
+      .filter((offer) => offer.produktId && offer.mengeVerfuegbar > 0)
+      .map((offer) => ({
+        offer,
+        product: liveProductsById.get(offer.produktId),
+      }))
+      .filter(({ product }) => {
+        if (!product) {
+          return liveCategory === "Alle";
+        }
 
-  const liveOfferProductIds = React.useMemo(
-    () => new Set(liveOffers.map((offer) => offer.produktId).filter(Boolean)),
-    [liveOffers],
-  );
+        if (liveCategory === "Alle") {
+          return true;
+        }
 
-  const liveOffersByProductId = React.useMemo(() => {
-    const entries = new Map<string, Angebot[]>();
+        return product.hauptkategorie === liveCategory;
+      })
+      .sort((left, right) => {
+        const productCompare = (left.product?.name || "ZZZ").localeCompare(
+          right.product?.name || "ZZZ",
+          "de",
+        );
 
-    for (const offer of liveOffers) {
-      if (!offer.produktId || offer.mengeVerfuegbar <= 0) {
-        continue;
-      }
+        if (productCompare !== 0) {
+          return productCompare;
+        }
 
-      const existing = entries.get(offer.produktId) ?? [];
-      existing.push(offer);
-      entries.set(offer.produktId, existing);
-    }
-
-    return entries;
-  }, [liveOffers]);
+        return (right.offer.year ?? 0) - (left.offer.year ?? 0);
+      });
+  }, [liveCategory, liveOffers, liveProductsById]);
 
   async function handleInlineSignup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -454,10 +409,10 @@ export default function HomePage() {
         <div className="relative flex flex-col items-center gap-8 text-center">
           <div className="flex max-w-4xl flex-col items-center gap-5 lg:max-w-[56rem]">
             <h1 className="text-display-brand text-balance text-white lg:max-w-[11ch]">
-              Prignitzer Permakultur Produkte.
+              Landwirtschaft mit Aussicht und Weitblick
             </h1>
             <p className="max-w-2xl text-base leading-7 text-white/78 sm:text-lg">
-              Frisch geerntet, direkt angeboten und nah am Hof.
+              Natürlich ökologisch.
             </p>
           </div>
 
@@ -488,10 +443,10 @@ export default function HomePage() {
                 Sorgfaltig gepflegt
               </div>
               <CardTitle className="font-display text-[2rem] leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
-                Aktuelle Produkte im Hofsystem.
+                Aktuelle Angebote im Hofsystem.
               </CardTitle>
               <CardDescription className="text-base leading-7 text-[var(--color-soil-700)]">
-                Eine kompakte Auswahl der aktuell gepflegten Produkte, direkt im Überblick.
+                Direkt verfügbare Angebote aus dem aktuellen Bestand, kompakt und verlinkt.
               </CardDescription>
               <div>
                 <Button asChild size="sm" variant="outline" className="rounded-full">
@@ -504,7 +459,7 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col items-start gap-3 sm:items-end">
               <Badge variant="outline" className="w-fit">
-                {isLoadingProducts ? "Lädt…" : `${filteredLiveProducts.length} Produkte`}
+                {isLoadingProducts ? "Lädt…" : `${filteredLiveOffers.length} Angebote`}
               </Badge>
               <Tabs
                 value={liveCategory}
@@ -524,171 +479,87 @@ export default function HomePage() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoadingProducts ? (
-            <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4 sm:px-6">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="surface-card flex aspect-square flex-col gap-4 rounded-[1.5rem] p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-col gap-2">
-                      <Skeleton className="h-5 w-28" />
-                      <Skeleton className="h-4 w-20" />
+            <div className="px-5 py-5 sm:px-6">
+              <div className="overflow-hidden rounded-[1.5rem] border border-border/70">
+                <div className="grid gap-0">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] gap-3 border-b border-border/70 px-4 py-4 last:border-b-0"
+                    >
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-9 w-20 rounded-full" />
                     </div>
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                  </div>
-                  <Skeleton className="h-4 w-full" />
-                  <div className="mt-auto grid grid-cols-12 gap-1">
-                    {Array.from({ length: 12 }).map((__, monthIndex) => (
-                      <Skeleton key={monthIndex} className="h-7 rounded-md" />
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           ) : productsError ? (
             <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
-              Die Live-Produkte konnten gerade nicht geladen werden.
+              Die Live-Angebote konnten gerade nicht geladen werden.
             </div>
-          ) : filteredLiveProducts.length === 0 ? (
+          ) : filteredLiveOffers.length === 0 ? (
             <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
-              Für diese Kategorie sind aktuell keine Produkte gepflegt.
+              Für diese Kategorie sind aktuell keine verfügbaren Angebote gepflegt.
             </div>
           ) : (
             <div className="px-5 py-5 sm:px-6">
-              <Carousel
-                opts={{ align: "start", loop: filteredLiveProducts.length > 3 }}
-                className="mx-auto w-full max-w-[78rem] px-12 sm:px-14"
-              >
-                <CarouselContent>
-                  {filteredLiveProducts.map((product) => (
-                    <CarouselItem
-                      key={product.id}
-                      className="basis-[88%] sm:basis-1/2 xl:basis-1/3"
-                    >
-                      {(() => {
-                        const productOffers = liveOffersByProductId.get(product.id) ?? [];
-                        const hasLiveOffer = liveOfferProductIds.has(product.id) && productOffers.length > 0;
-                        const productImageUrl = product.imageId
-                          ? getProduktImagePreviewUrl({ imageId: product.imageId, width: 96, height: 96 })
-                          : undefined;
-                        const metaParts = [
-                          product.unterkategorie ? displayValueLabel(product.unterkategorie) : null,
-                          isPerennialProduct(product) ? "mehrjährig" : null,
-                        ].filter(Boolean);
-
-                        return (
-                          <Card
-                            tone="strong"
-                            className="flex aspect-square flex-col rounded-[1.6rem] border-border/70"
-                          >
-                            <CardHeader className="gap-2 pb-2">
-                              <div className="flex items-start gap-3">
-                                <ProductAvatar imageUrl={productImageUrl} alt={product.name} />
-                                <div className="min-w-0 flex-1">
-                                  {metaParts.length > 0 ? (
-                                    <p className="mb-1 text-[0.72rem] uppercase tracking-[0.14em] text-muted-foreground">
-                                      {metaParts.join(" · ")}
-                                    </p>
-                                  ) : null}
-                                  <CardTitle className="line-clamp-2 text-[1.02rem] leading-[1.02] text-foreground">
-                                    {product.name}
-                                  </CardTitle>
-                                  {product.sorte ? (
-                                    <CardDescription className="mt-0.5 line-clamp-1 text-[0.8rem] leading-5">
-                                      {product.sorte}
-                                    </CardDescription>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="flex min-h-0 flex-1 flex-col gap-3 text-left">
-                              <div className="flex items-start gap-3">
-                                <Quote className="mt-0.5 shrink-0 text-[var(--color-soil-500)]" />
-                                <p className="line-clamp-4 text-left text-sm leading-6 text-foreground/78 italic">
-                                  “{buildProductInfoText(product)}”
-                                </p>
-                              </div>
-
-                              {hasLiveOffer ? (
-                                <div
-                                  className="group/offer relative text-[0.72rem] text-muted-foreground"
-                                  tabIndex={0}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="relative flex size-2 rounded-full bg-[var(--color-permdal-500)]">
-                                      <span className="absolute inset-0 rounded-full bg-[var(--color-permdal-500)]/50 animate-[pulse_2.8s_ease-in-out_infinite]" />
-                                    </span>
-                                    <span>
-                                      {productOffers.length} {productOffers.length === 1 ? "Angebot" : "Angebote"} verfügbar
-                                    </span>
-                                  </div>
-                                  <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-60 rounded-[1rem] border border-border/80 bg-background/96 p-3 opacity-0 shadow-brand-soft backdrop-blur transition duration-200 group-hover/offer:translate-y-0 group-hover/offer:opacity-100 group-focus-within/offer:translate-y-0 group-focus-within/offer:opacity-100 translate-y-1">
-                                    <p className="mb-2 text-[0.68rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                      Aktuelle Angebote
-                                    </p>
-                                    <div className="flex flex-col gap-2">
-                                      {productOffers.slice(0, 3).map((offer) => {
-                                        const preview = formatOfferPreview(offer);
-                                        return (
-                                          <div key={offer.id} className="rounded-[0.85rem] bg-muted/60 px-2.5 py-2">
-                                            <div className="text-[0.72rem] font-medium text-foreground">
-                                              {preview.headline}
-                                            </div>
-                                            {preview.detail ? (
-                                              <div className="text-[0.68rem] text-muted-foreground">
-                                                {preview.detail}
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-[0.72rem] text-muted-foreground">
-                                  <span className="flex size-2 rounded-full bg-border" />
-                                  <span>Noch kein aktuelles Angebot</span>
-                                </div>
-                              )}
-
-                              <div className="mt-auto rounded-[1.1rem] bg-muted/60 p-2.5">
-                                <div className="mb-2 flex items-center gap-2">
-                                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                                    Saison
-                                  </p>
-                                </div>
-                                <div className="grid grid-cols-12 gap-1">
-                                  {monthInitials.map((month, monthIndex) => {
-                                    const isActive = product.saisonalitaet.includes(monthIndex + 1);
-                                    const isCurrentMonth = monthIndex === currentMonthIndex;
-                                    return (
-                                      <div
-                                        key={`${product.id}-${month}-${monthIndex}`}
-                                        className={
-                                          isActive
-                                            ? "relative flex h-5 items-center justify-center rounded-sm bg-accent text-[0.62rem] font-semibold text-accent-foreground"
-                                            : "relative flex h-5 items-center justify-center rounded-sm bg-background text-[0.62rem] font-medium text-muted-foreground"
-                                        }
-                                        aria-label={isCurrentMonth ? `${month} ist der aktuelle Monat` : undefined}
-                                      >
-                                        {isCurrentMonth ? (
-                                          <span className="absolute inset-[-2px] rounded-md border border-[var(--color-lilac-400)]/80 animate-[pulse_3.6s_ease-in-out_infinite]" />
-                                        ) : null}
-                                        {month}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })()}
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-0 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 bg-background/92 shadow-brand-soft backdrop-blur" />
-                <CarouselNext className="right-0 top-1/2 z-10 translate-x-1/2 -translate-y-1/2 bg-background/92 shadow-brand-soft backdrop-blur" />
-              </Carousel>
+              <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/80">
+                <Table className="min-w-[760px]">
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead>Produkt</TableHead>
+                      <TableHead>Kategorie</TableHead>
+                      <TableHead>Verfügbar</TableHead>
+                      <TableHead>Preis</TableHead>
+                      <TableHead>Abholung</TableHead>
+                      <TableHead className="text-right">Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLiveOffers.map(({ offer, product }) => (
+                      <TableRow key={offer.id}>
+                        <TableCell className="font-medium whitespace-normal">
+                          <div className="flex flex-col gap-1">
+                            <Link
+                              to="/angebote/$id"
+                              params={{ id: offer.id }}
+                              className="w-fit transition hover:text-primary"
+                            >
+                              {product?.name || "Unbekanntes Produkt"}
+                            </Link>
+                            {product?.sorte ? (
+                              <span className="text-xs text-muted-foreground">{product.sorte}</span>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-normal text-muted-foreground">
+                          {displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") || "Offen"}
+                        </TableCell>
+                        <TableCell>{formatAvailability(offer)}</TableCell>
+                        <TableCell>
+                          {offer.euroPreis > 0 ? `${formatCurrency(offer.euroPreis)} / ${offer.einheit}` : "Auf Anfrage"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatPickupDate(offer.pickupAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button asChild size="sm" variant="outline" className="rounded-full">
+                            <Link to="/angebote/$id" params={{ id: offer.id }}>
+                              Ansehen
+                              <ArrowRight data-icon="inline-end" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>
@@ -1105,9 +976,8 @@ export default function HomePage() {
           </p>
 
           <p className="max-w-3xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-            Bald kommen auch <span className="home-team-script">Newsletter</span>,{" "}
-            <span className="home-team-script">Blog</span> und{" "}
-            <span className="home-team-script">Rezepte</span> dazu!
+            Bald kommen auch <span className="home-team-script">Biete/Suche</span> und{" "}
+            <span className="home-team-script">Blog</span> dazu!
           </p>
         </div>
       </section>
