@@ -64,7 +64,7 @@ These are the current minimum runtime scopes based on the code in the repo.
 
 - `createMembership`: `users.read`, `rows.read`, `rows.write`
 - `verifyPayment`: `users.read`, `documents.read`, `documents.write`
-- `createOrder`: `users.read`, `documents.read`, `documents.write`
+- `createOrder`: `documents.read`, `documents.write`
 If you want to keep a single shared key for CLI automation and all current
 local function tests, the practical union is:
 

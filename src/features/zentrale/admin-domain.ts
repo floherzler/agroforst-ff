@@ -86,7 +86,7 @@ export type OfferFormState = {
   memberPreis: string;
   expectedRevenue: string;
   saatPflanzDatum: string;
-  ernteProjektion: string;
+  ernteProjektion: string[];
   pickupAt: string;
   beschreibung: string;
   preisStaffeln: PreisStaffelFormState[];
@@ -158,6 +158,29 @@ export function fromDateTimeInput(value: string): string | undefined {
   }
 
   return date.toISOString();
+}
+
+export function fromDateInput(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new Error(`Ungueltiges Datum: ${value}`);
+  }
+
+  return `${trimmed}T00:00:00.000Z`;
+}
+
+export function normalizeDateInputList(values: string[]): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => fromDateInput(value))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).sort((left, right) => left.localeCompare(right));
 }
 
 export function formatCurrency(value?: number): string {
@@ -249,7 +272,7 @@ export function emptyOfferForm(defaultProductId = ""): OfferFormState {
     memberPreis: "",
     expectedRevenue: "",
     saatPflanzDatum: "",
-    ernteProjektion: "",
+    ernteProjektion: [],
     pickupAt: "",
     beschreibung: "",
     preisStaffeln: [],
@@ -304,7 +327,9 @@ export function offerToFormState(offer: Staffel): OfferFormState {
     memberPreis: offer.memberPreis === undefined ? "" : String(offer.memberPreis),
     expectedRevenue: offer.expectedRevenue === undefined ? "" : String(offer.expectedRevenue),
     saatPflanzDatum: toDateInput(offer.saatPflanzDatum),
-    ernteProjektion: joinList(offer.ernteProjektion),
+    ernteProjektion: offer.ernteProjektion
+      .map((value) => toDateInput(value))
+      .filter(Boolean),
     pickupAt: toDateTimeInput(offer.pickupAt),
     beschreibung: offer.beschreibung ?? "",
     preisStaffeln: (offer.preisStaffeln ?? []).map((staffel) => ({

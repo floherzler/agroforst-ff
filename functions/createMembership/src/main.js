@@ -84,7 +84,6 @@ function normalizeMembershipType(value) {
 function buildUserPermissions(userId) {
     return [
         Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
         Permission.read(Role.label(ADMIN_LABEL)),
         Permission.update(Role.label(ADMIN_LABEL)),
         Permission.delete(Role.label(ADMIN_LABEL)),
@@ -160,7 +159,7 @@ export default async ({ req, res, log, error }) => {
                 dauer_jahre: durationYears,
                 beantragt_am: nowIso,
                 status: "beantragt",
-                bezahl_status: "warten",
+                bezahl_status: "beantragt",
                 guthaben_start_eur: Number(body.guthaben_start_eur ?? body.credit_start_eur ?? 0) || 0,
                 guthaben_aktuell_eur: Number(body.guthaben_aktuell_eur ?? body.credit_balance_eur ?? 0) || 0,
                 rechnungsadresse: typeof (body.rechnungsadresse ?? body.billing_address) === "string" ? (body.rechnungsadresse ?? body.billing_address) : undefined,

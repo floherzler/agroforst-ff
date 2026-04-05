@@ -13,8 +13,10 @@ import {
   ImagePlus,
   Layers3,
   Package2,
+  Plus,
   ReceiptText,
   Sprout,
+  Trash2,
 } from "lucide-react";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -42,7 +44,8 @@ import {
   type ProductFormState,
   unterkategorieValues,
 } from "@/features/zentrale/admin-domain";
-import { getOfferPriceSummary } from "@/features/catalog/catalog";
+import { formatHarvestRange, getOfferPriceSummary } from "@/features/catalog/catalog";
+import { formatOfferDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 type SharedAdminState = {
@@ -459,6 +462,7 @@ export function OfferEditor({
   compact?: boolean;
 }) {
   const { offerForm, selectedOffer, offerStatus, produkte } = state;
+  const harvestDates = offerForm.ernteProjektion.length > 0 ? offerForm.ernteProjektion : [""];
 
   return (
     <Card className="border-border/80 bg-card/95 shadow-brand-soft">
@@ -775,19 +779,71 @@ export function OfferEditor({
                   </label>
                 </div>
 
-                <label className="flex flex-col gap-2 text-sm font-medium">
-                  Ernteprojektion
-                  <Textarea
-                    value={offerForm.ernteProjektion}
-                    onChange={(event) =>
-                      state.setOfferForm((current: any) => ({
-                        ...current,
-                        ernteProjektion: event.target.value,
-                      }))
-                    }
-                    placeholder="z. B. 2026-08-15, 2026-08-29"
-                  />
-                </label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium">Ernteprojektion</span>
+                      <span className="text-xs text-muted-foreground">
+                        Einzelne Erntetermine werden als Appwrite-`datetime[]` gespeichert.
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        state.setOfferForm((current: OfferFormState) => ({
+                          ...current,
+                          ernteProjektion: [...current.ernteProjektion, ""],
+                        }))
+                      }
+                    >
+                      <Plus className="size-4" />
+                      Termin
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-background/70 p-3">
+                    {harvestDates.map((value, index) => (
+                      <div key={`${index}-${value || "empty"}`} className="flex items-end gap-3">
+                        <label className="flex flex-1 flex-col gap-2 text-sm font-medium">
+                          {`Erntetermin ${index + 1}`}
+                          <Input
+                            type="date"
+                            value={value}
+                            onChange={(event) =>
+                              state.setOfferForm((current: OfferFormState) => ({
+                                ...current,
+                                ernteProjektion: current.ernteProjektion.map((entry, entryIndex) =>
+                                  entryIndex === index ? event.target.value : entry,
+                                ),
+                              }))
+                            }
+                          />
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={offerForm.ernteProjektion.length === 0}
+                          onClick={() =>
+                            state.setOfferForm((current: OfferFormState) => ({
+                              ...current,
+                              ernteProjektion: current.ernteProjektion.filter(
+                                (_, entryIndex) => entryIndex !== index,
+                              ),
+                            }))
+                          }
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="text-xs text-muted-foreground">
+                      Anzeige: {formatHarvestRange(harvestDates.filter(Boolean))}
+                    </div>
+                  </div>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -945,9 +1001,14 @@ export function OfferTable({
                   <TableCell>{offer.year ?? "-"}</TableCell>
                   <TableCell>{getOfferPriceSummary(offer)}</TableCell>
                   <TableCell>
-                    <Badge variant={offer.mengeVerfuegbar > 0 ? "default" : "secondary"}>
-                      {offer.mengeVerfuegbar} {displayUnitLabel(offer.einheit)}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={offer.mengeVerfuegbar > 0 ? "default" : "secondary"}>
+                        {offer.mengeVerfuegbar} {displayUnitLabel(offer.einheit)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Ernte: {formatHarvestRange(offer.ernteProjektion)}
+                      </span>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -970,6 +1031,12 @@ export function OfferTable({
                 </span>
                 <span>
                   Reserviert: {state.selectedOffer.mengeAbgeholt} {displayUnitLabel(state.selectedOffer.einheit)}
+                </span>
+                <span>
+                  Saat-/Pflanzdatum: {formatOfferDate(state.selectedOffer.saatPflanzDatum)}
+                </span>
+                <span>
+                  Erntefenster: {formatHarvestRange(state.selectedOffer.ernteProjektion)}
                 </span>
                 <span>
                   Abholung:{" "}

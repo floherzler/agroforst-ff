@@ -41,3 +41,34 @@ export function formatOfferDate(value?: string | null, fallback = "—") {
     year: "numeric",
   }).format(parsed);
 }
+
+export function formatOfferDateRange(
+  values: Array<string | null | undefined>,
+  fallback = "Noch offen",
+) {
+  const rawValues = values
+    .map((value) => value?.trim() ?? "")
+    .filter(Boolean);
+
+  if (rawValues.length === 0) {
+    return fallback;
+  }
+
+  const parsedValues = rawValues
+    .map((value) => ({ raw: value, parsed: parseFlexibleDate(value) }))
+    .filter((entry) => entry.parsed)
+    .sort((left, right) => left.parsed!.getTime() - right.parsed!.getTime());
+
+  if (parsedValues.length === 0) {
+    return rawValues.join(" - ");
+  }
+
+  const first = parsedValues[0]?.raw;
+  const last = parsedValues[parsedValues.length - 1]?.raw;
+
+  if (!first || !last || first === last) {
+    return formatOfferDate(first ?? last, fallback);
+  }
+
+  return `${formatOfferDate(first, fallback)} - ${formatOfferDate(last, fallback)}`;
+}

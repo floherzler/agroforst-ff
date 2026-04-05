@@ -97,7 +97,7 @@ function paymentStatusToMembershipStatus(status) {
         case "teilbezahlt":
             return "teilbezahlt";
         default:
-            return "warten";
+            return "beantragt";
     }
 }
 

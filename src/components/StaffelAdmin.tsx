@@ -18,6 +18,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { subscribeToStaffeln } from "@/lib/appwrite/appwriteProducts";
+import { formatOfferDateRange } from "@/lib/date";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useEffect, useState } from 'react';
@@ -253,11 +254,7 @@ export default function StaffelAdmin({ initialStaffeln }: { initialStaffeln: Sta
                             <TableCell>{staffel.id}</TableCell>
                             <TableCell>{staffel.produktId}</TableCell>
                             <TableCell>{new Date(staffel.saatPflanzDatum).toDateString()}</TableCell>
-                            <TableCell>
-                                {new Date(staffel.ernteProjektion[0]).toDateString()} -
-                                {' '}
-                                {new Date(staffel.ernteProjektion[staffel.ernteProjektion.length - 1]).toDateString()}
-                            </TableCell>
+                            <TableCell>{formatOfferDateRange(staffel.ernteProjektion)}</TableCell>
                             <TableCell>{staffel.menge}</TableCell>
                             <TableCell>{staffel.einheit}</TableCell>
                             <TableCell>{staffel.euroPreis}€</TableCell>

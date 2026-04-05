@@ -1,7 +1,7 @@
 "use client";
 
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Search as SearchIcon } from "lucide-react";
+import { ArrowRight, ImageOff, Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -26,6 +27,7 @@ import {
   formatHarvestRange,
   getOfferDisplayUnitPrice,
   getOfferPriceSummary,
+  getProductImageUrl,
 } from "@/features/catalog/catalog";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -210,7 +212,7 @@ export default function ProductsCatalogPage() {
       <PageHeader
         title="Produkte"
         badge="Angebotsübersicht"
-        description="Hier steht das Angebot im Vordergrund: erst alle aktuellen Angebote, danach die Produkte ohne laufendes Angebot. Die Struktur bleibt absichtlich schlicht."
+        description="Hier stehen aktuelle Angebote und dazu passende Produkte im Vordergrund. Erntefenster werden direkt aus den Angebotsdaten gelesen, und Produktbilder geben der Liste mehr Orientierung."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
@@ -260,7 +262,7 @@ export default function ProductsCatalogPage() {
         />
       ) : (
         <SurfaceSection className="overflow-hidden">
-          <Table className="min-w-[880px]">
+          <Table className="min-w-[1040px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Status</TableHead>
@@ -274,6 +276,9 @@ export default function ProductsCatalogPage() {
             </TableHeader>
             <TableBody>
               {visibleRows.map((row) => {
+                const imageUrl = getProductImageUrl(row.product.imageId);
+                const productLabel = `${row.product.name}${row.product.sorte ? ` – ${row.product.sorte}` : ""}`;
+
                 if (row.kind === "offer") {
                   return (
                     <TableRow key={row.id}>
@@ -283,16 +288,24 @@ export default function ProductsCatalogPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        <div className="flex flex-col gap-1">
-                          <span>
-                            {row.product.name}
-                            {row.product.sorte ? ` – ${row.product.sorte}` : ""}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {row.offerCount === 1
-                              ? "1 laufendes Angebot"
-                              : `${row.offerCount} laufende Angebote`}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-12 rounded-xl border border-border/60">
+                            {imageUrl ? (
+                              <AvatarImage src={imageUrl} alt={productLabel} className="object-cover" />
+                            ) : (
+                              <AvatarFallback className="rounded-xl bg-muted text-muted-foreground">
+                                <ImageOff className="size-4" />
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div className="flex flex-col gap-1">
+                            <span>{productLabel}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {row.offerCount === 1
+                                ? "1 laufendes Angebot"
+                                : `${row.offerCount} laufende Angebote`}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
@@ -326,8 +339,23 @@ export default function ProductsCatalogPage() {
                       <Badge variant="outline">Produkt</Badge>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {row.product.name}
-                      {row.product.sorte ? ` – ${row.product.sorte}` : ""}
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-12 rounded-xl border border-border/60">
+                          {imageUrl ? (
+                            <AvatarImage src={imageUrl} alt={productLabel} className="object-cover" />
+                          ) : (
+                            <AvatarFallback className="rounded-xl bg-muted text-muted-foreground">
+                              <ImageOff className="size-4" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="flex flex-col gap-1">
+                          <span>{productLabel}</span>
+                          <span className="text-xs text-muted-foreground">
+                            Produktbild {imageUrl ? "verknüpft" : "noch nicht vorhanden"}
+                          </span>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       <div>{displayValueLabel(row.product.hauptkategorie)}</div>

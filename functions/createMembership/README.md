@@ -15,7 +15,7 @@ _TODO(@floherzler): wie müssen wir den AGB-Timestamp speichern?_
 ### Datenbank (`mitgliedschaft`-Collection)
 - `beantragungs_datum`: auf den aktuellen Zeitstempel
 - `status`: auf `beantragt`
-- `bezahl_status`: auf `warten` gesetzt
+- `bezahl_status`: auf `beantragt` gesetzt
 - `kontingent_start`: auf `preis`
 
 ### E-Mail

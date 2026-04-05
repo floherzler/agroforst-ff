@@ -55,7 +55,8 @@
                     "required": true,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "sorte",
@@ -63,7 +64,8 @@
                     "required": false,
                     "array": false,
                     "size": 255,
-                    "default": ""
+                    "default": "",
+                    "encrypt": null
                 },
                 {
                     "key": "hauptkategorie",
@@ -71,7 +73,8 @@
                     "required": true,
                     "array": false,
                     "size": 100,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "unterkategorie",
@@ -79,7 +82,8 @@
                     "required": false,
                     "array": false,
                     "size": 100,
-                    "default": ""
+                    "default": "",
+                    "encrypt": null
                 },
                 {
                     "key": "lebensdauer",
@@ -87,7 +91,8 @@
                     "required": false,
                     "array": false,
                     "size": 100,
-                    "default": ""
+                    "default": "",
+                    "encrypt": null
                 },
                 {
                     "key": "fruchtfolge_vor",
@@ -95,7 +100,8 @@
                     "required": false,
                     "array": true,
                     "size": 120,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "fruchtfolge_nach",
@@ -103,7 +109,8 @@
                     "required": false,
                     "array": true,
                     "size": 120,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "bodenansprueche",
@@ -111,7 +118,8 @@
                     "required": false,
                     "array": true,
                     "size": 120,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "begleitpflanzen",
@@ -119,7 +127,8 @@
                     "required": false,
                     "array": true,
                     "size": 120,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "saisonalitaet",
@@ -136,14 +145,16 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "notizen",
                     "type": "text",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 }
             ],
             "indexes": [
@@ -152,6 +163,9 @@
                     "type": "fulltext",
                     "attributes": [
                         "name"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 },
                 {
@@ -159,6 +173,9 @@
                     "type": "key",
                     "attributes": [
                         "hauptkategorie"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -179,11 +196,11 @@
                 {
                     "key": "produkt",
                     "type": "relationship",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "relatedTableId": "produkte",
-                    "relationType": "many-to-one",
+                    "relationType": "manyToOne",
                     "twoWay": false,
+                    "twoWayKey": "angebote",
                     "onDelete": "restrict"
                 },
                 {
@@ -211,96 +228,88 @@
                 },
                 {
                     "key": "menge",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "menge_verfuegbar",
-                    "type": "float",
+                    "type": "double",
                     "required": true,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "menge_reserviert",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": 0,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "einheit",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "stueck",
                         "kilogramm",
                         "bund",
                         "liter"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "preis_pro_einheit_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": true,
                     "array": false,
                     "default": null,
-                    "min": 0
-                },
-                {
-                    "key": "teilungen",
-                    "type": "float",
-                    "required": false,
-                    "array": true,
-                    "default": null,
-                    "min": 0
-                },
-                {
-                    "key": "preise_pro_teilung_eur",
-                    "type": "float",
-                    "required": false,
-                    "array": true,
-                    "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "erzeugerpreis_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "standardpreis_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "mitgliedspreis_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "erwarteter_umsatz_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "abholung_ab",
@@ -314,7 +323,8 @@
                     "type": "text",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "erstellt_von_user_id",
@@ -322,7 +332,8 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "aktualisiert_von_user_id",
@@ -330,7 +341,26 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "teilungen",
+                    "type": "double",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "preise_pro_teilung_eur",
+                    "type": "double",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 }
             ],
             "indexes": [
@@ -339,6 +369,9 @@
                     "type": "key",
                     "attributes": [
                         "jahr"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -361,7 +394,8 @@
                     "required": false,
                     "array": false,
                     "size": 32,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "benutzer_id",
@@ -369,18 +403,19 @@
                     "required": true,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "mitgliedschaftstyp",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "privat",
                         "betrieb"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "dauer_jahre",
@@ -400,35 +435,36 @@
                 },
                 {
                     "key": "status",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "beantragt",
                         "aktiv",
                         "abgelaufen",
                         "storniert"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "storno_grund",
                     "type": "text",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "bezahl_status",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "beantragt",
                         "teilbezahlt",
                         "bezahlt"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "bezahlt_am",
@@ -460,26 +496,29 @@
                 },
                 {
                     "key": "guthaben_start_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "guthaben_aktuell_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "rechnungsadresse",
                     "type": "text",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "letzte_zahlung_id",
@@ -487,7 +526,8 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "letzte_zahlung_am",
@@ -503,6 +543,9 @@
                     "type": "key",
                     "attributes": [
                         "benutzer_id"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 },
                 {
@@ -510,6 +553,9 @@
                     "type": "unique",
                     "attributes": [
                         "mitgliedsnummer"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -529,57 +575,58 @@
                 {
                     "key": "mitgliedschaft",
                     "type": "relationship",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "relatedTableId": "mitgliedschaften",
-                    "relationType": "many-to-one",
+                    "relationType": "manyToOne",
                     "twoWay": false,
+                    "twoWayKey": "mitgliedschaftszahlungen",
                     "onDelete": "restrict"
                 },
                 {
                     "key": "zahlungsart",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "mitgliedschaft",
                         "bestellung",
                         "sonstiges"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "kundentyp",
-                    "type": "enum",
+                    "type": "string",
                     "required": false,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "privat",
                         "betrieb"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "betrag_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": true,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "status",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "offen",
                         "warten",
                         "bezahlt",
                         "fehlgeschlagen",
                         "storniert"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "referenz",
@@ -587,14 +634,16 @@
                     "required": false,
                     "array": false,
                     "size": 64,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "notiz",
                     "type": "text",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "verifiziert_am",
@@ -617,6 +666,9 @@
                     "type": "unique",
                     "attributes": [
                         "referenz"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -639,7 +691,8 @@
                     "required": true,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "benutzer_email",
@@ -647,89 +700,68 @@
                     "required": false,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "mitgliedschaft",
                     "type": "relationship",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "relatedTableId": "mitgliedschaften",
-                    "relationType": "many-to-one",
+                    "relationType": "manyToOne",
                     "twoWay": false,
+                    "twoWayKey": "bestellungen",
                     "onDelete": "restrict"
                 },
                 {
                     "key": "angebot",
                     "type": "relationship",
-                    "required": true,
+                    "required": false,
                     "array": false,
-                    "relatedTableId": "angebote",
-                    "relationType": "many-to-one",
+                    "relationType": "manyToOne",
                     "twoWay": false,
+                    "twoWayKey": "bestellungen",
                     "onDelete": "restrict"
                 },
                 {
                     "key": "menge",
-                    "type": "float",
+                    "type": "double",
                     "required": true,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "einheit",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "stueck",
                         "kilogramm",
                         "bund",
                         "liter"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "preis_pro_einheit_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": true,
                     "array": false,
                     "default": null,
-                    "min": 0
-                },
-                {
-                    "key": "bestellte_teilungen",
-                    "type": "float",
-                    "required": false,
-                    "array": true,
-                    "default": null,
-                    "min": 0
-                },
-                {
-                    "key": "bestellte_teilungs_anzahlen",
-                    "type": "integer",
-                    "required": false,
-                    "array": true,
-                    "default": null,
                     "min": 0,
-                    "max": 1000000
-                },
-                {
-                    "key": "bestellte_teilpreise_eur",
-                    "type": "float",
-                    "required": false,
-                    "array": true,
-                    "default": null,
-                    "min": 0
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "gesamtpreis_eur",
-                    "type": "float",
+                    "type": "double",
                     "required": true,
                     "array": false,
                     "default": null,
-                    "min": 0
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 },
                 {
                     "key": "abholung_ab",
@@ -744,20 +776,48 @@
                     "required": true,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "status",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "angefragt",
                         "bestaetigt",
                         "erfuellt",
                         "storniert"
-                    ],
-                    "default": null
+                    ]
+                },
+                {
+                    "key": "bestellte_teilungen",
+                    "type": "double",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "bestellte_teilungs_anzahlen",
+                    "type": "integer",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000000
+                },
+                {
+                    "key": "bestellte_teilpreise_eur",
+                    "type": "double",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
                 }
             ],
             "indexes": [
@@ -766,6 +826,9 @@
                     "type": "key",
                     "attributes": [
                         "benutzer_id"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -789,21 +852,24 @@
                     "required": true,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "kurzbeschreibung",
                     "type": "text",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "inhalt",
                     "type": "text",
                     "required": true,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "schlagworte",
@@ -811,7 +877,8 @@
                     "required": false,
                     "array": true,
                     "size": 80,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "autor_name",
@@ -819,7 +886,8 @@
                     "required": false,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "veroeffentlicht_am",
@@ -842,6 +910,9 @@
                     "type": "key",
                     "attributes": [
                         "veroeffentlicht_am"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 },
                 {
@@ -849,6 +920,9 @@
                     "type": "fulltext",
                     "attributes": [
                         "titel"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -872,37 +946,39 @@
                     "required": true,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "nachrichtstyp",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "feedback",
                         "newsletter_wunsch",
                         "anbau_wunsch"
-                    ],
-                    "default": null
+                    ]
                 },
                 {
                     "key": "nachricht",
                     "type": "text",
                     "required": true,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "status",
-                    "type": "enum",
+                    "type": "string",
                     "required": true,
                     "array": false,
+                    "default": null,
                     "elements": [
                         "neu",
                         "erledigt"
-                    ],
-                    "default": null
+                    ]
                 }
             ],
             "indexes": [
@@ -911,6 +987,9 @@
                     "type": "key",
                     "attributes": [
                         "benutzer_id"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 },
                 {
@@ -918,6 +997,9 @@
                     "type": "key",
                     "attributes": [
                         "nachrichtstyp"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]
@@ -940,7 +1022,8 @@
                     "required": true,
                     "array": false,
                     "size": 80,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "bestellung_id",
@@ -948,7 +1031,8 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "angebot_id",
@@ -956,7 +1040,8 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "benutzer_id",
@@ -964,7 +1049,8 @@
                     "required": false,
                     "array": false,
                     "size": 36,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "benutzer_email",
@@ -972,7 +1058,8 @@
                     "required": false,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "betreff",
@@ -980,14 +1067,16 @@
                     "required": false,
                     "array": false,
                     "size": 255,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "nachricht",
                     "type": "text",
                     "required": true,
                     "array": false,
-                    "default": null
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "zugestellt",
@@ -1010,6 +1099,9 @@
                     "type": "key",
                     "attributes": [
                         "ereignistyp"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 },
                 {
@@ -1017,6 +1109,9 @@
                     "type": "key",
                     "attributes": [
                         "bestellung_id"
+                    ],
+                    "lengths": [
+                        0
                     ]
                 }
             ]

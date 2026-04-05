@@ -7,8 +7,13 @@ import { ArrowDown, ArrowRight, Info, Loader2, Mail, MapPin } from "lucide-react
 import { PageShell } from "@/components/base/page-shell";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Carousel,
   CarouselContent,
@@ -19,13 +24,13 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -56,8 +61,9 @@ import {
 } from "@/components/ui/popover";
 import { InView } from "@/components/motion-primitives/in-view";
 import { TextLoop } from "@/components/motion-primitives/text-loop";
-import { YearWheelSection } from "@/features/home/year-wheel-section";
+// import { YearWheelSection } from "@/features/home/year-wheel-section";
 import {
+  formatHarvestRange,
   getOfferDisplayUnitPrice,
   getOfferPriceSummary,
   getProductImageUrl,
@@ -161,12 +167,32 @@ function applyRealtimeOffers(
   return current.map((entry) => (entry.id === change.record.id ? change.record : entry));
 }
 
-function formatCurrency(value: number) {
-  return `${value.toFixed(2).replace(".", ",")} €`;
-}
-
 function formatAvailability(offer: Angebot) {
   return `${offer.mengeVerfuegbar} ${offer.einheit}`;
+}
+
+function getAvailabilityPercentage(offer: Angebot) {
+  if (offer.menge <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, (offer.mengeVerfuegbar / offer.menge) * 100));
+}
+
+function getAvailabilityIndicatorClass(value: number) {
+  if (value <= 25) {
+    return "bg-rose-300/80";
+  }
+
+  if (value <= 50) {
+    return "bg-amber-300/80";
+  }
+
+  return "bg-emerald-300/85";
+}
+
+function getCompactOfferPriceSummary(offer: Angebot) {
+  return getOfferPriceSummary(offer).replace(/^ab\s+/i, "");
 }
 
 function HeaderInfo({
@@ -551,19 +577,38 @@ export default function HomePage() {
         <CardContent className="p-0">
           {isLoadingProducts ? (
             <div className="px-5 py-5 sm:px-6">
-              <div className="overflow-hidden rounded-[1.5rem] border border-border/70">
+              <div className="grid gap-3 md:hidden">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-[1.35rem] border border-border/70 bg-background/80 px-4 py-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="size-12 rounded-xl" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-28" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <Skeleton className="h-12 rounded-xl" />
+                      <Skeleton className="h-12 rounded-xl" />
+                    </div>
+                    <Skeleton className="mt-4 h-10 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-hidden rounded-[1.5rem] border border-border/70 md:block">
                 <div className="grid gap-0">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] gap-3 border-b border-border/70 px-4 py-4 last:border-b-0"
+                      className="grid grid-cols-[1.75fr_1fr_1fr_auto] gap-3 border-b border-border/70 px-4 py-4 last:border-b-0"
                     >
                       <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-5 w-24" />
                       <Skeleton className="h-5 w-20" />
                       <Skeleton className="h-5 w-24" />
-                      <Skeleton className="h-5 w-24" />
-                      <Skeleton className="h-9 w-20 rounded-full" />
+                      <Skeleton className="h-9 w-24 rounded-full" />
                     </div>
                   ))}
                 </div>
@@ -579,12 +624,96 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="px-5 py-5 sm:px-6">
-              <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/80">
-                <Table className="min-w-[760px]">
+              <div className="grid gap-3 md:hidden">
+                {featuredLiveOffers.map(({ offer, product }) => {
+                  const imageUrl = getProductImageUrl(product?.imageId);
+                  const categoryLabel =
+                    displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") ||
+                    "Offen";
+                  const availabilityPercentage = getAvailabilityPercentage(offer);
+                  const availabilityIndicatorClass =
+                    getAvailabilityIndicatorClass(availabilityPercentage);
+
+                  return (
+                    <article
+                      key={offer.id}
+                      className="rounded-[1.35rem] border border-border/70 bg-background/85 px-4 py-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="size-12 rounded-xl border border-border/60">
+                          {imageUrl ? (
+                            <AvatarImage
+                              src={imageUrl}
+                              alt={product?.name || "Produktbild"}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <AvatarFallback className="rounded-xl bg-secondary text-primary">
+                              {(product?.name || "??").substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-stretch justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <Link
+                                  to="/angebote/$id"
+                                  params={{ id: offer.id }}
+                                  className="w-fit truncate text-base font-medium transition hover:text-primary"
+                                >
+                                  {product?.name || "Unbekanntes Produkt"}
+                                </Link>
+                                <HeaderInfo title="Kategorie" description={categoryLabel} />
+                              </div>
+                              {product?.sorte ? (
+                                <p className="mt-1 text-sm text-muted-foreground">{product.sorte}</p>
+                              ) : null}
+                            </div>
+
+                            <div className="flex w-1/2 shrink-0 flex-col justify-between px-1 py-0.5">
+                              <p className="text-sm font-medium text-foreground">
+                                noch {formatAvailability(offer)}
+                              </p>
+                              <Progress
+                                value={availabilityPercentage}
+                                className="gap-0"
+                                trackClassName="h-1.5 bg-muted/70"
+                                indicatorClassName={availabilityIndicatorClass}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-3">
+                        <div className="min-w-0 space-y-2">
+                          <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                            Preis ab
+                          </p>
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {getCompactOfferPriceSummary(offer)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Nächste Ernte: {formatHarvestRange(offer.ernteProjektion)}
+                          </p>
+                        </div>
+                        <Button asChild size="sm" variant="outline" className="shrink-0 rounded-full">
+                          <Link to="/angebote/$id" params={{ id: offer.id }}>
+                            Angebot öffnen
+                            <ArrowRight data-icon="inline-end" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="hidden overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/80 md:block">
+                <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableHead>Produkt</TableHead>
-                      <TableHead>Kategorie</TableHead>
                       <TableHead>Verfügbar</TableHead>
                       <TableHead>
                         <span className="inline-flex items-center gap-1.5">
@@ -595,6 +724,7 @@ export default function HomePage() {
                           />
                         </span>
                       </TableHead>
+                      <TableHead>Ernte</TableHead>
                       <TableHead className="text-right">
                         <span className="inline-flex items-center justify-end gap-1.5">
                           Details
@@ -609,6 +739,12 @@ export default function HomePage() {
                   <TableBody>
                     {featuredLiveOffers.map(({ offer, product }) => {
                       const imageUrl = getProductImageUrl(product?.imageId);
+                      const categoryLabel =
+                        displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") ||
+                        "Offen";
+                      const availabilityPercentage = getAvailabilityPercentage(offer);
+                      const availabilityIndicatorClass =
+                        getAvailabilityIndicatorClass(availabilityPercentage);
 
                       return (
                         <TableRow key={offer.id}>
@@ -628,24 +764,39 @@ export default function HomePage() {
                                 )}
                               </Avatar>
                               <div className="flex flex-col gap-1">
-                                <Link
-                                  to="/angebote/$id"
-                                  params={{ id: offer.id }}
-                                  className="w-fit transition hover:text-primary"
-                                >
-                                  {product?.name || "Unbekanntes Produkt"}
-                                </Link>
+                                <div className="flex items-center gap-1.5">
+                                  <Link
+                                    to="/angebote/$id"
+                                    params={{ id: offer.id }}
+                                    className="w-fit transition hover:text-primary"
+                                  >
+                                    {product?.name || "Unbekanntes Produkt"}
+                                  </Link>
+                                  <HeaderInfo title="Kategorie" description={categoryLabel} />
+                                </div>
                                 {product?.sorte ? (
                                   <span className="text-xs text-muted-foreground">{product.sorte}</span>
                                 ) : null}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="whitespace-normal text-muted-foreground">
-                            {displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") || "Offen"}
+                          <TableCell>
+                            <div className="flex min-w-[12rem] max-w-[14rem] flex-col gap-2">
+                              <p className="text-sm font-medium text-foreground">
+                                noch {formatAvailability(offer)}
+                              </p>
+                              <Progress
+                                value={availabilityPercentage}
+                                className="gap-0"
+                                trackClassName="h-1.5 bg-muted/70"
+                                indicatorClassName={availabilityIndicatorClass}
+                              />
+                            </div>
                           </TableCell>
-                          <TableCell>{formatAvailability(offer)}</TableCell>
                           <TableCell>{getOfferPriceSummary(offer)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatHarvestRange(offer.ernteProjektion)}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button asChild size="sm" variant="outline" className="rounded-full">
                               <Link to="/angebote/$id" params={{ id: offer.id }}>
@@ -734,36 +885,136 @@ export default function HomePage() {
       </InView>
 
       <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
-        <div className="home-vision-copy mx-auto flex max-w-3xl justify-center text-center">
-          <div className="home-vision-copy-line">
-            <p className="home-vision-copy-text max-w-2xl">
+        <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10">
+          <div className="flex flex-col items-center gap-4 text-center lg:items-start lg:text-left">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-soil-700)]">
+              Kreislauf
+            </span>
+            <h2 className="font-display text-[2.1rem] leading-[0.95] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.8rem]">
               Gemeinsam wollen wir lokale Landwirtschaft zirkulärer gestalten.
+            </h2>
+            <p className="max-w-xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
+              Der Hof soll nicht nur Produkte liefern, sondern Beziehungen zwischen
+              Anbau, Angebot, Mitgliedschaft und Bestellung sichtbar machen. Das
+              Schema zeigt, wie diese Teile zusammenhängen.
             </p>
+          </div>
+
+          <div className="home-schema-wrap mx-auto w-full max-w-3xl">
+            <img
+              src="/schema.svg"
+              alt="Handgezeichnete Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
+              className="home-schema-image w-full bg-white object-contain"
+            />
           </div>
         </div>
       </section>
 
       <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
-        <div className="home-schema-wrap mx-auto w-full max-w-3xl">
-          <img
-            src="/schema.svg"
-            alt="Handgezeichnete Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
-            className="home-schema-image w-full bg-white object-contain"
-          />
-        </div>
-      </section>
-
-      <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
-        <div className="home-vision-copy mx-auto flex max-w-3xl justify-center text-center">
-          <div className="home-vision-copy-line">
-            <p className="home-vision-copy-text max-w-2xl">
-              Mit den Jahreszeiten wachsen neue Produkte, Wünsche und Möglichkeiten.
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+          <div className="flex max-w-3xl flex-col items-center gap-3 text-center">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-soil-700)]">
+              Grundlagen
+            </span>
+            <h2 className="font-display text-[2.2rem] leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3rem]">
+              Was ist ein Agroforst?
+            </h2>
+            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
+              Ein Agroforst verbindet Ackerbau, Gartenbau oder Tierhaltung mit Bäumen
+              und Sträuchern auf derselben Fläche. Statt alles strikt zu trennen,
+              arbeiten verschiedene Pflanzenebenen zusammen.
             </p>
+          </div>
+
+          <div className="rounded-[1.8rem] border border-[var(--color-soil-900)]/10 bg-white/70 p-6 backdrop-blur-sm sm:p-7">
+            <div className="flex flex-col items-center gap-6 text-center">
+              <article>
+                <h3 className="font-display text-[1.55rem] leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)]">
+                  Bäume, Sträucher und Kulturen zusammen denken
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
+                  In einem Agroforst stehen Gehölze nicht nur am Rand, sondern werden
+                  bewusst in die landwirtschaftliche Fläche integriert. Zwischen oder
+                  unter ihnen wachsen weitere Kulturen, die davon profitieren können.
+                </p>
+              </article>
+
+              <article>
+                <h3 className="font-display text-[1.55rem] leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)]">
+                  Ein System mit mehreren Ebenen
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
+                  Unterschiedliche Wuchshöhen und Wurzeltiefen nutzen Licht, Wasser
+                  und Boden auf verschiedene Weise. Dadurch entsteht mehr Vielfalt
+                  und oft auch mehr Stabilität im Jahresverlauf.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <div className="rounded-[1.8rem] border border-[var(--color-soil-900)]/10 bg-[var(--color-sand-100)]/85 p-5 sm:p-6">
+            <div className="text-center">
+              <h3 className="font-display text-[1.7rem] leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)]">
+                Warum Agroforst sinnvoll ist
+              </h3>
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
+                Agroforst kann Wind abbremsen, Wasser besser in der Fläche halten und
+                Lebensräume für Insekten, Vögel und Bodenleben schaffen. Gleichzeitig
+                bleibt die Fläche produktiv und entwickelt sich über Jahre zu einem
+                widerstandsfähigeren Anbausystem.
+              </p>
+            </div>
+
+            <Accordion
+              type="multiple"
+              className="mx-auto mt-6 w-full max-w-xl px-2 sm:px-4"
+            >
+              <AccordionItem
+                value="mikroklima"
+                className="border-b border-[var(--color-soil-900)]/10"
+              >
+                <AccordionTrigger className="py-4 text-left text-base font-medium text-[var(--color-soil-900)] hover:no-underline">
+                  Mikroklima und Schutz
+                </AccordionTrigger>
+                <AccordionContent className="text-left text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
+                  Gehölze schaffen Windschutz, Schatten und ein ausgeglicheneres
+                  Mikroklima. Das kann Pflanzen und Boden in heißen oder trockenen
+                  Phasen entlasten.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="boden"
+                className="border-b border-[var(--color-soil-900)]/10"
+              >
+                <AccordionTrigger className="py-4 text-left text-base font-medium text-[var(--color-soil-900)] hover:no-underline">
+                  Boden und Wasser
+                </AccordionTrigger>
+                <AccordionContent className="text-left text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
+                  Wurzeln helfen, den Boden zu stabilisieren, Humus aufzubauen und
+                  Wasser länger in der Fläche zu halten. So wird das System robuster.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="vielfalt"
+                className="border-b border-[var(--color-soil-900)]/10"
+              >
+                <AccordionTrigger className="py-4 text-left text-base font-medium text-[var(--color-soil-900)] hover:no-underline">
+                  Vielfalt statt Monokultur
+                </AccordionTrigger>
+                <AccordionContent className="text-left text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
+                  Verschiedene Arten auf einer Fläche fördern Biodiversität und
+                  machen die Bewirtschaftung langfristiger planbar. Mit jeder Saison
+                  wird das System lesbarer und oft widerstandsfähiger.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         </div>
       </section>
 
-      <YearWheelSection />
+      {/* <YearWheelSection /> */}
 
       <section className="landing-reveal home-promise-panel px-5 py-10 sm:px-8 sm:py-12 lg:px-10">
         <div className="home-promise-shell flex flex-col items-center gap-6 text-center">
@@ -835,28 +1086,23 @@ export default function HomePage() {
             <CarouselContent>
               {galleryImages.map((image) => (
                 <CarouselItem key={image.src} className="basis-full">
-                  <Card
-                    tone="strong"
-                    className="overflow-hidden rounded-[2rem] border-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(249,244,236,0.94))] shadow-[0_24px_52px_-38px_rgba(35,22,15,0.22)] ring-0"
-                  >
-                    <CardContent className="p-3 sm:p-4">
-                      <figure className="overflow-hidden rounded-[1.7rem] bg-[var(--color-surface-plain)]">
-                        <img
-                          src={image.src}
-                          alt={image.alt}
-                          className="h-[18rem] w-full object-cover sm:h-[23rem] lg:h-[28rem]"
-                        />
-                      </figure>
-                    </CardContent>
-                    <CardFooter className="flex flex-col items-center justify-center gap-2 border-t-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(244,238,229,0.92))] px-6 py-4 text-center sm:py-5">
+                  <figure className="mx-auto flex max-w-5xl flex-col gap-4">
+                    <div className="overflow-hidden rounded-[1.8rem] bg-[var(--color-surface-plain)]/70">
+                      <img
+                        src={image.src}
+                        alt={image.alt}
+                        className="h-[18rem] w-full object-cover sm:h-[23rem] lg:h-[28rem]"
+                      />
+                    </div>
+                    <figcaption className="flex flex-col items-center justify-center gap-2 px-2 text-center">
                       <span className="text-sm font-medium text-[var(--color-soil-700)] sm:text-base">
                         {image.label}
                       </span>
                       <span className="font-accent text-[0.72rem] uppercase tracking-[0.22em] text-[var(--color-soil-500)]">
                         {currentSlide + 1} / {galleryImages.length}
                       </span>
-                    </CardFooter>
-                  </Card>
+                    </figcaption>
+                  </figure>
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -865,14 +1111,14 @@ export default function HomePage() {
               aria-label="Vorheriges Bild"
               variant="outline"
               size="icon"
-              className="left-4 top-[58%] z-20 size-12 -translate-y-1/2 rounded-full border border-[var(--color-soil-900)]/12 bg-[rgba(247,241,231,0.96)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.55)] backdrop-blur transition hover:bg-white disabled:opacity-40"
+              className="left-4 top-[46%] z-20 size-12 -translate-y-1/2 rounded-full border-0 bg-[rgba(247,241,231,0.92)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.45)] backdrop-blur transition hover:bg-white disabled:opacity-40"
             />
 
             <CarouselNext
               aria-label="Nächstes Bild"
               variant="outline"
               size="icon"
-              className="right-4 top-[58%] z-20 size-12 -translate-y-1/2 rounded-full border border-[var(--color-soil-900)]/12 bg-[rgba(247,241,231,0.96)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.55)] backdrop-blur transition hover:bg-white disabled:opacity-40"
+              className="right-4 top-[46%] z-20 size-12 -translate-y-1/2 rounded-full border-0 bg-[rgba(247,241,231,0.92)] text-[var(--color-soil-900)] shadow-[0_18px_34px_-20px_rgba(35,22,15,0.45)] backdrop-blur transition hover:bg-white disabled:opacity-40"
             />
           </Carousel>
         </div>

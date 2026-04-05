@@ -4,6 +4,7 @@ import {
   listAngebote,
   listProdukte,
 } from "@/lib/appwrite/appwriteProducts";
+import { formatOfferDateRange } from "@/lib/date";
 
 export const catalogCategories = [
   "Obst",
@@ -255,11 +256,7 @@ export function getOfferPriceSummary(offer: Angebot): string {
 }
 
 export function formatHarvestRange(values: string[]) {
-  if (values.length === 0) {
-    return "Noch offen";
-  }
-
-  return values.join(" - ");
+  return formatOfferDateRange(values);
 }
 
 export function formatEuro(value: number) {
