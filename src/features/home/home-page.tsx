@@ -120,8 +120,7 @@ const galleryImages = [
   },
 ];
 
-const heroVideoUrl =
-  "https://fra.cloud.appwrite.io/v1/storage/buckets/homepage_media/files/69d2523c00332c74cda4/view?project=670b925800275a11d5c1";
+const heroVideoUrl = "/media/garten-1-schwenk-pingpong.mp4";
 
 const permdalCertificatePdfUrl = encodeURI("/img/statut_Permdal_öko.pdf");
 const permdalCertificateImageUrl = encodeURI("/img/statut_Permdal_öko.png");
