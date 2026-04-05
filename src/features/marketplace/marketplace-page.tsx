@@ -48,9 +48,9 @@ import {
   composeMarketplaceOffers,
   filterMarketplaceOffers,
   formatHarvestRange,
-  formatPricePerUnit,
   getOfferAvailabilityBadgeVariant,
   getOfferAvailabilityText,
+  getOfferPriceSummary,
   getProductImageUrl,
   listMarketplaceSnapshot,
   type CatalogCategory,
@@ -365,11 +365,7 @@ export default function MarketplacePage() {
                     />
                     <InfoRow
                       icon={<Euro className="size-4" />}
-                      label={formatPricePerUnit(
-                        offer.euroPreis,
-                        offer.menge,
-                        offer.einheit,
-                      )}
+                      label={getOfferPriceSummary(offer)}
                     />
                     <InfoRow
                       icon={<Calendar className="size-4" />}

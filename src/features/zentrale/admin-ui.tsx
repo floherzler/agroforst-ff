@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   displayProductName,
+  formatTeilungPreviewLabel,
   displayUnitLabel,
   displayValueLabel,
   formatCurrency,
@@ -36,8 +37,12 @@ import {
   lebensdauerValues,
   offerUnits,
   type FunctionStatus,
+  type OfferFormState,
+  type PreisStaffelFormState,
+  type ProductFormState,
   unterkategorieValues,
 } from "@/features/zentrale/admin-domain";
+import { getOfferPriceSummary } from "@/features/catalog/catalog";
 import { cn } from "@/lib/utils";
 
 type SharedAdminState = {
@@ -48,8 +53,8 @@ type SharedAdminState = {
   selectedOfferId: string | null;
   selectedProduct: Produkt | null;
   selectedOffer: Staffel | null;
-  productForm: Record<string, string>;
-  offerForm: Record<string, string>;
+  productForm: ProductFormState;
+  offerForm: OfferFormState;
   productStatus: FunctionStatus;
   offerStatus: FunctionStatus;
   productFilter: string;
@@ -88,6 +93,16 @@ export function StatusMessage({ status }: { status: FunctionStatus }) {
     <p className={status.state === "success" ? "text-sm text-primary" : "text-sm text-destructive"}>
       {status.message}
     </p>
+  );
+}
+
+function updatePreisStaffelAt(
+  staffeln: PreisStaffelFormState[],
+  index: number,
+  patch: Partial<PreisStaffelFormState>,
+) {
+  return staffeln.map((entry, entryIndex) =>
+    entryIndex === index ? { ...entry, ...patch } : entry,
   );
 }
 
@@ -581,21 +596,6 @@ export function OfferEditor({
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm font-medium">
-              Verkaufspreis pro Einheit
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={offerForm.euroPreis}
-                onChange={(event) =>
-                  state.setOfferForm((current: any) => ({
-                    ...current,
-                    euroPreis: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
               Erwarteter Umsatz gesamt
               <Input
                 type="number"
@@ -610,6 +610,120 @@ export function OfferEditor({
                 }
               />
             </label>
+          </div>
+
+          <div className="rounded-[1.35rem] border border-border/70 bg-background/70 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="text-sm font-medium text-foreground">Preisstaffeln</div>
+                <p className="text-xs text-muted-foreground">
+                  Teilungen werden numerisch in der gewählten Basiseinheit gespeichert und können
+                  später kombiniert bestellt werden.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  state.setOfferForm((current: OfferFormState) => ({
+                    ...current,
+                    preisStaffeln: [...current.preisStaffeln, { teilung: "", paketPreisEur: "" }],
+                  }))
+                }
+              >
+                Staffel hinzufügen
+              </Button>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3">
+              {offerForm.preisStaffeln.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/70 px-4 py-5 text-sm text-muted-foreground">
+                  Keine Preisstaffeln gepflegt. Fuer jedes Angebot ist mindestens eine Staffel erforderlich.
+                </div>
+              ) : (
+                offerForm.preisStaffeln.map((staffel, index) => {
+                  const teilung = Number(staffel.teilung);
+                  const paketPreis = Number(staffel.paketPreisEur);
+                  const hasPreview =
+                    Number.isFinite(teilung)
+                    && teilung > 0
+                    && Number.isFinite(paketPreis)
+                    && paketPreis >= 0;
+
+                  return (
+                    <div
+                      key={index}
+                      className="grid gap-3 rounded-xl border border-border/70 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]"
+                    >
+                      <label className="flex flex-col gap-2 text-sm font-medium">
+                        Teilung
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={staffel.teilung}
+                          onChange={(event) =>
+                            state.setOfferForm((current: OfferFormState) => ({
+                              ...current,
+                              preisStaffeln: updatePreisStaffelAt(current.preisStaffeln, index, {
+                                teilung: event.target.value,
+                              }),
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm font-medium">
+                        Paketpreis
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={staffel.paketPreisEur}
+                          onChange={(event) =>
+                            state.setOfferForm((current: OfferFormState) => ({
+                              ...current,
+                              preisStaffeln: updatePreisStaffelAt(current.preisStaffeln, index, {
+                                paketPreisEur: event.target.value,
+                              }),
+                            }))
+                          }
+                        />
+                      </label>
+                      <div className="flex flex-col justify-center gap-1 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                        <div className="font-medium text-foreground">
+                          {hasPreview
+                            ? formatTeilungPreviewLabel(teilung, offerForm.einheit)
+                            : "Vorschau folgt"}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {hasPreview
+                            ? `${formatCurrency(paketPreis)} gesamt · ${formatCurrency(paketPreis / teilung)} / ${displayUnitLabel(offerForm.einheit)}`
+                            : "Teilung und Paketpreis eingeben"}
+                        </div>
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            state.setOfferForm((current: OfferFormState) => ({
+                              ...current,
+                              preisStaffeln: current.preisStaffeln.filter(
+                                (_, entryIndex) => entryIndex !== index,
+                              ),
+                            }))
+                          }
+                        >
+                          Entfernen
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           <label className="flex flex-col gap-2 text-sm font-medium">
@@ -627,62 +741,6 @@ export function OfferEditor({
           </label>
 
           <Accordion type="multiple" className="w-full rounded-[1.3rem] border border-border/70 bg-background/60 px-4">
-            <AccordionItem value="preise">
-              <AccordionTrigger>
-                <span className="flex items-center gap-2">
-                  <Euro />
-                  Preisstaffelung
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="grid gap-4 pt-1 md:grid-cols-3">
-                <label className="flex flex-col gap-2 text-sm font-medium">
-                  Erzeugerpreis
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={offerForm.producerPreis}
-                    onChange={(event) =>
-                      state.setOfferForm((current: any) => ({
-                        ...current,
-                        producerPreis: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium">
-                  Standardpreis
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={offerForm.standardPreis}
-                    onChange={(event) =>
-                      state.setOfferForm((current: any) => ({
-                        ...current,
-                        standardPreis: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium">
-                  Mitgliedspreis
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={offerForm.memberPreis}
-                    onChange={(event) =>
-                      state.setOfferForm((current: any) => ({
-                        ...current,
-                        memberPreis: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              </AccordionContent>
-            </AccordionItem>
-
             <AccordionItem value="timeline">
               <AccordionTrigger>
                 <span className="flex items-center gap-2">
@@ -885,7 +943,7 @@ export function OfferTable({
                   <TableCell className="font-mono text-xs">{offer.id}</TableCell>
                   <TableCell className="font-medium">{displayProductName(product)}</TableCell>
                   <TableCell>{offer.year ?? "-"}</TableCell>
-                  <TableCell>{formatCurrency(offer.euroPreis)}</TableCell>
+                  <TableCell>{getOfferPriceSummary(offer)}</TableCell>
                   <TableCell>
                     <Badge variant={offer.mengeVerfuegbar > 0 ? "default" : "secondary"}>
                       {offer.mengeVerfuegbar} {displayUnitLabel(offer.einheit)}
@@ -1085,7 +1143,7 @@ export function OperationsBoard({ state }: { state: SharedAdminState }) {
               <div className="flex flex-col gap-1">
                 <span className="font-medium">{displayProductName(state.productById.get(offer.produktId))}</span>
                 <span className="text-xs text-muted-foreground">
-                  {offer.year ?? "-"} · {formatCurrency(offer.euroPreis)}
+                  {offer.year ?? "-"} · {getOfferPriceSummary(offer)}
                 </span>
               </div>
               <Badge variant={offer.mengeVerfuegbar > 0 ? "default" : "secondary"}>
@@ -1288,7 +1346,7 @@ export function OfferBoard({
                     </Badge>
                   </div>
                   <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{formatCurrency(offer.euroPreis)}</span>
+                    <span>{getOfferPriceSummary(offer)}</span>
                     <span>{displayUnitLabel(offer.einheit)}</span>
                   </div>
                 </button>

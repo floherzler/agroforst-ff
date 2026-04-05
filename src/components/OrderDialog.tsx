@@ -1,284 +1,380 @@
-"use client"
+"use client";
 
-import React from "react"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { placeOrderRequest } from "@/lib/appwrite/appwriteFunctions"
-import { getStaffelById } from "@/lib/appwrite/appwriteProducts"
+import React from "react";
+import { Link } from "@tanstack/react-router";
+
+import { placeOrderRequest } from "@/lib/appwrite/appwriteFunctions";
+import { listMembershipsByUserId, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
 import { useAuthStore } from "@/store/Auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type Props = {
-  angebotId: string
-  membershipId?: string
+  angebot: Angebot;
+};
+
+type StaffelSelection = Record<string, number>;
+
+function parseDisplayNumber(value: string) {
+  return Number(value.replace(",", "."));
 }
 
-export default function OrderDialog({ angebotId, membershipId }: Props) {
-  const [open, setOpen] = React.useState(false)
-  // displayedAmount is what the user edits: for weight units we show kilograms, for count units integer values
-  const [displayedAmount, setDisplayedAmount] = React.useState<string>("")
-  const [submitting, setSubmitting] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  const [success, setSuccess] = React.useState<string | null>(null)
+function formatCurrency(value: number) {
+  try {
+    return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
+  } catch {
+    return `${value.toFixed(2)} €`;
+  }
+}
 
-  const { user } = useAuthStore();
-  const user_mail = user?.email ?? "";
+function getPendingMembership(memberships: MembershipRecord[]) {
+  return memberships.find((membership) => (membership.status ?? "").toLowerCase() === "beantragt") ?? null;
+}
 
-  const [angebot, setAngebot] = React.useState<Staffel | null>(null)
+export default function OrderDialog({ angebot }: Props) {
+  const { user, hydrated } = useAuthStore();
+  const [displayedAmount, setDisplayedAmount] = React.useState<string>("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+  const [staffelSelection, setStaffelSelection] = React.useState<StaffelSelection>({});
+  const [memberships, setMemberships] = React.useState<MembershipRecord[]>([]);
+  const [membershipsLoading, setMembershipsLoading] = React.useState(false);
+  const [membershipsError, setMembershipsError] = React.useState<string | null>(null);
+
+  const userMail = user?.email ?? "";
+  const hasPreisStaffeln = angebot.preisStaffeln.length > 0;
 
   React.useEffect(() => {
-    let mounted = true
-    async function fetchAngebot() {
+    setError(null);
+    setSuccess(null);
+    setDisplayedAmount("1");
+    setStaffelSelection(
+      Object.fromEntries(angebot.preisStaffeln.map((staffel) => [String(staffel.teilung), 0])),
+    );
+  }, [angebot]);
+
+  React.useEffect(() => {
+    if (!user?.id) {
+      setMemberships([]);
+      setMembershipsError(null);
+      setMembershipsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMemberships() {
+      setMembershipsLoading(true);
+      setMembershipsError(null);
+
       try {
-        const record = await getStaffelById(angebotId)
-        if (mounted) setAngebot(record)
+        const records = await listMembershipsByUserId({ userId: user.id, limit: 10 });
+        if (!cancelled) {
+          setMemberships(records);
+        }
       } catch (err) {
-        console.error('Failed to fetch angebot', err)
+        if (!cancelled) {
+          setMembershipsError(err instanceof Error ? err.message : "Mitgliedschaften konnten nicht geladen werden.");
+        }
+      } finally {
+        if (!cancelled) {
+          setMembershipsLoading(false);
+        }
       }
     }
-    fetchAngebot()
-    return () => { mounted = false }
-  }, [angebotId])
 
-  // When dialog opens, set sensible defaults.
-  React.useEffect(() => {
-    if (!open) return
-    setError(null)
-    setSuccess(null)
-    setDisplayedAmount("1")
-  }, [open, angebot])
+    void loadMemberships();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setSuccess(null)
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
-    if (!membershipId) {
-      setError("Für eine Bestellung wird eine aktive Mitgliedschaft benötigt.")
-      return
+  const activeMembership = React.useMemo(
+    () => memberships.find((membership) => (membership.status ?? "").toLowerCase() === "aktiv") ?? null,
+    [memberships],
+  );
+
+  const pendingMembership = React.useMemo(() => getPendingMembership(memberships), [memberships]);
+
+  const legacyRequestedAmount = React.useMemo(() => {
+    const value = parseDisplayNumber(displayedAmount);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }, [displayedAmount]);
+
+  const staffelSummary = React.useMemo(() => {
+    const selected = angebot.preisStaffeln
+      .map((staffel) => ({
+        ...staffel,
+        anzahl: staffelSelection[String(staffel.teilung)] ?? 0,
+      }))
+      .filter((staffel) => staffel.anzahl > 0);
+
+    const gesamtMenge = selected.reduce((sum, staffel) => sum + staffel.teilung * staffel.anzahl, 0);
+    const gesamtPreis = selected.reduce((sum, staffel) => sum + staffel.paketPreisEur * staffel.anzahl, 0);
+
+    return { selected, gesamtMenge, gesamtPreis };
+  }, [angebot.preisStaffeln, staffelSelection]);
+
+  const availableAmount = Number(angebot.mengeVerfuegbar ?? 0);
+  const requestedAmount = hasPreisStaffeln ? staffelSummary.gesamtMenge : legacyRequestedAmount;
+  const exceedsAvailable = requestedAmount !== null && Number.isFinite(availableAmount) && requestedAmount > availableAmount;
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!user) {
+      setError("Bitte melde dich an, um eine Bestellung anzufragen.");
+      return;
     }
 
-    const displayParsed = Number(displayedAmount)
-    if (!Number.isFinite(displayParsed) || displayParsed <= 0) {
-      setError("Bitte eine gültige Menge > 0 eingeben.")
-      return
+    if (!activeMembership) {
+      setError("Für eine Bestellung wird eine aktive Mitgliedschaft benötigt.");
+      return;
     }
 
-    const unitRaw = (angebot?.einheit || '').toString().toLowerCase()
-    let internalMenge: number
-    if (unitRaw === 'kg' || unitRaw === 'kilogramm' || unitRaw === 'gramm' || unitRaw === 'g') {
-      internalMenge = Math.round(displayParsed * 100) / 100
-    } else {
-      if (!Number.isInteger(displayParsed)) {
-        setError('Bitte eine ganze Zahl für diese Einheit eingeben.')
-        return
+    if (hasPreisStaffeln) {
+      if (staffelSummary.selected.length === 0) {
+        setError("Bitte mindestens eine Preisstaffel auswählen.");
+        return;
       }
-      internalMenge = displayParsed
+    } else if (!legacyRequestedAmount || legacyRequestedAmount <= 0) {
+      setError("Bitte eine gültige Menge > 0 eingeben.");
+      return;
     }
 
-    setSubmitting(true)
+    if (exceedsAvailable) {
+      setError("Die gewählte Menge überschreitet die verfügbare Menge.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await placeOrderRequest({
-        angebotId,
-        membershipId: membershipId ?? "",
-        menge: internalMenge,
-        userMail: user_mail,
-      })
+        angebotId: angebot.id,
+        membershipId: activeMembership.id,
+        menge: hasPreisStaffeln ? undefined : legacyRequestedAmount ?? undefined,
+        staffeln: hasPreisStaffeln
+          ? staffelSummary.selected.map((staffel) => ({
+              teilung: staffel.teilung,
+              anzahl: staffel.anzahl,
+            }))
+          : undefined,
+        userMail,
+      });
 
-      setSuccess("Anfrage gesendet. Wir melden uns zeitnah!")
-      setTimeout(() => {
-        setOpen(false)
-        setDisplayedAmount("")
-        setSuccess(null)
-      }, 1200)
+      setSuccess("Anfrage gesendet. Wir melden uns zeitnah!");
+      setDisplayedAmount(hasPreisStaffeln ? "1" : "");
+      setStaffelSelection(
+        Object.fromEntries(angebot.preisStaffeln.map((staffel) => [String(staffel.teilung), 0])),
+      );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unbekannter Fehler beim Senden."
-      setError(message)
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Senden.");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
   }
-
-  // helpers for preview
-  const formatCurrency = (value: number) => {
-    try {
-      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
-    } catch {
-      return `${value.toFixed(2)} €`
-    }
-  }
-
-  const computePreview = (): { label: string; total?: string } => {
-    if (!angebot) return { label: '' }
-    const unitRaw = (angebot.einheit || '').toString().toLowerCase()
-    const price = Number(angebot.euroPreis) || 0
-    const displayParsed = parseDisplayNumber(displayedAmount)
-    if (!Number.isFinite(displayParsed) || displayParsed <= 0) return { label: '' }
-
-    if (unitRaw === 'kg' || unitRaw === 'kilogramm' || unitRaw === 'gramm' || unitRaw === 'g') {
-      const kg = displayParsed
-      const total = kg * price
-      return { label: `${kg} kg`, total: formatCurrency(total) }
-    }
-
-    // count-like
-    const total = displayParsed * price
-    return { label: `${displayParsed} ${angebot.einheit}`, total: formatCurrency(total) }
-  }
-
-  // Accept German decimal comma in user input
-  const parseDisplayNumber = (s: string) => {
-    if (typeof s !== 'string') return NaN
-    const norm = s.replace(',', '.')
-    return Number(norm)
-  }
-
-  // compute internal requested amount (grams or count) from displayedAmount
-  const computeInternalRequested = (): number | null => {
-    const displayParsed = parseDisplayNumber(displayedAmount)
-    if (!Number.isFinite(displayParsed) || displayParsed <= 0 || !angebot) return null
-    const unitRaw = (angebot.einheit || '').toString().toLowerCase()
-    if (['gramm', 'g', 'kg', 'kilogramm'].includes(unitRaw)) {
-      return Math.round(displayParsed * 100) / 100
-    }
-    return Math.round(displayParsed)
-  }
-
-  const availableInternal = (() => {
-    if (!angebot) return Infinity
-    const v = Number(angebot.mengeVerfuegbar)
-    return Number.isFinite(v) ? v : Infinity
-  })()
-
-  const internalRequested = computeInternalRequested()
-  const isOverAvailable = internalRequested !== null && internalRequested > availableInternal
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-permdal-600 hover:bg-permdal-700">
-          Jetzt bestellen
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Bestellung anfragen</DialogTitle>
-          <DialogDescription>
-            Gib die gewünschte Menge ein und sende deine Anfrage.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="menge" className="block text-sm font-medium mb-1">
-              Menge
-            </label>
-            {/* determine if the angebot unit is weight-like */}
-            {/** compute isWeight from angebot */}
-            <div className="flex items-center gap-2 mb-2">
-              {/* suggestion buttons */}
-              {(() => {
-                const unitRaw = (angebot?.einheit || '').toString().toLowerCase()
-                const isWeight = ['gramm', 'g', 'kg', 'kilogramm'].includes(unitRaw)
-                let suggestions: number[] = []
-                if (isWeight) {
-                  const avail = Number(angebot?.mengeVerfuegbar ?? 0)
-                  const availKg = Number.isFinite(avail) ? avail : Infinity
-                  const base = [1, 3, 5]
-                  suggestions = base.filter((b) => !Number.isFinite(availKg) || b <= Math.max(1, Math.floor(availKg)))
-                  if (suggestions.length === 0 && Number.isFinite(availKg) && availKg > 0) {
-                    suggestions = [Math.round(availKg * 10) / 10]
-                  }
-                } else {
-                  suggestions = [1, 3, 5]
-                }
-                return (
-                  <div className="flex gap-2">
-                    {suggestions.map((s) => {
-                      const would = (['gramm', 'g', 'kg', 'kilogramm'].includes((angebot?.einheit || '').toString().toLowerCase())) ? Math.round(s * 100) / 100 : Math.round(s)
-                      const wouldExceed = !!(angebot && Number.isFinite(Number(angebot.mengeVerfuegbar)) && would > Number(angebot.mengeVerfuegbar))
-                      const clickInternal = (val: number) => {
-                        if (wouldExceed) return
-                        setDisplayedAmount(String(val))
-                      }
-                      return (
+    <section className="rounded-[2rem] border border-[var(--color-soil-900)]/10 bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(245,239,230,0.98))] p-6 shadow-[0_28px_70px_-40px_rgba(35,22,15,0.35)] sm:p-8">
+      <div className="flex flex-col gap-2 border-b border-[var(--color-soil-900)]/8 pb-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-soil-600)]">
+          Bestellung
+        </p>
+        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--color-soil-900)] sm:text-[2rem]">
+          Direkt aus diesem Angebot anfragen
+        </h2>
+        <p className="max-w-2xl text-sm text-[var(--color-soil-700)] sm:text-base">
+          Wähle deine Menge hier auf der Seite. Wenn du eingeloggt bist und eine aktive Mitgliedschaft hast,
+          geht die Anfrage ohne zusätzlichen Zwischenschritt raus.
+        </p>
+      </div>
+
+      {!hydrated ? (
+        <div className="mt-6 rounded-[1.6rem] border border-[var(--color-soil-900)]/8 bg-white/80 p-5 text-sm text-[var(--color-soil-700)]">
+          Anmeldestatus wird geprüft…
+        </div>
+      ) : !user ? (
+        <div className="mt-6 rounded-[1.6rem] border border-[var(--color-soil-900)]/8 bg-white/85 p-5">
+          <p className="text-base font-medium text-[var(--color-soil-900)]">
+            Melde dich an, um dieses Angebot direkt zu bestellen.
+          </p>
+          <p className="mt-2 text-sm text-[var(--color-soil-700)]">
+            Danach kannst du deine Anfrage hier auf der Seite absenden.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/login" search={{ redirect: `/angebote/${angebot.id}` }}>
+                Zum Login
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/signup" search={{ redirect: `/angebote/${angebot.id}` }}>
+                Konto erstellen
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : membershipsLoading ? (
+        <div className="mt-6 rounded-[1.6rem] border border-[var(--color-soil-900)]/8 bg-white/80 p-5 text-sm text-[var(--color-soil-700)]">
+          Mitgliedschaften werden geladen…
+        </div>
+      ) : membershipsError ? (
+        <div className="mt-6 rounded-[1.6rem] border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+          {membershipsError}
+        </div>
+      ) : !activeMembership ? (
+        <div className="mt-6 rounded-[1.6rem] border border-[var(--color-soil-900)]/8 bg-white/85 p-5">
+          <p className="text-base font-medium text-[var(--color-soil-900)]">
+            Für Bestellungen brauchst du eine aktive Mitgliedschaft.
+          </p>
+          <p className="mt-2 text-sm text-[var(--color-soil-700)]">
+            {pendingMembership
+              ? "Deine Mitgliedschaft ist bereits beantragt, aber noch nicht freigeschaltet."
+              : "Aktuell ist keine aktive Mitgliedschaft für dein Konto hinterlegt."}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link to="/konto">Mitgliedschaft verwalten</Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="space-y-3">
+              {hasPreisStaffeln ? (
+                angebot.preisStaffeln.map((staffel) => {
+                  const count = staffelSelection[String(staffel.teilung)] ?? 0;
+
+                  return (
+                    <div
+                      key={`${staffel.teilung}-${staffel.paketPreisEur}`}
+                      className="flex items-center justify-between gap-3 rounded-[1.8rem] border border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.92)] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]"
+                    >
+                      <div>
+                        <div className="text-[1.05rem] font-semibold text-[var(--color-soil-900)]">{staffel.label}</div>
+                        <div className="text-sm text-[var(--color-soil-700)]">
+                          {formatCurrency(staffel.paketPreisEur)} gesamt
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
                         <Button
-                          key={s}
                           type="button"
-                          size="sm"
                           variant="outline"
-                          onClick={() => clickInternal(s)}
-                          className="text-xs"
-                          disabled={wouldExceed}
+                          size="icon-lg"
+                          className="border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.98)] text-[var(--color-soil-900)] shadow-none hover:bg-white"
+                          onClick={() =>
+                            setStaffelSelection((current) => ({
+                              ...current,
+                              [String(staffel.teilung)]: Math.max(0, count - 1),
+                            }))
+                          }
                         >
-                          {s}{isWeight ? ' kg' : ` ${angebot?.einheit ?? ''}`}
+                          -
                         </Button>
-                      )
-                    })}
-                  </div>
-                )
-              })()}
+                        <div className="min-w-8 text-center text-[1.05rem] font-semibold text-[var(--color-soil-900)]">{count}</div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-lg"
+                          className="border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.98)] text-[var(--color-soil-900)] shadow-none hover:bg-white"
+                          onClick={() =>
+                            setStaffelSelection((current) => ({
+                              ...current,
+                              [String(staffel.teilung)]: count + 1,
+                            }))
+                          }
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-[1.8rem] border border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.92)] p-5">
+                  <label htmlFor="menge" className="mb-2 block text-sm font-medium text-[var(--color-soil-900)]">
+                    Wunschmenge
+                  </label>
+                  <Input
+                    id="menge"
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    inputMode="decimal"
+                    placeholder="z. B. 10"
+                    value={displayedAmount}
+                    onChange={(event) => setDisplayedAmount(event.target.value)}
+                    required
+                    className="border-[var(--color-soil-900)]/10 bg-[rgba(255,251,245,0.9)]"
+                  />
+                </div>
+              )}
             </div>
 
-            <Input
-              id="menge"
-              type="number"
-              min={0}
-              step={(angebot && ['gramm', 'g', 'kg', 'kilogramm'].includes((angebot.einheit || '').toString().toLowerCase())) ? 0.1 : 1}
-              inputMode={(angebot && ['gramm', 'g', 'kg', 'kilogramm'].includes((angebot.einheit || '').toString().toLowerCase())) ? 'decimal' : 'numeric'}
-              placeholder={angebot && ['gramm', 'g', 'kg', 'kilogramm'].includes((angebot.einheit || '').toString().toLowerCase()) ? 'z. B. 10' : 'z. B. 1'}
-              value={displayedAmount}
-              onChange={(e) => {
-                const v = e.target.value
-                const unitRaw = (angebot?.einheit || '').toString().toLowerCase()
-                const isWeight = ['gramm', 'g', 'kg', 'kilogramm'].includes(unitRaw)
-                if (!isWeight) {
-                  // only allow integers for count-like units
-                  if (v.includes('.') || v.includes(',')) return
-                }
-                setDisplayedAmount(v)
-              }}
-              required
-            />
-          </div>
-
-          {/* Live price preview */}
-          <div className="text-sm text-muted-foreground">
-            {(() => {
-              const p = computePreview()
-              if (!p || !p.label || !p.total) return null
-              return (
-                <div>
-                  <div className="text-xs">Voraussichtlicher Gesamtpreis für {p.label}:</div>
-                  <div className="text-sm font-semibold">{p.total}</div>
+            <aside className="rounded-[1.8rem] border border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.94)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[var(--color-soil-700)]">Mitgliedschaft</span>
+                  <span className="font-semibold text-[var(--color-soil-900)]">
+                    {(activeMembership.typ ?? "aktiv").toUpperCase()}
+                  </span>
                 </div>
-              )
-            })()}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[var(--color-soil-700)]">Verfügbar</span>
+                  <span className="font-semibold text-[var(--color-soil-900)]">
+                    {angebot.mengeVerfuegbar} {angebot.einheit}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[var(--color-soil-700)]">Gewählt</span>
+                  <span className="font-semibold text-[var(--color-soil-900)]">
+                    {requestedAmount ?? 0} {angebot.einheit}
+                  </span>
+                </div>
+                {hasPreisStaffeln ? (
+                  <div className="flex items-center justify-between gap-3 border-t border-[var(--color-soil-900)]/8 pt-3">
+                    <span className="text-[var(--color-soil-700)]">Gesamtpreis</span>
+                    <span className="text-lg font-semibold text-[var(--color-soil-900)]">
+                      {formatCurrency(staffelSummary.gesamtPreis)}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {exceedsAvailable ? (
+                <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  Die gewählte Menge überschreitet die verfügbare Menge.
+                </p>
+              ) : null}
+
+              {error ? (
+                <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" aria-live="assertive">
+                  {error}
+                </p>
+              ) : null}
+
+              {success ? (
+                <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700" aria-live="polite">
+                  {success}
+                </p>
+              ) : null}
+
+              <Button
+                type="submit"
+                disabled={submitting || exceedsAvailable}
+                className="mt-5 w-full rounded-full bg-[var(--color-soil-500)] px-6 text-white hover:bg-[var(--color-soil-600)]"
+              >
+                {submitting ? "Sende..." : "Bestellung senden"}
+              </Button>
+            </aside>
           </div>
-
-          {error && (
-            <p className="text-sm text-red-600" aria-live="assertive">
-              {error}
-            </p>
-          )}
-          {success && (
-            <p className="text-sm text-green-700" aria-live="polite">
-              {success}
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={submitting || isOverAvailable}>
-              {submitting ? "Senden…" : "Anfrage senden"}
-            </Button>
-          </DialogFooter>
         </form>
-        {isOverAvailable && (
-          <p className="text-sm text-red-600 mt-2">Es sind nur {angebot?.mengeVerfuegbar} {angebot?.einheit} verfügbar — reduziere die Menge.</p>
-        )}
-      </DialogContent>
-    </Dialog>
-  )
+      )}
+    </section>
+  );
 }

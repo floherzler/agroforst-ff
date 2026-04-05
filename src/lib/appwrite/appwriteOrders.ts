@@ -24,6 +24,9 @@ const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
   produkt_name: z.string().optional(),
   gesamtpreis_eur: z.unknown().optional(),
   preis_pro_einheit_eur: z.unknown().optional(),
+  bestellte_teilungen: z.unknown().optional(),
+  bestellte_teilungs_anzahlen: z.unknown().optional(),
+  bestellte_teilpreise_eur: z.unknown().optional(),
   status: z.string().optional(),
 });
 
@@ -68,6 +71,16 @@ function normalizeOrderStatus(value: string | undefined): string | undefined {
   }
 }
 
+function parseNumericArray(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => parseNumber(entry, Number.NaN))
+    .filter((entry) => Number.isFinite(entry));
+}
+
 export function normalizeBestellung(raw: unknown): Bestellung {
   const parsed = orderDocumentSchema.parse(raw);
 
@@ -84,6 +97,9 @@ export function normalizeBestellung(raw: unknown): Bestellung {
     preisGesamt: parseNumber(parsed.gesamtpreis_eur),
     preisEinheit: parseNumber(parsed.preis_pro_einheit_eur),
     status: normalizeOrderStatus(parsed.status) ?? "",
+    bestellteTeilungen: parseNumericArray(parsed.bestellte_teilungen),
+    bestellteTeilungsAnzahlen: parseNumericArray(parsed.bestellte_teilungs_anzahlen),
+    bestellteTeilpreiseEur: parseNumericArray(parsed.bestellte_teilpreise_eur),
   };
 }
 

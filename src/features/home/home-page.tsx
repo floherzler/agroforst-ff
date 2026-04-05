@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowRight, Loader2, Mail, MapPin } from "lucide-react";
+import { ArrowDown, ArrowRight, Info, Loader2, Mail, MapPin } from "lucide-react";
 
 import { PageShell } from "@/components/base/page-shell";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,9 +46,22 @@ import {
 } from "@/lib/appwrite/appwriteProducts";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { InView } from "@/components/motion-primitives/in-view";
 import { TextLoop } from "@/components/motion-primitives/text-loop";
 import { YearWheelSection } from "@/features/home/year-wheel-section";
+import {
+  getOfferDisplayUnitPrice,
+  getOfferPriceSummary,
+  getProductImageUrl,
+} from "@/features/catalog/catalog";
 
 const processSteps = [
   {
@@ -106,6 +120,9 @@ const galleryImages = [
   },
 ];
 
+const heroVideoUrl =
+  "https://fra.cloud.appwrite.io/v1/storage/buckets/homepage_media/files/69d2523c00332c74cda4/view?project=670b925800275a11d5c1";
+
 const permdalCertificatePdfUrl = encodeURI("/img/statut_Permdal_öko.pdf");
 const permdalCertificateImageUrl = encodeURI("/img/statut_Permdal_öko.png");
 const liveProductCategories = ["Alle", "Obst", "Gemuese", "Kraeuter"] as const;
@@ -153,26 +170,37 @@ function formatAvailability(offer: Angebot) {
   return `${offer.mengeVerfuegbar} ${offer.einheit}`;
 }
 
-function formatPickupDate(value?: string | null) {
-  if (!value) {
-    return "Nach Absprache";
-  }
-
-  const parsedDate = new Date(value);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(parsedDate);
+function HeaderInfo({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={title}
+          className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-foreground"
+        >
+          <Info className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="center" side="top" className="w-64">
+        <PopoverHeader>
+          <PopoverTitle>{title}</PopoverTitle>
+          <PopoverDescription>{description}</PopoverDescription>
+        </PopoverHeader>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export default function HomePage() {
   const { user, createAccount, login } = useAuthStore();
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
@@ -186,6 +214,39 @@ export default function HomePage() {
   const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
   const [productsError, setProductsError] = React.useState(false);
   const [liveCategory, setLiveCategory] = React.useState<LiveProductCategory>("Alle");
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) {
+      return;
+    }
+
+    const restart = () => {
+      video.currentTime = 0;
+      const playPromise = video.play();
+      if (playPromise) {
+        void playPromise.catch(() => {});
+      }
+    };
+
+    const ensurePlaying = () => {
+      if (!video.paused || video.ended) {
+        return;
+      }
+      const playPromise = video.play();
+      if (playPromise) {
+        void playPromise.catch(() => {});
+      }
+    };
+
+    video.addEventListener("ended", restart);
+    video.addEventListener("canplay", ensurePlaying);
+
+    return () => {
+      video.removeEventListener("ended", restart);
+      video.removeEventListener("canplay", ensurePlaying);
+    };
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -297,6 +358,26 @@ export default function HomePage() {
       });
   }, [liveCategory, liveOffers, liveProductsById]);
 
+  const featuredLiveOffers = React.useMemo(() => {
+    return [...filteredLiveOffers]
+      .sort((left, right) => {
+        const availabilityCompare =
+          right.offer.mengeVerfuegbar - left.offer.mengeVerfuegbar;
+        if (availabilityCompare !== 0) {
+          return availabilityCompare;
+        }
+
+        const priceCompare =
+          getOfferDisplayUnitPrice(left.offer) - getOfferDisplayUnitPrice(right.offer);
+        if (priceCompare !== 0) {
+          return priceCompare;
+        }
+
+        return (right.offer.year ?? 0) - (left.offer.year ?? 0);
+      })
+      .slice(0, 6);
+  }, [filteredLiveOffers]);
+
   async function handleInlineSignup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -390,26 +471,30 @@ export default function HomePage() {
       />
 
       <section className="landing-reveal home-hero relative overflow-hidden rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
-        <div className="home-hero-image-wrap home-hero-image-wrap-left" aria-hidden="true">
-          <img
-            src="/img/schnee-feld.jpeg"
-            alt=""
-            className="home-hero-image h-full w-full object-cover"
-          />
-        </div>
-
-        <div className="home-hero-image-wrap" aria-hidden="true">
+        <div className="home-hero-media" aria-hidden="true">
           <img
             src="/img/herbst.jpeg"
             alt=""
             className="home-hero-image h-full w-full object-cover"
           />
+          <video
+            ref={heroVideoRef}
+            className="home-hero-video h-full w-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            poster="/img/herbst.jpeg"
+          >
+            <source src={heroVideoUrl} type="video/mp4" />
+          </video>
         </div>
 
         <div className="relative flex flex-col items-center gap-8 text-center">
           <div className="flex max-w-4xl flex-col items-center gap-5 lg:max-w-[56rem]">
             <h1 className="text-display-brand text-balance text-white lg:max-w-[11ch]">
-              Landwirtschaft mit Aussicht und Weitblick
+              Landwirtschaft mit Weitblick
             </h1>
             <p className="max-w-2xl text-base leading-7 text-white/78 sm:text-lg">
               Natürlich ökologisch.
@@ -435,32 +520,19 @@ export default function HomePage() {
         <CardHeader className="gap-3 border-b border-border/70">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex max-w-2xl flex-col gap-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-soil-700)]">
-                <span className="relative flex size-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-lilac-500)] opacity-60" />
-                  <span className="relative inline-flex size-2.5 rounded-full bg-[var(--color-lilac-600)]" />
+              <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="font-display text-[2rem] leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
+                  Aktuelle Angebote
                 </span>
-                Sorgfaltig gepflegt
-              </div>
-              <CardTitle className="font-display text-[2rem] leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
-                Aktuelle Angebote im Hofsystem.
-              </CardTitle>
-              <CardDescription className="text-base leading-7 text-[var(--color-soil-700)]">
-                Direkt verfügbare Angebote aus dem aktuellen Bestand, kompakt und verlinkt.
-              </CardDescription>
-              <div>
-                <Button asChild size="sm" variant="outline" className="rounded-full">
+                <Button asChild size="sm" variant="outline" className="rounded-full w-fit">
                   <Link to="/produkte">
-                    Alle Produkte
+                    Alle ansehen
                     <ArrowRight data-icon="inline-end" />
                   </Link>
                 </Button>
-              </div>
+              </CardTitle>
             </div>
             <div className="flex flex-col items-start gap-3 sm:items-end">
-              <Badge variant="outline" className="w-fit">
-                {isLoadingProducts ? "Lädt…" : `${filteredLiveOffers.length} Angebote`}
-              </Badge>
               <Tabs
                 value={liveCategory}
                 onValueChange={(value) => setLiveCategory(value as LiveProductCategory)}
@@ -502,7 +574,7 @@ export default function HomePage() {
             <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
               Die Live-Angebote konnten gerade nicht geladen werden.
             </div>
-          ) : filteredLiveOffers.length === 0 ? (
+          ) : featuredLiveOffers.length === 0 ? (
             <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
               Für diese Kategorie sind aktuell keine verfügbaren Angebote gepflegt.
             </div>
@@ -515,48 +587,77 @@ export default function HomePage() {
                       <TableHead>Produkt</TableHead>
                       <TableHead>Kategorie</TableHead>
                       <TableHead>Verfügbar</TableHead>
-                      <TableHead>Preis</TableHead>
-                      <TableHead>Abholung</TableHead>
-                      <TableHead className="text-right">Details</TableHead>
+                      <TableHead>
+                        <span className="inline-flex items-center gap-1.5">
+                          Preis
+                          <HeaderInfo
+                            title="Preis ab"
+                            description='Das "ab" zeigt den günstigsten Preis pro Einheit aus den verfügbaren Teilungen.'
+                          />
+                        </span>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <span className="inline-flex items-center justify-end gap-1.5">
+                          Details
+                          <HeaderInfo
+                            title="Angebot öffnen"
+                            description="Auf der Angebotsseite wählst du deine gewünschte Menge als Kombination aus den verfügbaren Paketgrößen und kaufst dort weiter."
+                          />
+                        </span>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredLiveOffers.map(({ offer, product }) => (
-                      <TableRow key={offer.id}>
-                        <TableCell className="font-medium whitespace-normal">
-                          <div className="flex flex-col gap-1">
-                            <Link
-                              to="/angebote/$id"
-                              params={{ id: offer.id }}
-                              className="w-fit transition hover:text-primary"
-                            >
-                              {product?.name || "Unbekanntes Produkt"}
-                            </Link>
-                            {product?.sorte ? (
-                              <span className="text-xs text-muted-foreground">{product.sorte}</span>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-normal text-muted-foreground">
-                          {displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") || "Offen"}
-                        </TableCell>
-                        <TableCell>{formatAvailability(offer)}</TableCell>
-                        <TableCell>
-                          {offer.euroPreis > 0 ? `${formatCurrency(offer.euroPreis)} / ${offer.einheit}` : "Auf Anfrage"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatPickupDate(offer.pickupAt)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button asChild size="sm" variant="outline" className="rounded-full">
-                            <Link to="/angebote/$id" params={{ id: offer.id }}>
-                              Ansehen
-                              <ArrowRight data-icon="inline-end" />
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {featuredLiveOffers.map(({ offer, product }) => {
+                      const imageUrl = getProductImageUrl(product?.imageId);
+
+                      return (
+                        <TableRow key={offer.id}>
+                          <TableCell className="font-medium whitespace-normal">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="size-11 rounded-xl border border-border/60">
+                                {imageUrl ? (
+                                  <AvatarImage
+                                    src={imageUrl}
+                                    alt={product?.name || "Produktbild"}
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <AvatarFallback className="rounded-xl bg-secondary text-primary">
+                                    {(product?.name || "??").substring(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div className="flex flex-col gap-1">
+                                <Link
+                                  to="/angebote/$id"
+                                  params={{ id: offer.id }}
+                                  className="w-fit transition hover:text-primary"
+                                >
+                                  {product?.name || "Unbekanntes Produkt"}
+                                </Link>
+                                {product?.sorte ? (
+                                  <span className="text-xs text-muted-foreground">{product.sorte}</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-normal text-muted-foreground">
+                            {displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") || "Offen"}
+                          </TableCell>
+                          <TableCell>{formatAvailability(offer)}</TableCell>
+                          <TableCell>{getOfferPriceSummary(offer)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild size="sm" variant="outline" className="rounded-full">
+                              <Link to="/angebote/$id" params={{ id: offer.id }}>
+                                Angebot öffnen
+                                <ArrowRight data-icon="inline-end" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

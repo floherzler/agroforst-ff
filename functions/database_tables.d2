@@ -30,6 +30,8 @@ angebote: {
   menge_reserviert: double
   einheit: Enum(stueck|kilogramm|bund|liter)
   preis_pro_einheit_eur: double
+  teilungen: "double[]"
+  preise_pro_teilung_eur: "double[]"
   erzeugerpreis_eur: double?
   standardpreis_eur: double?
   mitgliedspreis_eur: double?
@@ -85,6 +87,9 @@ bestellungen: {
   menge: double
   einheit: Enum(stueck|kilogramm|bund|liter)
   preis_pro_einheit_eur: double
+  bestellte_teilungen: "double[]"
+  bestellte_teilungs_anzahlen: "int[]"
+  bestellte_teilpreise_eur: "double[]"
   gesamtpreis_eur: double
   abholung_ab: timestamp?
   produkt_name: String

@@ -39,6 +39,8 @@ const offerDocumentSchema = appwriteDocumentMetaSchema.extend({
   einheit: z.string().nullish().transform((value) => value ?? ""),
   menge: z.unknown().optional(),
   preis_pro_einheit_eur: z.unknown().optional(),
+  teilungen: z.unknown().optional(),
+  preise_pro_teilung_eur: z.unknown().optional(),
   saat_pflanz_datum: z.string().nullish().transform((value) => value ?? ""),
   ernte_projektion: z.unknown().optional(),
   menge_reserviert: z.unknown().optional(),
@@ -110,7 +112,13 @@ const upsertAngebotInputSchema = z.object({
   mengeVerfuegbar: z.number().nonnegative(),
   mengeAbgeholt: z.number().nonnegative().optional(),
   einheit: z.string().trim().min(1),
-  euroPreis: z.number().nonnegative(),
+  euroPreis: z.number().nonnegative().optional(),
+  preisStaffeln: z.array(
+    z.object({
+      teilung: z.number().positive(),
+      paketPreisEur: z.number().nonnegative(),
+    }),
+  ).optional(),
   producerPreis: z.number().nonnegative().optional(),
   standardPreis: z.number().nonnegative().optional(),
   memberPreis: z.number().nonnegative().optional(),
@@ -125,6 +133,22 @@ export type ProduktMitAngeboten = {
   produkt: Produkt;
   angebote: Angebot[];
 };
+
+function parseNumericArray(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => parseNumber(entry, Number.NaN))
+    .filter((entry) => Number.isFinite(entry));
+}
+
+function formatNumberLabel(value: number): string {
+  return new Intl.NumberFormat("de-DE", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 function normalizeUnit(value: string): string {
   switch (value.trim().toLowerCase()) {
@@ -141,6 +165,90 @@ function normalizeUnit(value: string): string {
     default:
       return value;
   }
+}
+
+function formatTeilungLabel(teilung: number, einheit: string): string {
+  const canonicalUnit = (einheit ?? "").trim().toLowerCase();
+  if (canonicalUnit === "kilogramm") {
+    if (teilung === 1000) {
+      return "1 Tonne";
+    }
+
+    if (teilung === 50) {
+      return "1 Zentner";
+    }
+
+    return `${formatNumberLabel(teilung)} kg`;
+  }
+
+  switch (canonicalUnit) {
+    case "stueck":
+      return `${formatNumberLabel(teilung)} Stück`;
+    case "bund":
+      return `${formatNumberLabel(teilung)} Bund`;
+    case "liter":
+      return `${formatNumberLabel(teilung)} Liter`;
+    default:
+      return `${formatNumberLabel(teilung)} ${einheit}`.trim();
+  }
+}
+
+function normalizePreisStaffeln(
+  teilungenRaw: unknown,
+  preiseRaw: unknown,
+  einheit: string,
+): PreisStaffel[] {
+  const teilungen = parseNumericArray(teilungenRaw);
+  const paketPreise = parseNumericArray(preiseRaw);
+  const pairCount = Math.min(teilungen.length, paketPreise.length);
+
+  return Array.from({ length: pairCount }, (_, index) => ({
+    teilung: teilungen[index] ?? 0,
+    paketPreisEur: paketPreise[index] ?? 0,
+  }))
+    .filter((entry) => entry.teilung > 0 && entry.paketPreisEur >= 0)
+    .sort((left, right) => left.teilung - right.teilung)
+    .map((entry) => ({
+      ...entry,
+      effektiverPreisProEinheitEur: Number(
+        (entry.paketPreisEur / entry.teilung).toFixed(4),
+      ),
+      label: formatTeilungLabel(entry.teilung, einheit),
+    }));
+}
+
+function normalizePreisStaffelnInput(
+  value: Array<{ teilung: number; paketPreisEur: number }> | undefined,
+): Array<{ teilung: number; paketPreisEur: number }> {
+  if (!value || value.length === 0) {
+    return [];
+  }
+
+  const normalized = value
+    .map((entry) => ({
+      teilung: Number(entry.teilung),
+      paketPreisEur: Number(entry.paketPreisEur),
+    }))
+    .filter(
+      (entry) =>
+        Number.isFinite(entry.teilung)
+        && entry.teilung > 0
+        && Number.isFinite(entry.paketPreisEur)
+        && entry.paketPreisEur >= 0,
+    )
+    .sort((left, right) => left.teilung - right.teilung);
+
+  if (normalized.length !== value.length) {
+    throw new Error("Alle Staffelwerte muessen gueltige positive Teilungen und Preise enthalten.");
+  }
+
+  for (let index = 1; index < normalized.length; index += 1) {
+    if (normalized[index - 1]?.teilung === normalized[index]?.teilung) {
+      throw new Error("Teilungen muessen eindeutig sein.");
+    }
+  }
+
+  return normalized;
 }
 
 export function normalizeProdukt(raw: unknown): Produkt {
@@ -176,6 +284,11 @@ export function normalizeProdukt(raw: unknown): Produkt {
 export function normalizeAngebot(raw: unknown): Angebot {
   const parsed = offerDocumentSchema.parse(raw);
   const parsedYear = parseOptionalNumber(parsed.jahr);
+  const preisStaffeln = normalizePreisStaffeln(
+    parsed.teilungen,
+    parsed.preise_pro_teilung_eur,
+    parsed.einheit || "",
+  );
   return {
     id: parsed.$id,
     createdAt: parsed.$createdAt,
@@ -185,6 +298,7 @@ export function normalizeAngebot(raw: unknown): Angebot {
     einheit: normalizeUnit(parsed.einheit || ""),
     menge: parseNumber(parsed.menge),
     euroPreis: parseNumber(parsed.preis_pro_einheit_eur),
+    preisStaffeln,
     saatPflanzDatum: parsed.saat_pflanz_datum || "",
     ernteProjektion: parseStringArray(parsed.ernte_projektion),
     mengeAbgeholt: parseNumber(parsed.menge_reserviert),
@@ -251,6 +365,16 @@ export async function listAlleProdukte(): Promise<Produkt[]> {
   );
 
   return response.documents.map(normalizeProdukt);
+}
+
+export async function getProduktById(id: string): Promise<Produkt> {
+  const response = await databases.getDocument(
+    ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
+    ensureConfigured(appwriteConfig.productTableId, "Produkt-Tabelle"),
+    z.string().trim().min(1).parse(id),
+  );
+
+  return normalizeProdukt(response);
 }
 
 export async function listAngebote(
@@ -393,7 +517,8 @@ export async function upsertAngebot(input: {
   mengeVerfuegbar: number;
   mengeAbgeholt?: number;
   einheit: string;
-  euroPreis: number;
+  euroPreis?: number;
+  preisStaffeln?: Array<{ teilung: number; paketPreisEur: number }>;
   producerPreis?: number;
   standardPreis?: number;
   memberPreis?: number;
@@ -405,6 +530,21 @@ export async function upsertAngebot(input: {
 }): Promise<Angebot> {
   const parsedInput = upsertAngebotInputSchema.parse(input);
   const documentId = parsedInput.id || ID.unique();
+  const normalizedPreisStaffeln = normalizePreisStaffelnInput(parsedInput.preisStaffeln);
+  const fallbackEuroPreis =
+    parsedInput.euroPreis
+    ?? (normalizedPreisStaffeln[0]
+      ? Number(
+          (
+            normalizedPreisStaffeln[0].paketPreisEur
+            / normalizedPreisStaffeln[0].teilung
+          ).toFixed(4),
+        )
+      : undefined);
+
+  if (fallbackEuroPreis === undefined) {
+    throw new Error("Preis oder mindestens eine Preisstaffel ist erforderlich.");
+  }
 
   const response = await databases.upsertDocument(
     ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
@@ -417,7 +557,9 @@ export async function upsertAngebot(input: {
       menge_verfuegbar: parsedInput.mengeVerfuegbar,
       menge_reserviert: parsedInput.mengeAbgeholt ?? 0,
       einheit: parsedInput.einheit,
-      preis_pro_einheit_eur: parsedInput.euroPreis,
+      preis_pro_einheit_eur: fallbackEuroPreis,
+      teilungen: normalizedPreisStaffeln.map((entry) => entry.teilung),
+      preise_pro_teilung_eur: normalizedPreisStaffeln.map((entry) => entry.paketPreisEur),
       erzeugerpreis_eur: parsedInput.producerPreis,
       standardpreis_eur: parsedInput.standardPreis,
       mitgliedspreis_eur: parsedInput.memberPreis,
@@ -517,6 +659,7 @@ export const listProdukteMitStaffeln = listProdukteMitAngeboten;
 export const upsertStaffel = upsertAngebot;
 export const subscribeToStaffeln = subscribeToAngebote;
 export const subscribeToStaffel = subscribeToAngebot;
+export { formatTeilungLabel };
 
 export function subscribeToBlogPosts(
   onChange: (change: RealtimeChange<BlogPost>) => void,

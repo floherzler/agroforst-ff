@@ -21,6 +21,7 @@ import {
   formatCurrency,
   fromDateTimeInput,
   offerToFormState,
+  parsePreisStaffeln,
   parseOptionalNumberField,
   parseRequiredNumber,
   productToFormState,
@@ -31,6 +32,7 @@ import {
   type OfferFormState,
   type ProductFormState,
 } from "@/features/zentrale/admin-domain";
+import { getOfferDisplayUnitPrice } from "@/features/catalog/catalog";
 
 export function useZentraleAdmin({
   initialProdukte,
@@ -126,7 +128,7 @@ export function useZentraleAdmin({
   const totalProjectedQuantity = staffeln.reduce((sum, offer) => sum + (offer.menge ?? 0), 0);
   const totalAvailableQuantity = staffeln.reduce((sum, offer) => sum + (offer.mengeVerfuegbar ?? 0), 0);
   const totalExpectedRevenue = staffeln.reduce(
-    (sum, offer) => sum + (offer.expectedRevenue ?? offer.euroPreis * offer.mengeVerfuegbar),
+    (sum, offer) => sum + (offer.expectedRevenue ?? getOfferDisplayUnitPrice(offer) * offer.mengeVerfuegbar),
     0,
   );
   const activeSeasonOffers = staffeln.filter((offer) => (offer.year ?? 0) >= new Date().getFullYear()).length;
@@ -321,7 +323,10 @@ export function useZentraleAdmin({
       const mengeAbgeholt = offerForm.mengeAbgeholt.trim()
         ? parseRequiredNumber(offerForm.mengeAbgeholt, "Reservierte Menge")
         : 0;
-      const euroPreis = parseRequiredNumber(offerForm.euroPreis, "Preis");
+      const preisStaffeln = parsePreisStaffeln(
+        offerForm.preisStaffeln,
+        canonicalUnit(offerForm.einheit) || "kilogramm",
+      );
       const year = offerForm.year.trim()
         ? parseRequiredNumber(offerForm.year, "Jahr")
         : undefined;
@@ -334,7 +339,11 @@ export function useZentraleAdmin({
         mengeVerfuegbar,
         mengeAbgeholt,
         einheit: canonicalUnit(offerForm.einheit) || "kilogramm",
-        euroPreis,
+        euroPreis: undefined,
+        preisStaffeln: preisStaffeln.map(({ teilung, paketPreisEur }) => ({
+          teilung,
+          paketPreisEur,
+        })),
         producerPreis: parseOptionalNumberField(offerForm.producerPreis),
         standardPreis: parseOptionalNumberField(offerForm.standardPreis),
         memberPreis: parseOptionalNumberField(offerForm.memberPreis),

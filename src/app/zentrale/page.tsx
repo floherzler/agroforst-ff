@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, Sparkles, Sprout, Upload, Boxes } from "lucide-react";
+import { CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, Sprout, Upload, Boxes } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ProductCard } from "@/features/zentrale/product-card";
+import { OfferEditor, OfferTable } from "@/features/zentrale/admin-ui";
 import {
   displayProductName,
   displayValueLabel,
@@ -557,7 +558,7 @@ function InlineProductEditor({
                   <Label htmlFor="produkt-unterkategorie">Unterkategorie</Label>
                   <Select
                     value={form.unterkategorie || "__empty__"}
-                    onValueChange={(value) => onFieldChange("unterkategorie", value === "__empty__" ? "" : value)}
+                    onValueChange={(value) => onFieldChange("unterkategorie", value && value !== "__empty__" ? value : "")}
                   >
                     <SelectTrigger id="produkt-unterkategorie">
                       <SelectValue placeholder="Optional" />
@@ -713,12 +714,6 @@ function ZentraleWorkspace({
   }, [drafts]);
 
   useEffect(() => {
-    if (state.activePanel !== "produkte") {
-      state.setActivePanel("produkte");
-    }
-  }, [state.activePanel, state.setActivePanel]);
-
-  useEffect(() => {
     const isKnown = hauptkategorieValues.includes(activeCategory as (typeof hauptkategorieValues)[number]);
     if (!isKnown) {
       setActiveCategory(defaultCategory);
@@ -796,9 +791,9 @@ function ZentraleWorkspace({
       draftKey === NEW_PRODUCT_KEY
         ? emptyProductForm()
         : (() => {
-            const product = state.produkte.find((entry) => entry.id === draftKey);
-            return product ? productToFormState(product) : emptyProductForm();
-          })();
+          const product = state.produkte.find((entry) => entry.id === draftKey);
+          return product ? productToFormState(product) : emptyProductForm();
+        })();
 
     setDrafts((current) => {
       const previous = current[draftKey];
@@ -854,6 +849,12 @@ function ZentraleWorkspace({
   function openNewProductEditor() {
     setPublishOpen(false);
     setEditorTarget({ kind: "new" });
+  }
+
+  function openOfferWorkspace() {
+    setPublishOpen(false);
+    setEditorTarget(null);
+    state.createOfferDraft();
   }
 
   function openExistingEditor(productId: string) {
@@ -963,60 +964,75 @@ function ZentraleWorkspace({
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(182,209,164,0.18),transparent_24%),radial-gradient(circle_at_top_right,rgba(190,176,235,0.14),transparent_22%),linear-gradient(180deg,var(--color-background),color-mix(in_srgb,var(--color-surface-soft)_44%,white_56%))] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <div className={cn("flex flex-wrap items-center gap-3 rounded-[1.6rem] px-4 py-4", surfaceRecipes({ tone: "band" }))}>
-          <RowButton active>
+          <RowButton active={state.activePanel === "produkte"} onClick={() => state.setActivePanel("produkte")}>
             <Sprout className="size-4" />
             Produkte
           </RowButton>
-          <RowButton active={false} disabled>
+          <RowButton active={state.activePanel === "angebote"} onClick={openOfferWorkspace}>
             <Boxes className="size-4" />
             Angebote
           </RowButton>
-          <RowButton active={false} disabled>
-            <Sparkles className="size-4" />
-            Mitgliedschaften
-          </RowButton>
         </div>
 
-        <div className="flex justify-start">
-          <Button onClick={openNewProductEditor}>
-            <Plus data-icon="inline-start" />
-            Neues Produkt
-          </Button>
-        </div>
+        {state.activePanel === "produkte" ? (
+          <>
+            <div className="flex justify-start">
+              <Button onClick={openNewProductEditor}>
+                <Plus data-icon="inline-start" />
+                Neues Produkt
+              </Button>
+            </div>
 
-        <div className={cn("flex flex-wrap items-center gap-3 rounded-[1.4rem] px-4 py-3", surfaceRecipes({ tone: "default" }))}>
-          {availableCategories.map((category) => (
-            <RowButton
-              key={category}
-              active={activeCategory === category}
-              onClick={() => setActiveCategory(category)}
-            >
-              {displayValueLabel(category)}
-            </RowButton>
-          ))}
-        </div>
+            <div className={cn("flex flex-wrap items-center gap-3 rounded-[1.4rem] px-4 py-3", surfaceRecipes({ tone: "default" }))}>
+              {availableCategories.map((category) => (
+                <RowButton
+                  key={category}
+                  active={activeCategory === category}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {displayValueLabel(category)}
+                </RowButton>
+              ))}
+            </div>
 
-        {productsForActiveCategory.length === 0 ? (
-          <EmptyCategoryState categoryLabel={displayValueLabel(activeCategory)} />
+            {productsForActiveCategory.length === 0 ? (
+              <EmptyCategoryState categoryLabel={displayValueLabel(activeCategory)} />
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {productsForActiveCategory.map((product) => {
+                  const statusTone = productStatusForCard(product);
+
+                  return (
+                    <div key={product.id}>
+                      <ProductCard
+                        product={product}
+                        selected={editorTarget?.kind === "existing" && editorTarget.id === product.id}
+                        statusLabel={statusTone.label}
+                        statusVariant={statusTone.variant}
+                        onSelect={() => openExistingEditor(product.id)}
+                        onEdit={() => openExistingEditor(product.id)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {productsForActiveCategory.map((product) => {
-              const statusTone = productStatusForCard(product);
+          <>
+            <div className="flex items-center justify-between gap-3 rounded-[1.4rem] border border-border/70 bg-surface-card px-4 py-3">
+              <div>
+                <div className={cn(textRecipes({ role: "label" }), "text-sm text-foreground")}>Angebote</div>
+              </div>
+              <Button onClick={() => state.createOfferDraft()}>
+                <Plus data-icon="inline-start" />
+                Neues Angebot
+              </Button>
+            </div>
 
-              return (
-                <div key={product.id}>
-                  <ProductCard
-                    product={product}
-                    selected={editorTarget?.kind === "existing" && editorTarget.id === product.id}
-                    statusLabel={statusTone.label}
-                    statusVariant={statusTone.variant}
-                    onSelect={() => openExistingEditor(product.id)}
-                    onEdit={() => openExistingEditor(product.id)}
-                  />
-                </div>
-              );
-            })}
-          </div>
+            <OfferTable state={state} caption="Angebote nach Produkt, Jahr, Preis und Verfügbarkeit." />
+            <OfferEditor state={state} />
+          </>
         )}
       </div>
 

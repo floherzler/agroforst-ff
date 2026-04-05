@@ -215,6 +215,45 @@ export function formatPricePerUnit(
   return `${formatEuro(euroPreis)} / ${einheit}`;
 }
 
+export function getOfferDisplayUnitPrice(offer: Angebot): number {
+  if (offer.preisStaffeln.length > 0) {
+    return Math.min(
+      ...offer.preisStaffeln.map((staffel) => staffel.effektiverPreisProEinheitEur),
+    );
+  }
+
+  return offer.euroPreis;
+}
+
+export function getOfferPriceSummary(offer: Angebot): string {
+  if (offer.preisStaffeln.length > 0) {
+    const cheapestTier = offer.preisStaffeln.reduce<
+      Angebot["preisStaffeln"][number] | null
+    >((lowest, current) => {
+      if (!lowest) {
+        return current;
+      }
+
+      return current.effektiverPreisProEinheitEur <
+        lowest.effektiverPreisProEinheitEur
+        ? current
+        : lowest;
+    }, null);
+
+    if (!cheapestTier) {
+      return "Auf Anfrage";
+    }
+
+    return `ab ${formatPricePerUnit(
+      cheapestTier.effektiverPreisProEinheitEur,
+      offer.menge,
+      offer.einheit,
+    )}`;
+  }
+
+  return formatPricePerUnit(offer.euroPreis, offer.menge, offer.einheit);
+}
+
 export function formatHarvestRange(values: string[]) {
   if (values.length === 0) {
     return "Noch offen";

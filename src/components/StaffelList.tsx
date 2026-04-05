@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { subscribeToStaffeln } from "@/lib/appwrite/appwriteProducts";
+import { getOfferPriceSummary } from "@/features/catalog/catalog";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from './ui/table';
 
 export default function StaffelList({ initialStaffeln }: { initialStaffeln: Staffel[] }) {
@@ -44,7 +45,7 @@ export default function StaffelList({ initialStaffeln }: { initialStaffeln: Staf
               <TableCell>{new Date(staffel.ernteProjektion[0]).toDateString()} - {new Date(staffel.ernteProjektion[staffel.ernteProjektion.length - 1]).toDateString()}</TableCell>
               <TableCell>{staffel.menge}</TableCell>
               <TableCell>{staffel.einheit}</TableCell>
-              <TableCell>{staffel.euroPreis}€</TableCell>
+              <TableCell>{getOfferPriceSummary(staffel)}</TableCell>
               <TableCell>{staffel.mengeVerfuegbar}</TableCell>
               <TableCell>{staffel.mengeAbgeholt}</TableCell>
             </TableRow>

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { VariantProps } from "class-variance-authority";
 
-import { formatHarvestRange, formatPricePerUnit } from "@/features/catalog/catalog";
+import { formatHarvestRange, getOfferPriceSummary } from "@/features/catalog/catalog";
 import { listStaffeln } from "@/lib/appwrite/appwriteProducts";
+import { formatOfferDate } from "@/lib/date";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -108,11 +109,7 @@ export default function AngeboteModal({
                         {angebot.mengeVerfuegbar} {angebot.einheit} verfügbar
                       </CardTitle>
                       <CardDescription>
-                        {formatPricePerUnit(
-                          angebot.euroPreis,
-                          angebot.menge,
-                          angebot.einheit,
-                        )}
+                        {getOfferPriceSummary(angebot)}
                       </CardDescription>
                     </div>
                     <Badge variant={angebot.mengeVerfuegbar > 0 ? "secondary" : "outline"}>
@@ -123,7 +120,7 @@ export default function AngeboteModal({
                 <CardContent className="flex flex-col gap-2 pt-3 text-sm text-muted-foreground">
                   <p>
                     Saat- / Pflanzdatum:{" "}
-                    {new Date(angebot.saatPflanzDatum).toLocaleDateString("de-DE")}
+                    {formatOfferDate(angebot.saatPflanzDatum)}
                   </p>
                   <p>Nächste Ernte: {formatHarvestRange(angebot.ernteProjektion)}</p>
                 </CardContent>

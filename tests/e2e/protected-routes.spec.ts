@@ -11,9 +11,5 @@ test("zentrale redirects unauthenticated users to home", async ({ page }) => {
   await page.goto("/zentrale");
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(
-    page.getByText(
-      /agroforst, produkte und neuigkeiten in einer klaren ersten version/i,
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /landwirtschaft mit aussicht und weitblick/i })).toBeVisible();
 });

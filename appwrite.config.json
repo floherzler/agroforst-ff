@@ -255,6 +255,22 @@
                     "min": 0
                 },
                 {
+                    "key": "teilungen",
+                    "type": "float",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "preise_pro_teilung_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0
+                },
+                {
                     "key": "erzeugerpreis_eur",
                     "type": "float",
                     "required": false,
@@ -679,6 +695,31 @@
                     "type": "float",
                     "required": true,
                     "array": false,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "bestellte_teilungen",
+                    "type": "float",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0
+                },
+                {
+                    "key": "bestellte_teilungs_anzahlen",
+                    "type": "integer",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000000
+                },
+                {
+                    "key": "bestellte_teilpreise_eur",
+                    "type": "float",
+                    "required": false,
+                    "array": true,
                     "default": null,
                     "min": 0
                 },

@@ -101,6 +101,48 @@ function calculateTotalPrice(quantity, unit, unitPriceEur) {
     return Number((quantity * unitPriceEur).toFixed(2));
 }
 
+function parseNumericArray(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value
+        .map((entry) => Number(entry))
+        .filter((entry) => Number.isFinite(entry));
+}
+
+function normalizeStaffelInput(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value
+        .map((entry) => ({
+            teilung: Number(entry?.teilung),
+            anzahl: Number(entry?.anzahl),
+        }))
+        .filter(
+            (entry) =>
+                Number.isFinite(entry.teilung) &&
+                entry.teilung > 0 &&
+                Number.isInteger(entry.anzahl) &&
+                entry.anzahl > 0
+        );
+}
+
+function createPreisstaffelMap(offer) {
+    const teilungen = parseNumericArray(offer.teilungen);
+    const paketPreise = parseNumericArray(offer.preise_pro_teilung_eur);
+    const pairCount = Math.min(teilungen.length, paketPreise.length);
+    const result = new Map();
+
+    for (let index = 0; index < pairCount; index += 1) {
+        result.set(teilungen[index], paketPreise[index]);
+    }
+
+    return result;
+}
+
 function compactObject(value) {
     return Object.fromEntries(
         Object.entries(value).filter(([, entry]) => entry !== undefined)
@@ -133,9 +175,17 @@ export default async ({ req, res, log, error }) => {
             body.mitgliedschaft ?? body.mitgliedschaft_id ?? body.membership ?? body.membership_id ?? body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? ""
         ).trim();
         const quantity = Number(body.menge ?? body.quantity ?? url.searchParams.get("menge"));
+        const requestedStaffeln = normalizeStaffelInput(body.staffeln);
+        const rawStaffeln = Array.isArray(body.staffeln) ? body.staffeln : [];
+        const hasLegacyQuantity = Number.isFinite(quantity) && quantity > 0;
+        const hasStaffeln = requestedStaffeln.length > 0;
 
-        if (!offerId || !membershipId || !Number.isFinite(quantity) || quantity <= 0) {
-            return fail(res, "Invalid input: require { angebot_id, mitgliedschaft_id, menge > 0 }", 400);
+        if (rawStaffeln.length > 0 && requestedStaffeln.length !== rawStaffeln.length) {
+            return fail(res, "Ungueltige Preisstaffeln im Request.", 400);
+        }
+
+        if (!offerId || !membershipId || (!hasLegacyQuantity && !hasStaffeln)) {
+            return fail(res, "Invalid input: require { angebot_id, mitgliedschaft_id, menge > 0 } or { staffeln[] }", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
@@ -178,11 +228,35 @@ export default async ({ req, res, log, error }) => {
         });
 
         const canonicalUnit = normalizeWeightUnit(offer.einheit);
+        const preisstaffelMap = createPreisstaffelMap(offer);
+        const offerHasPreisstaffeln = preisstaffelMap.size > 0;
+        const orderBreakdown = hasStaffeln
+            ? requestedStaffeln
+            : [];
+        if (hasStaffeln && !offerHasPreisstaffeln) {
+            return fail(res, "Dieses Angebot hat keine Preisstaffeln.", 409);
+        }
+
+        if (offerHasPreisstaffeln && !hasStaffeln) {
+            return fail(res, "Preisstaffeln muessen explizit ausgewaehlt werden.", 400);
+        }
+
+        if (offerHasPreisstaffeln && hasStaffeln) {
+            for (const entry of orderBreakdown) {
+                if (!preisstaffelMap.has(entry.teilung)) {
+                    return fail(res, "Ungueltige Preisstaffel angefordert.", 400, { teilung: entry.teilung });
+                }
+            }
+        }
+
+        const effectiveQuantity = hasStaffeln
+            ? orderBreakdown.reduce((sum, entry) => sum + entry.teilung * entry.anzahl, 0)
+            : quantity;
         const availableQuantity = Number(offer.menge_verfuegbar ?? 0);
-        if (!Number.isFinite(availableQuantity) || availableQuantity < quantity) {
+        if (!Number.isFinite(availableQuantity) || availableQuantity < effectiveQuantity) {
             return fail(res, "Not enough available", 409, {
                 available: availableQuantity,
-                requested: quantity,
+                requested: effectiveQuantity,
             });
         }
 
@@ -206,10 +280,19 @@ export default async ({ req, res, log, error }) => {
             productName = String(offer.produkt_name ?? `Produkt ${productId}`).trim();
         }
 
-        const unitPriceEur = Number(offer.preis_pro_einheit_eur ?? 0);
-        const totalPriceEur = calculateTotalPrice(quantity, canonicalUnit, unitPriceEur);
-        const nextAvailableQuantity = availableQuantity - quantity;
-        const nextAllocatedQuantity = Number(offer.menge_reserviert ?? 0) + quantity;
+        const bestellteTeilungen = orderBreakdown.map((entry) => entry.teilung);
+        const bestellteTeilungsAnzahlen = orderBreakdown.map((entry) => entry.anzahl);
+        const bestellteTeilpreiseEur = orderBreakdown.map((entry) => Number(preisstaffelMap.get(entry.teilung) ?? 0));
+        const totalPriceEur = hasStaffeln
+            ? Number(
+                orderBreakdown
+                    .reduce((sum, entry) => sum + (Number(preisstaffelMap.get(entry.teilung) ?? 0) * entry.anzahl), 0)
+                    .toFixed(2)
+            )
+            : calculateTotalPrice(effectiveQuantity, canonicalUnit, Number(offer.preis_pro_einheit_eur ?? 0));
+        const unitPriceEur = Number((totalPriceEur / effectiveQuantity).toFixed(4));
+        const nextAvailableQuantity = availableQuantity - effectiveQuantity;
+        const nextAllocatedQuantity = Number(offer.menge_reserviert ?? 0) + effectiveQuantity;
 
         await tables.updateRow({
             databaseId,
@@ -231,9 +314,12 @@ export default async ({ req, res, log, error }) => {
                 benutzer_email: "",
                 mitgliedschaft: membershipId,
                 angebot: offerId,
-                menge: quantity,
+                menge: effectiveQuantity,
                 einheit: canonicalUnit,
                 preis_pro_einheit_eur: unitPriceEur,
+                bestellte_teilungen: bestellteTeilungen.length > 0 ? bestellteTeilungen : undefined,
+                bestellte_teilungs_anzahlen: bestellteTeilungsAnzahlen.length > 0 ? bestellteTeilungsAnzahlen : undefined,
+                bestellte_teilpreise_eur: bestellteTeilpreiseEur.length > 0 ? bestellteTeilpreiseEur : undefined,
                 gesamtpreis_eur: totalPriceEur,
                 abholung_ab: offer.abholung_ab ?? undefined,
                 produkt_name: productName,
@@ -273,10 +359,13 @@ export default async ({ req, res, log, error }) => {
                     nachricht: [
                         `Bestellung ${order.$id}`,
                         `Produkt: ${productName}`,
-                        `Menge: ${quantity} ${canonicalUnit}`,
+                        `Menge: ${effectiveQuantity} ${canonicalUnit}`,
                         `Preis: ${unitPriceEur.toFixed(2)} EUR`,
                         `Gesamt: ${totalPriceEur.toFixed(2)} EUR`,
-                    ].join("\n"),
+                        bestellteTeilungen.length > 0
+                            ? `Staffeln: ${bestellteTeilungen.map((teilung, index) => `${teilung} x ${bestellteTeilungsAnzahlen[index]}`).join(", ")}`
+                            : undefined,
+                    ].filter(Boolean).join("\n"),
                     zugestellt: false,
                     erstellt_am: nowIso,
                 }),

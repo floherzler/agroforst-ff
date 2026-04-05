@@ -1,5 +1,7 @@
 "use client";
 
+import { formatTeilungLabel } from "@/lib/appwrite/appwriteProducts";
+
 export const hauptkategorieValues = [
   "Obst",
   "Gemuese",
@@ -87,6 +89,12 @@ export type OfferFormState = {
   ernteProjektion: string;
   pickupAt: string;
   beschreibung: string;
+  preisStaffeln: PreisStaffelFormState[];
+};
+
+export type PreisStaffelFormState = {
+  teilung: string;
+  paketPreisEur: string;
 };
 
 export function splitList(value: string): string[] {
@@ -244,6 +252,7 @@ export function emptyOfferForm(defaultProductId = ""): OfferFormState {
     ernteProjektion: "",
     pickupAt: "",
     beschreibung: "",
+    preisStaffeln: [],
   };
 }
 
@@ -298,7 +307,58 @@ export function offerToFormState(offer: Staffel): OfferFormState {
     ernteProjektion: joinList(offer.ernteProjektion),
     pickupAt: toDateTimeInput(offer.pickupAt),
     beschreibung: offer.beschreibung ?? "",
+    preisStaffeln: (offer.preisStaffeln ?? []).map((staffel) => ({
+      teilung: String(staffel.teilung),
+      paketPreisEur: String(staffel.paketPreisEur),
+    })),
   };
+}
+
+export function formatTeilungPreviewLabel(teilung: number, einheit: string): string {
+  return formatTeilungLabel(teilung, canonicalUnit(einheit) || einheit);
+}
+
+export function parsePreisStaffeln(
+  values: PreisStaffelFormState[],
+  einheit: string,
+): Array<{ teilung: number; paketPreisEur: number; label: string; effektiverPreisProEinheitEur: number }> {
+  const normalized = values
+    .filter((entry) => entry.teilung.trim() || entry.paketPreisEur.trim())
+    .map((entry, index) => {
+      if (!entry.teilung.trim() || !entry.paketPreisEur.trim()) {
+        throw new Error(`Staffel ${index + 1} ist unvollstaendig.`);
+      }
+
+      const teilung = parseRequiredNumber(entry.teilung, `Teilung ${index + 1}`);
+      const paketPreisEur = parseRequiredNumber(entry.paketPreisEur, `Paketpreis ${index + 1}`);
+
+      if (teilung <= 0) {
+        throw new Error(`Teilung ${index + 1} muss groesser als 0 sein.`);
+      }
+
+      if (paketPreisEur < 0) {
+        throw new Error(`Paketpreis ${index + 1} darf nicht negativ sein.`);
+      }
+
+      return { teilung, paketPreisEur };
+    })
+    .sort((left, right) => left.teilung - right.teilung);
+
+  if (normalized.length === 0) {
+    throw new Error("Mindestens eine Preisstaffel ist erforderlich.");
+  }
+
+  for (let index = 1; index < normalized.length; index += 1) {
+    if (normalized[index - 1]?.teilung === normalized[index]?.teilung) {
+      throw new Error("Teilungen muessen eindeutig sein.");
+    }
+  }
+
+  return normalized.map((entry) => ({
+    ...entry,
+    label: formatTeilungPreviewLabel(entry.teilung, einheit),
+    effektiverPreisProEinheitEur: Number((entry.paketPreisEur / entry.teilung).toFixed(4)),
+  }));
 }
 
 export function parseRequiredNumber(value: string, label: string): number {

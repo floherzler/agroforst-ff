@@ -20,8 +20,22 @@ const functionExecutionSchema = z.object({
 const placeOrderInputSchema = z.object({
   angebotId: z.string().trim().min(1),
   membershipId: z.string().trim().min(1),
-  menge: z.number().positive(),
+  menge: z.number().positive().optional(),
+  staffeln: z.array(
+    z.object({
+      teilung: z.number().positive(),
+      anzahl: z.number().int().positive(),
+    }),
+  ).optional(),
   userMail: z.email(),
+}).superRefine((value, context) => {
+  if (!value.menge && (!value.staffeln || value.staffeln.length === 0)) {
+    context.addIssue({
+      code: "custom",
+      message: "Entweder eine Menge oder Preisstaffeln sind erforderlich.",
+      path: ["menge"],
+    });
+  }
 });
 
 const membershipRequestInputSchema = z.object({
@@ -83,7 +97,8 @@ async function executeValidatedFunction<TOutput = unknown>(
 export async function placeOrderRequest(input: {
   angebotId: string;
   membershipId: string;
-  menge: number;
+  menge?: number;
+  staffeln?: Array<{ teilung: number; anzahl: number }>;
   userMail: string;
 }): Promise<void> {
   const parsedInput = placeOrderInputSchema.parse(input);
@@ -92,6 +107,7 @@ export async function placeOrderRequest(input: {
     angebot_id: parsedInput.angebotId,
     mitgliedschaft_id: parsedInput.membershipId,
     menge: parsedInput.menge,
+    staffeln: parsedInput.staffeln,
     benutzer_email: parsedInput.userMail,
   });
 }

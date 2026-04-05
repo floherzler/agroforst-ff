@@ -1,3 +1,10 @@
+interface PreisStaffel {
+  teilung: number;
+  paketPreisEur: number;
+  effektiverPreisProEinheitEur: number;
+  label: string;
+}
+
 interface Angebot {
   id: string;
   createdAt: string;
@@ -18,6 +25,7 @@ interface Angebot {
   createdByUserId?: string;
   updatedByUserId?: string;
   beschreibung?: string;
+  preisStaffeln: PreisStaffel[];
 }
 
 type Staffel = Angebot;
@@ -64,4 +72,7 @@ interface Bestellung {
   preisGesamt: number;
   preisEinheit: number;
   status: string;
+  bestellteTeilungen: number[];
+  bestellteTeilungsAnzahlen: number[];
+  bestellteTeilpreiseEur: number[];
 }
