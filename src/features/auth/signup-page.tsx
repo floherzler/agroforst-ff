@@ -2,14 +2,18 @@
 
 import React from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Loader2, UserRoundPlus } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  UserRoundPlus,
+} from "lucide-react";
 
 import { BrandCard } from "@/components/brand/brand-card";
 import { AuthFormField } from "@/features/auth/auth-form-field";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -62,7 +66,7 @@ export default function SignUpPage() {
     if (createAccountResponse.error) {
       setError(
         createAccountResponse.error.message ??
-          "Die Registrierung ist fehlgeschlagen.",
+        "Die Registrierung ist fehlgeschlagen.",
       );
       setIsLoading(false);
       return;
@@ -73,13 +77,135 @@ export default function SignUpPage() {
     if (loginResponse.error) {
       setError(
         loginResponse.error.message ??
-          "Automatischer Login nach der Registrierung fehlgeschlagen.",
+        "Automatischer Login nach der Registrierung fehlgeschlagen.",
       );
       setIsLoading(false);
       return;
     }
 
     void navigate({ to: redirectTo, replace: true });
+  }
+
+  if (showQrWelcome) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-5 pb-8 pt-6">
+        <section className="mt-8 space-y-4">
+          <div className="space-y-3">
+            <h1 className="max-w-[15ch] font-display text-[2.45rem] leading-[0.92] text-[var(--color-soil-900)]">
+              Willkommen im Agroforstbetrieb Frank Fege!
+            </h1>
+            <p className="max-w-[31ch] text-base leading-7 text-[var(--color-soil-700)]">
+              Schön, dass du Interesse hast! Melde dich an, um immer auf dem
+              Laufenden zu bleiben.
+            </p>
+            <p className="max-w-[32ch] text-sm leading-6 text-muted-foreground">
+              Schau dir auch unsere Mitgliedschafts-Modelle an: privat mit
+              Jahresguthaben oder auf Rechnung für Unternehmen und unterstütze nachhaltige, lokale Landwirtschaft.
+            </p>
+          </div>
+          <Link
+            to="/"
+            className="inline-flex items-center text-base font-semibold text-foreground hover:text-[var(--color-forest-800)]"
+          >
+            Mehr Info -&gt;
+          </Link>
+        </section>
+
+        <form
+          className="mt-8 space-y-4 border-t border-[color:rgba(39,38,21,0.12)] pt-6"
+          onSubmit={handleSubmit}
+        >
+          {error ? (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/15 px-4 py-3 text-sm font-medium text-destructive">
+              {error}
+            </div>
+          ) : null}
+          <AuthFormField>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              placeholder="Dein Name"
+              className="h-12 rounded-2xl bg-white/80"
+            />
+          </AuthFormField>
+          <AuthFormField>
+            <Label htmlFor="email">E-Mail</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              defaultValue={prefilledEmail}
+              placeholder="email@beispiel.de"
+              className="h-12 rounded-2xl bg-white/80"
+            />
+          </AuthFormField>
+          <AuthFormField>
+            <Label htmlFor="password">Passwort</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="Mindestens 8 Zeichen"
+                className="h-12 rounded-2xl bg-white/80 pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
+          </AuthFormField>
+          <AuthFormField>
+            <Label htmlFor="confirmPassword">Passwort wiederholen</Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="Passwort wiederholen"
+              className="h-12 rounded-2xl bg-white/80"
+            />
+          </AuthFormField>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="h-12 w-full rounded-2xl shadow-none"
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                Konto wird erstellt…
+              </span>
+            ) : (
+              "Jetzt anmelden"
+            )}
+          </Button>
+        </form>
+
+        <p className="mt-5 text-sm text-[var(--color-soil-700)]">
+          Schon dabei?{" "}
+          <Link
+            to="/login"
+            search={{ redirect: redirectTo, origin: "qr" }}
+            className="font-semibold text-foreground hover:text-[var(--color-forest-800)]"
+          >
+            Zum Login
+          </Link>
+        </p>
+      </main>
+    );
   }
 
   return (
@@ -89,15 +215,6 @@ export default function SignUpPage() {
           <UserRoundPlus className="size-6" />
         </div>
         <CardTitle className="text-2xl">Willkommen im Agroforst</CardTitle>
-        {showQrWelcome ? (
-          <div className="rounded-lg border border-lilac-200/60 bg-lilac-50 px-4 py-3 text-sm text-lilac-800 shadow-inner">
-            <p className="font-semibold">Schön, dass du Interesse hast!</p>
-            <p className="mt-1 text-xs text-lilac-900/80">
-              Erstelle dir ein kostenloses Konto, um von unseren neuen Angeboten
-              zu erfahren.
-            </p>
-          </div>
-        ) : null}
         <CardDescription className="text-base text-muted-foreground">
           Erstelle dein kostenloses Konto für Newsletter, Feedback und um Teil
           unserer Direktvermarktung zu werden.

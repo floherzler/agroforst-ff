@@ -327,6 +327,15 @@
                     "encrypt": null
                 },
                 {
+                    "key": "schlagworte",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
                     "key": "erstellt_von_user_id",
                     "type": "varchar",
                     "required": false,

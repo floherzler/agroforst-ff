@@ -25,6 +25,7 @@ interface Angebot {
   createdByUserId?: string;
   updatedByUserId?: string;
   beschreibung?: string;
+  tags: string[];
   preisStaffeln: PreisStaffel[];
 }
 

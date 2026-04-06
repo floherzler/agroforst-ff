@@ -89,6 +89,7 @@ export type OfferFormState = {
   ernteProjektion: string[];
   pickupAt: string;
   beschreibung: string;
+  tags: string;
   preisStaffeln: PreisStaffelFormState[];
 };
 
@@ -275,6 +276,7 @@ export function emptyOfferForm(defaultProductId = ""): OfferFormState {
     ernteProjektion: [],
     pickupAt: "",
     beschreibung: "",
+    tags: "",
     preisStaffeln: [],
   };
 }
@@ -332,6 +334,7 @@ export function offerToFormState(offer: Staffel): OfferFormState {
       .filter(Boolean),
     pickupAt: toDateTimeInput(offer.pickupAt),
     beschreibung: offer.beschreibung ?? "",
+    tags: joinList(offer.tags),
     preisStaffeln: (offer.preisStaffeln ?? []).map((staffel) => ({
       teilung: String(staffel.teilung),
       paketPreisEur: String(staffel.paketPreisEur),

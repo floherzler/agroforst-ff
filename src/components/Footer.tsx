@@ -33,7 +33,7 @@ export default function Footer() {
               </a>
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-soil-900)]/10 bg-white/72 px-3 py-1.5">
                 <MapPin className="size-4 text-[var(--color-lilac-700)]" />
-                Prignitz, Brandenburg
+                Ostprignitz, Brandenburg
               </div>
             </div>
 

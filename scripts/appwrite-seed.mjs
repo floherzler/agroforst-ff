@@ -205,6 +205,7 @@ function seedDemoData() {
           teilungen: [1, 5, 25, 50, 100, 1000],
           preise_pro_teilung_eur: [3.1, 14.5, 68, 128, 245, 2200],
           beschreibung: "Festkochende Speisekartoffel fuer die Herbstvermarktung, Hofladenkisten und Sammelbestellungen.",
+          schlagworte: ["lagerware", "grundnahrungsmittel"],
         },
         {
           $id: `angebot_salbei_muskateller_${seedJahr}`,
@@ -225,6 +226,7 @@ function seedDemoData() {
           teilungen: [1, 3, 5, 10],
           preise_pro_teilung_eur: [3.4, 9.6, 15.5, 29],
           beschreibung: "Frische Salbei-Buendel fuer Kueche, Tee und Trocknung mit mehreren Schnittfenstern.",
+          schlagworte: ["frisch", "duftend"],
         },
         {
           $id: `angebot_apfel_elstar_${seedJahr}`,
@@ -245,6 +247,7 @@ function seedDemoData() {
           teilungen: [1, 5, 10, 25, 50, 100, 1000],
           preise_pro_teilung_eur: [4.9, 23, 44, 105, 199, 379, 3200],
           beschreibung: "Knackiger Tafelapfel mit gestaffelten Pflueckterminen fuer Direktverkauf und Lagerstart.",
+          schlagworte: ["Sonderangebot", "lagerstart"],
         },
         {
           $id: `angebot_lupine_blue_${seedJahr}`,
@@ -265,6 +268,7 @@ function seedDemoData() {
           teilungen: [1, 5, 25, 50, 100],
           preise_pro_teilung_eur: [4.1, 19.5, 92, 172, 325],
           beschreibung: "Blaue Lupine fuer Weiterverarbeitung und regionale Eiweissprodukte mit Sommerernte.",
+          schlagworte: ["Sonderangebot", "verarbeitung"],
         },
         {
           $id: `angebot_hokkaido_kuerbis_${seedJahr}`,
@@ -285,6 +289,7 @@ function seedDemoData() {
           teilungen: [1, 3, 5, 10],
           preise_pro_teilung_eur: [5.2, 14.8, 23.5, 44],
           beschreibung: "Hokkaido in Portionsgroesse fuer Hofladen, Marktstand und herbstliche Gemuesekisten.",
+          schlagworte: ["herbst", "hofladen"],
         },
       ],
     ],

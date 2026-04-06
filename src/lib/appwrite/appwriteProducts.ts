@@ -52,6 +52,7 @@ const offerDocumentSchema = appwriteDocumentMetaSchema.extend({
   erstellt_von_user_id: z.string().nullish(),
   aktualisiert_von_user_id: z.string().nullish(),
   beschreibung: z.string().nullish(),
+  schlagworte: z.unknown().optional(),
 });
 
 const blogPostDocumentSchema = appwriteDocumentMetaSchema.extend({
@@ -127,6 +128,7 @@ const upsertAngebotInputSchema = z.object({
   ernteProjektion: z.array(z.string().trim()).optional(),
   pickupAt: z.string().trim().optional(),
   beschreibung: z.string().trim().optional(),
+  tags: z.array(z.string().trim()).optional(),
 });
 
 export type ProduktMitAngeboten = {
@@ -310,6 +312,7 @@ export function normalizeAngebot(raw: unknown): Angebot {
     createdByUserId: parseOptionalString(parsed.erstellt_von_user_id),
     updatedByUserId: parseOptionalString(parsed.aktualisiert_von_user_id),
     beschreibung: parseOptionalString(parsed.beschreibung),
+    tags: parseStringArray(parsed.schlagworte),
   };
 }
 
@@ -527,6 +530,7 @@ export async function upsertAngebot(input: {
   ernteProjektion?: string[];
   pickupAt?: string;
   beschreibung?: string;
+  tags?: string[];
 }): Promise<Angebot> {
   const parsedInput = upsertAngebotInputSchema.parse(input);
   const documentId = parsedInput.id || ID.unique();
@@ -568,6 +572,7 @@ export async function upsertAngebot(input: {
       ernte_projektion: parsedInput.ernteProjektion ?? [],
       abholung_ab: parsedInput.pickupAt || undefined,
       beschreibung: parsedInput.beschreibung?.trim() || undefined,
+      schlagworte: (parsedInput.tags ?? []).map((entry) => entry.trim()).filter(Boolean),
     },
   );
 

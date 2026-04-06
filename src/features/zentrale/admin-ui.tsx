@@ -744,6 +744,20 @@ export function OfferEditor({
             />
           </label>
 
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Tags
+            <Input
+              value={offerForm.tags}
+              onChange={(event) =>
+                state.setOfferForm((current: OfferFormState) => ({
+                  ...current,
+                  tags: event.target.value,
+                }))
+              }
+              placeholder="z. B. Sonderangebot, neu, lagerware"
+            />
+          </label>
+
           <Accordion type="multiple" className="w-full rounded-[1.3rem] border border-border/70 bg-background/60 px-4">
             <AccordionItem value="timeline">
               <AccordionTrigger>
@@ -1043,6 +1057,9 @@ export function OfferTable({
                   {state.selectedOffer.pickupAt
                     ? new Date(state.selectedOffer.pickupAt).toLocaleString("de-DE")
                     : "-"}
+                </span>
+                <span>
+                  Tags: {state.selectedOffer.tags.length > 0 ? state.selectedOffer.tags.join(", ") : "-"}
                 </span>
               </div>
             </div>

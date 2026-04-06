@@ -28,6 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -198,6 +199,10 @@ function getAvailabilityIndicatorClass(value: number) {
 
 function getCompactOfferPriceSummary(offer: Angebot) {
   return getOfferPriceSummary(offer).replace(/^ab\s+/i, "");
+}
+
+function hasSpecialOfferTag(offer: Angebot) {
+  return offer.tags.some((tag) => tag.trim().toLowerCase() === "sonderangebot");
 }
 
 function HeaderInfo({
@@ -390,22 +395,16 @@ export default function HomePage() {
 
   const featuredLiveOffers = React.useMemo(() => {
     return [...filteredLiveOffers]
+      .filter(({ offer }) => hasSpecialOfferTag(offer))
       .sort((left, right) => {
         const availabilityCompare =
-          right.offer.mengeVerfuegbar - left.offer.mengeVerfuegbar;
+          getAvailabilityPercentage(left.offer) - getAvailabilityPercentage(right.offer);
         if (availabilityCompare !== 0) {
           return availabilityCompare;
         }
 
-        const priceCompare =
-          getOfferDisplayUnitPrice(left.offer) - getOfferDisplayUnitPrice(right.offer);
-        if (priceCompare !== 0) {
-          return priceCompare;
-        }
-
         return (right.offer.year ?? 0) - (left.offer.year ?? 0);
-      })
-      .slice(0, 6);
+      });
   }, [filteredLiveOffers]);
 
   async function handleInlineSignup(event: React.FormEvent<HTMLFormElement>) {
@@ -674,6 +673,18 @@ export default function HomePage() {
                               {product?.sorte ? (
                                 <p className="mt-1 text-sm text-muted-foreground">{product.sorte}</p>
                               ) : null}
+                              {offer.tags.length > 0 ? (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {offer.tags.map((tag) => (
+                                    <Badge
+                                      key={tag}
+                                      variant={tag.trim().toLowerCase() === "sonderangebot" ? "default" : "outline"}
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : null}
                             </div>
 
                             <div className="flex w-1/2 shrink-0 flex-col justify-between px-1 py-0.5">
@@ -781,6 +792,18 @@ export default function HomePage() {
                                 </div>
                                 {product?.sorte ? (
                                   <span className="text-xs text-muted-foreground">{product.sorte}</span>
+                                ) : null}
+                                {offer.tags.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 pt-1">
+                                    {offer.tags.map((tag) => (
+                                      <Badge
+                                        key={tag}
+                                        variant={tag.trim().toLowerCase() === "sonderangebot" ? "default" : "outline"}
+                                      >
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 ) : null}
                               </div>
                             </div>

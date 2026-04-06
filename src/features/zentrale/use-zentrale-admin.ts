@@ -97,7 +97,7 @@ export function useZentraleAdmin({
       }
 
       const product = productById.get(offer.produktId);
-      return [offer.id, offer.produktId, displayProductName(product), offer.year ?? ""]
+      return [offer.id, offer.produktId, displayProductName(product), offer.year ?? "", ...(offer.tags ?? [])]
         .join(" ")
         .toLowerCase()
         .includes(search);
@@ -354,6 +354,7 @@ export function useZentraleAdmin({
         ernteProjektion: normalizeDateInputList(offerForm.ernteProjektion),
         pickupAt: fromDateTimeInput(offerForm.pickupAt),
         beschreibung: offerForm.beschreibung.trim() || undefined,
+        tags: splitList(offerForm.tags),
       });
 
       setSelectedOfferId(saved.id);

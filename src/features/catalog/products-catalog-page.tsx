@@ -149,6 +149,14 @@ export default function ProductsCatalogPage() {
       })
       .filter((row): row is Extract<CatalogRow, { kind: "offer" }> => row !== null)
       .sort((left, right) => {
+        const urgentCompare =
+          Number(
+            right.offer.tags.some((tag) => tag.trim().toLowerCase() === "sonderangebot"),
+          ) - Number(left.offer.tags.some((tag) => tag.trim().toLowerCase() === "sonderangebot"));
+        if (urgentCompare !== 0) {
+          return urgentCompare;
+        }
+
         const availabilityCompare =
           right.offer.mengeVerfuegbar - left.offer.mengeVerfuegbar;
         if (availabilityCompare !== 0) {
@@ -196,6 +204,7 @@ export default function ProductsCatalogPage() {
         row.product.hauptkategorie,
         row.product.unterkategorie,
         row.kind === "offer" ? row.offer.year : "",
+        row.kind === "offer" ? row.offer.tags.join(" ") : "",
       ]
         .join(" ")
         .toLowerCase();
@@ -238,7 +247,7 @@ export default function ProductsCatalogPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Produkt, Sorte oder Kategorie suchen"
+              placeholder="Produkt, Sorte, Kategorie oder Tag suchen"
               className="pl-9"
               aria-label="Produkte oder Angebote suchen"
             />
@@ -303,6 +312,18 @@ export default function ProductsCatalogPage() {
                                 ? "1 laufendes Angebot"
                                 : `${row.offerCount} laufende Angebote`}
                             </span>
+                            {row.offer.tags.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {row.offer.tags.map((tag) => (
+                                  <Badge
+                                    key={tag}
+                                    variant={tag.trim().toLowerCase() === "sonderangebot" ? "default" : "outline"}
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </TableCell>
