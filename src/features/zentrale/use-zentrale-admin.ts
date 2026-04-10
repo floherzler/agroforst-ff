@@ -22,7 +22,6 @@ import {
   emptyProductForm,
   formatCurrency,
   fromDateInput,
-  fromDateTimeInput,
   normalizeDateInputList,
   offerToFormState,
   parsePreisStaffeln,
@@ -403,7 +402,6 @@ export function useZentraleAdmin({
         expectedRevenue: parseOptionalNumberField(offerForm.expectedRevenue),
         saatPflanzDatum: fromDateInput(offerForm.saatPflanzDatum),
         ernteProjektion: normalizeDateInputList(offerForm.ernteProjektion),
-        pickupAt: fromDateTimeInput(offerForm.pickupAt),
         beschreibung: offerForm.beschreibung.trim() || undefined,
         tags: splitList(offerForm.tags),
       });

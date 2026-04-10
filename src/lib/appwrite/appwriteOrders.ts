@@ -21,6 +21,11 @@ const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
   menge: z.unknown().optional(),
   einheit: z.string().optional().default(""),
   abholung_ab: z.string().optional(),
+  pickup_slot_start: z.string().optional(),
+  pickup_slot_end: z.string().optional(),
+  pickup_slot_label: z.string().optional(),
+  pickup_location: z.string().optional(),
+  pickup_note: z.string().optional(),
   produkt_name: z.string().optional(),
   gesamtpreis_eur: z.unknown().optional(),
   preis_pro_einheit_eur: z.unknown().optional(),
@@ -100,6 +105,11 @@ export function normalizeBestellung(raw: unknown): Bestellung {
     bestellteTeilungen: parseNumericArray(parsed.bestellte_teilungen),
     bestellteTeilungsAnzahlen: parseNumericArray(parsed.bestellte_teilungs_anzahlen),
     bestellteTeilpreiseEur: parseNumericArray(parsed.bestellte_teilpreise_eur),
+    pickupSlotStart: parseOptionalString(parsed.pickup_slot_start) ?? parseOptionalString(parsed.abholung_ab),
+    pickupSlotEnd: parseOptionalString(parsed.pickup_slot_end),
+    pickupSlotLabel: parseOptionalString(parsed.pickup_slot_label),
+    pickupLocation: parseOptionalString(parsed.pickup_location),
+    pickupNote: parseOptionalString(parsed.pickup_note),
   };
 }
 

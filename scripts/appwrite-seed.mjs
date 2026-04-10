@@ -124,6 +124,21 @@ function seedDemoData() {
     new Date(Date.UTC(seedJahr, month - 1, day, hour, minute, 0, 0)).toISOString();
   const demoEntries = [
     [
+      "abholkonfiguration",
+      [
+        {
+          $id: "global",
+          horizon_tage: 21,
+          abholort: "Agroforst FF, Wittstock",
+          notiz: "Bitte innerhalb des gewählten Zeitfensters abholen.",
+          wochentermine_json: JSON.stringify([
+            { weekday: 3, startTime: "17:00", endTime: "18:00", active: true },
+            { weekday: 5, startTime: "17:00", endTime: "18:00", active: true },
+          ]),
+        },
+      ],
+    ],
+    [
       "produkte",
       [
         {
@@ -345,6 +360,7 @@ function syncFunctionVariables() {
     APPWRITE_TABLE_MEMBERSHIPS_ID: "mitgliedschaften",
     APPWRITE_TABLE_PAYMENTS_ID: "mitgliedschaftszahlungen",
     APPWRITE_TABLE_ORDERS_ID: "bestellungen",
+    APPWRITE_TABLE_PICKUP_CONFIG_ID: "abholkonfiguration",
     APPWRITE_TABLE_BLOG_POSTS_ID: "blog_beitraege",
     APPWRITE_TABLE_CUSTOMER_MESSAGES_ID: "kunden_nachrichten",
     APPWRITE_TABLE_BACKOFFICE_EVENTS_ID: "backoffice_ereignisse",

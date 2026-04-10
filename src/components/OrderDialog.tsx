@@ -4,7 +4,9 @@ import React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
+import { getPickupConfig } from "@/lib/appwrite/appwritePickupConfig";
 import { placeOrderRequest } from "@/lib/appwrite/appwriteFunctions";
+import { formatPickupSlotRange, generateUpcomingPickupSlots } from "@/features/pickup/pickup-schedule";
 import { listMembershipsByUserId, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
 import { useAuthStore } from "@/store/Auth";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,10 @@ export default function OrderDialog({ angebot }: Props) {
   const [memberships, setMemberships] = React.useState<MembershipRecord[]>([]);
   const [membershipsLoading, setMembershipsLoading] = React.useState(false);
   const [membershipsError, setMembershipsError] = React.useState<string | null>(null);
+  const [pickupConfig, setPickupConfig] = React.useState<PickupConfig | null>(null);
+  const [pickupConfigLoading, setPickupConfigLoading] = React.useState(false);
+  const [pickupConfigError, setPickupConfigError] = React.useState<string | null>(null);
+  const [selectedPickupSlotId, setSelectedPickupSlotId] = React.useState<string>("");
 
   const userMail = user?.email ?? "";
   const hasPreisStaffeln = angebot.preisStaffeln.length > 0;
@@ -92,6 +98,51 @@ export default function OrderDialog({ angebot }: Props) {
     };
   }, [user?.id]);
 
+  React.useEffect(() => {
+    if (!user?.id) {
+      setPickupConfig(null);
+      setPickupConfigError(null);
+      setPickupConfigLoading(false);
+      setSelectedPickupSlotId("");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPickupConfig() {
+      setPickupConfigLoading(true);
+      setPickupConfigError(null);
+
+      try {
+        const config = await getPickupConfig();
+        if (!cancelled) {
+          if (!config) {
+            setPickupConfig(null);
+            setPickupConfigError("Abholfenster sind noch nicht eingerichtet.");
+            return;
+          }
+
+          setPickupConfig(config);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPickupConfig(null);
+          setPickupConfigError(err instanceof Error ? err.message : "Abholfenster konnten nicht geladen werden.");
+        }
+      } finally {
+        if (!cancelled) {
+          setPickupConfigLoading(false);
+        }
+      }
+    }
+
+    void loadPickupConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const activeMembership = React.useMemo(
     () => memberships.find((membership) => (membership.status ?? "").toLowerCase() === "aktiv") ?? null,
     [memberships],
@@ -121,6 +172,26 @@ export default function OrderDialog({ angebot }: Props) {
   const availableAmount = Number(angebot.mengeVerfuegbar ?? 0);
   const requestedAmount = hasPreisStaffeln ? staffelSummary.gesamtMenge : legacyRequestedAmount;
   const exceedsAvailable = requestedAmount !== null && Number.isFinite(availableAmount) && requestedAmount > availableAmount;
+  const pickupSlots = React.useMemo(
+    () => (pickupConfig ? generateUpcomingPickupSlots(pickupConfig) : []),
+    [pickupConfig],
+  );
+  const selectedPickupSlot = React.useMemo(
+    () => pickupSlots.find((slot) => slot.id === selectedPickupSlotId) ?? null,
+    [pickupSlots, selectedPickupSlotId],
+  );
+  const pickupBlocked = pickupConfigLoading || Boolean(pickupConfigError) || pickupSlots.length === 0;
+
+  React.useEffect(() => {
+    if (pickupSlots.length === 0) {
+      setSelectedPickupSlotId("");
+      return;
+    }
+
+    setSelectedPickupSlotId((current) =>
+      pickupSlots.some((slot) => slot.id === current) ? current : pickupSlots[0]!.id,
+    );
+  }, [pickupSlots]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -151,6 +222,11 @@ export default function OrderDialog({ angebot }: Props) {
       return;
     }
 
+    if (!selectedPickupSlot) {
+      setError("Bitte ein Abholfenster auswählen.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await placeOrderRequest({
@@ -163,6 +239,11 @@ export default function OrderDialog({ angebot }: Props) {
               anzahl: staffel.anzahl,
             }))
           : undefined,
+        pickupSlot: {
+          start: selectedPickupSlot.start,
+          end: selectedPickupSlot.end,
+          label: selectedPickupSlot.label,
+        },
         userMail,
       });
 
@@ -315,6 +396,55 @@ export default function OrderDialog({ angebot }: Props) {
                   />
                 </div>
               )}
+
+              <div className="rounded-[1.8rem] border border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.92)] p-5">
+                <div className="mb-3">
+                  <div className="text-[1.05rem] font-semibold text-[var(--color-soil-900)]">Abholung</div>
+                  <div className="mt-1 text-sm text-[var(--color-soil-700)]">
+                    Wähle dein verbindliches Zeitfenster.
+                  </div>
+                </div>
+
+                {pickupConfigLoading ? (
+                  <p className="text-sm text-[var(--color-soil-700)]">Abholfenster werden geladen…</p>
+                ) : pickupConfigError ? (
+                  <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {pickupConfigError}
+                  </p>
+                ) : pickupSlots.length === 0 ? (
+                  <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    Aktuell sind keine zukünftigen Abholfenster verfügbar.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {pickupConfig?.location ? (
+                      <p className="text-sm text-[var(--color-soil-700)]">Ort: {pickupConfig.location}</p>
+                    ) : null}
+                    {pickupConfig?.note ? (
+                      <p className="text-sm text-[var(--color-soil-700)]">{pickupConfig.note}</p>
+                    ) : null}
+                    <div className="grid gap-3">
+                      {pickupSlots.map((slot) => {
+                        const selected = selectedPickupSlotId === slot.id;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => setSelectedPickupSlotId(slot.id)}
+                            className={`rounded-[1.35rem] border px-4 py-3 text-left transition ${
+                              selected
+                                ? "border-[var(--color-permdal-700)] bg-[rgba(227,240,229,0.92)]"
+                                : "border-[var(--color-soil-900)]/8 bg-white/70 hover:bg-white"
+                            }`}
+                          >
+                            <div className="font-medium text-[var(--color-soil-900)]">{slot.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <aside className="rounded-[1.8rem] border border-[var(--color-soil-900)]/8 bg-[rgba(255,251,245,0.94)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
@@ -345,6 +475,21 @@ export default function OrderDialog({ angebot }: Props) {
                     </span>
                   </div>
                 ) : null}
+                <div className="border-t border-[var(--color-soil-900)]/8 pt-3">
+                  <div className="text-[var(--color-soil-700)]">Abholung</div>
+                  <div className="mt-1 font-semibold text-[var(--color-soil-900)]">
+                    {selectedPickupSlot
+                      ? formatPickupSlotRange(
+                          selectedPickupSlot.start,
+                          selectedPickupSlot.end,
+                          selectedPickupSlot.label,
+                        )
+                      : "Noch nicht gewählt"}
+                  </div>
+                  {pickupConfig?.location ? (
+                    <div className="mt-1 text-sm text-[var(--color-soil-700)]">{pickupConfig.location}</div>
+                  ) : null}
+                </div>
               </div>
 
               {exceedsAvailable ? (
@@ -361,7 +506,7 @@ export default function OrderDialog({ angebot }: Props) {
 
               <Button
                 type="submit"
-                disabled={submitting || exceedsAvailable}
+                disabled={submitting || exceedsAvailable || pickupBlocked}
                 className="mt-5 w-full rounded-full border border-[var(--color-permdal-800)]/10 bg-[var(--color-permdal-700)] px-6 text-white shadow-[0_18px_44px_-26px_rgba(35,58,42,0.55)] hover:bg-[var(--color-permdal-800)] hover:text-white focus-visible:ring-[var(--color-permdal-400)]"
               >
                 {submitting ? (

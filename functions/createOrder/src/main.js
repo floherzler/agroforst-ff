@@ -13,7 +13,10 @@ const DEFAULT_OFFERS_TABLE_ID = "angebote";
 const DEFAULT_MEMBERSHIPS_TABLE_ID = "mitgliedschaften";
 const DEFAULT_ORDERS_TABLE_ID = "bestellungen";
 const DEFAULT_BACKOFFICE_EVENTS_TABLE_ID = "backoffice_ereignisse";
+const DEFAULT_PICKUP_CONFIG_TABLE_ID = "abholkonfiguration";
 const ADMIN_LABEL = "admin";
+const PICKUP_CONFIG_DOCUMENT_ID = "global";
+const PICKUP_TIMEZONE = "Europe/Berlin";
 
 function ok(res, data, status = 200) {
     return res.json(data, status);
@@ -161,6 +164,177 @@ function parseRelationId(value) {
     return "";
 }
 
+function parseWeeklySlots(value) {
+    if (typeof value !== "string" || !value.trim()) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(value);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed
+            .map((entry) => ({
+                weekday: Number(entry?.weekday),
+                startTime: String(entry?.startTime ?? "").trim(),
+                endTime: String(entry?.endTime ?? "").trim(),
+                active: entry?.active !== false,
+            }))
+            .filter((entry) =>
+                Number.isInteger(entry.weekday) &&
+                entry.weekday >= 1 &&
+                entry.weekday <= 7 &&
+                /^\d{2}:\d{2}$/.test(entry.startTime) &&
+                /^\d{2}:\d{2}$/.test(entry.endTime)
+            );
+    } catch {
+        return [];
+    }
+}
+
+function formatOffset(date, timeZone) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        timeZoneName: "shortOffset",
+        hour: "2-digit",
+    }).formatToParts(date);
+    return parts.find((part) => part.type === "timeZoneName")?.value ?? "GMT+0";
+}
+
+function getOffsetMilliseconds(date, timeZone) {
+    const raw = formatOffset(date, timeZone);
+    const match = raw.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/i);
+    if (!match) {
+        return 0;
+    }
+
+    const sign = match[1] === "-" ? -1 : 1;
+    const hours = Number(match[2] ?? 0);
+    const minutes = Number(match[3] ?? 0);
+    return sign * ((hours * 60) + minutes) * 60 * 1000;
+}
+
+function zonedDateParts(date, timeZone) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+    }).formatToParts(date);
+
+    const valueOf = (type) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+    return {
+        year: valueOf("year"),
+        month: valueOf("month"),
+        day: valueOf("day"),
+    };
+}
+
+function berlinLocalToUtc(year, month, day, hours, minutes) {
+    let guess = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
+
+    for (let index = 0; index < 3; index += 1) {
+        const offset = getOffsetMilliseconds(new Date(guess), PICKUP_TIMEZONE);
+        const nextGuess = Date.UTC(year, month - 1, day, hours, minutes, 0, 0) - offset;
+        if (nextGuess === guess) {
+            break;
+        }
+        guess = nextGuess;
+    }
+
+    return new Date(guess);
+}
+
+function isoWeekdayFromLocalDate(year, month, day) {
+    const weekday = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0)).getUTCDay();
+    return weekday === 0 ? 7 : weekday;
+}
+
+function parseTime(value) {
+    const [hours, minutes] = String(value ?? "").split(":").map((entry) => Number(entry));
+    return { hours, minutes };
+}
+
+function formatPickupSlotLabel(startIso, endIso) {
+    const start = new Date(startIso);
+    const end = new Date(endIso);
+    const startText = new Intl.DateTimeFormat("de-DE", {
+        timeZone: PICKUP_TIMEZONE,
+        weekday: "long",
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(start);
+    const endText = new Intl.DateTimeFormat("de-DE", {
+        timeZone: PICKUP_TIMEZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(end);
+    return `${startText} bis ${endText} Uhr`;
+}
+
+function generateUpcomingPickupSlots(config, now = new Date()) {
+    const horizonDays = Number(config?.horizonDays ?? 0);
+    const weeklySlots = Array.isArray(config?.weeklySlots) ? config.weeklySlots : [];
+    const today = zonedDateParts(now, PICKUP_TIMEZONE);
+    const result = [];
+
+    for (let dayOffset = 0; dayOffset < horizonDays; dayOffset += 1) {
+        const anchor = new Date(Date.UTC(today.year, today.month - 1, today.day + dayOffset, 12, 0, 0, 0));
+        const local = zonedDateParts(anchor, PICKUP_TIMEZONE);
+        const weekday = isoWeekdayFromLocalDate(local.year, local.month, local.day);
+
+        for (const rule of weeklySlots) {
+            if (!rule.active || rule.weekday !== weekday) {
+                continue;
+            }
+
+            const startTime = parseTime(rule.startTime);
+            const endTime = parseTime(rule.endTime);
+            const start = berlinLocalToUtc(local.year, local.month, local.day, startTime.hours, startTime.minutes);
+            const end = berlinLocalToUtc(local.year, local.month, local.day, endTime.hours, endTime.minutes);
+
+            if (end.getTime() <= start.getTime() || end.getTime() <= now.getTime()) {
+                continue;
+            }
+
+            result.push({
+                start: start.toISOString(),
+                end: end.toISOString(),
+                label: formatPickupSlotLabel(start.toISOString(), end.toISOString()),
+            });
+        }
+    }
+
+    return result.sort((left, right) => left.start.localeCompare(right.start));
+}
+
+async function readPickupConfig(tables, databaseId, tableId) {
+    try {
+        const document = await tables.getRow({
+            databaseId,
+            tableId,
+            rowId: PICKUP_CONFIG_DOCUMENT_ID,
+        });
+
+        return {
+            horizonDays: Number(document.horizon_tage ?? 0),
+            location: String(document.abholort ?? "").trim(),
+            note: String(document.notiz ?? "").trim(),
+            weeklySlots: parseWeeklySlots(document.wochentermine_json),
+        };
+    } catch {
+        return null;
+    }
+}
+
 export default async ({ req, res, log, error }) => {
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
@@ -176,6 +350,13 @@ export default async ({ req, res, log, error }) => {
         ).trim();
         const quantity = Number(body.menge ?? body.quantity ?? url.searchParams.get("menge"));
         const requestedStaffeln = normalizeStaffelInput(body.staffeln);
+        const requestedPickupSlot =
+            body.pickup_slot && typeof body.pickup_slot === "object"
+                ? body.pickup_slot
+                : {};
+        const pickupSlotStart = String(requestedPickupSlot.start ?? "").trim();
+        const pickupSlotEnd = String(requestedPickupSlot.end ?? "").trim();
+        const pickupSlotLabel = String(requestedPickupSlot.label ?? "").trim();
         const rawStaffeln = Array.isArray(body.staffeln) ? body.staffeln : [];
         const hasLegacyQuantity = Number.isFinite(quantity) && quantity > 0;
         const hasStaffeln = requestedStaffeln.length > 0;
@@ -186,6 +367,10 @@ export default async ({ req, res, log, error }) => {
 
         if (!offerId || !membershipId || (!hasLegacyQuantity && !hasStaffeln)) {
             return fail(res, "Invalid input: require { angebot_id, mitgliedschaft_id, menge > 0 } or { staffeln[] }", 400);
+        }
+
+        if (!pickupSlotStart || !pickupSlotEnd || !pickupSlotLabel) {
+            return fail(res, "Pickup slot is required.", 400);
         }
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
@@ -200,6 +385,8 @@ export default async ({ req, res, log, error }) => {
         const ordersTableId = readEnv("APPWRITE_TABLE_ORDERS_ID") || DEFAULT_ORDERS_TABLE_ID;
         const backofficeEventsTableId =
             readEnv("APPWRITE_TABLE_BACKOFFICE_EVENTS_ID") || DEFAULT_BACKOFFICE_EVENTS_TABLE_ID;
+        const pickupConfigTableId =
+            readEnv("APPWRITE_TABLE_PICKUP_CONFIG_ID") || DEFAULT_PICKUP_CONFIG_TABLE_ID;
 
         if (!endpoint || !projectId || !apiKey) {
             return fail(res, "Function endpoint, project ID, or API key is not configured", 500);
@@ -208,6 +395,23 @@ export default async ({ req, res, log, error }) => {
         const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
         const tables = new TablesDB(client);
         const users = new Users(client);
+        const pickupConfig = await readPickupConfig(tables, databaseId, pickupConfigTableId);
+
+        if (!pickupConfig || pickupConfig.weeklySlots.length === 0 || pickupConfig.horizonDays <= 0) {
+            return fail(res, "Pickup configuration is missing.", 409);
+        }
+
+        const matchingPickupSlot = generateUpcomingPickupSlots(pickupConfig).find(
+            (slot) => slot.start === pickupSlotStart && slot.end === pickupSlotEnd
+        );
+
+        if (!matchingPickupSlot) {
+            return fail(res, "Ungueltiger Abholslot.", 409);
+        }
+
+        if (new Date(pickupSlotStart).getTime() >= new Date(pickupSlotEnd).getTime()) {
+            return fail(res, "Ungueltiger Abholslot-Zeitraum.", 400);
+        }
 
         const membership = await tables.getRow({
             databaseId,
@@ -322,6 +526,11 @@ export default async ({ req, res, log, error }) => {
                 bestellte_teilpreise_eur: bestellteTeilpreiseEur.length > 0 ? bestellteTeilpreiseEur : undefined,
                 gesamtpreis_eur: totalPriceEur,
                 abholung_ab: offer.abholung_ab ?? undefined,
+                pickup_slot_start: matchingPickupSlot.start,
+                pickup_slot_end: matchingPickupSlot.end,
+                pickup_slot_label: pickupSlotLabel || matchingPickupSlot.label,
+                pickup_location: pickupConfig.location || undefined,
+                pickup_note: pickupConfig.note || undefined,
                 produkt_name: productName,
                 status: "angefragt",
             }),
@@ -362,6 +571,8 @@ export default async ({ req, res, log, error }) => {
                         `Menge: ${effectiveQuantity} ${canonicalUnit}`,
                         `Preis: ${unitPriceEur.toFixed(2)} EUR`,
                         `Gesamt: ${totalPriceEur.toFixed(2)} EUR`,
+                        `Abholung: ${pickupSlotLabel || matchingPickupSlot.label}`,
+                        pickupConfig.location ? `Ort: ${pickupConfig.location}` : undefined,
                         bestellteTeilungen.length > 0
                             ? `Staffeln: ${bestellteTeilungen.map((teilung, index) => `${teilung} x ${bestellteTeilungsAnzahlen[index]}`).join(", ")}`
                             : undefined,

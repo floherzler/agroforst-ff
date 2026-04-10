@@ -181,6 +181,56 @@
             ]
         },
         {
+            "$id": "abholkonfiguration",
+            "databaseId": "agroforst",
+            "name": "Abholkonfiguration",
+            "enabled": true,
+            "rowSecurity": false,
+            "$permissions": [
+                "read(\"users\")",
+                "create(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "horizon_tage",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 21,
+                    "min": 1,
+                    "max": 90
+                },
+                {
+                    "key": "abholort",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "notiz",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "wochentermine_json",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": "[]",
+                    "encrypt": null
+                }
+            ],
+            "indexes": []
+        },
+        {
             "$id": "angebote",
             "databaseId": "agroforst",
             "name": "Angebote",
@@ -859,6 +909,46 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "pickup_slot_start",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "pickup_slot_end",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "pickup_slot_label",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "pickup_location",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "pickup_note",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "produkt_name",

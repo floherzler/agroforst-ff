@@ -23,6 +23,7 @@ export const appwriteConfig = {
   offerTableId: getManagedTableId("angebote"),
   exchangeTableId: getManagedTableId("biete_suche"),
   orderTableId: getManagedTableId("bestellungen"),
+  pickupConfigTableId: getManagedTableId("abholkonfiguration"),
   postTableId: getManagedTableId("blog_beitraege"),
   membershipTableId: getManagedTableId("mitgliedschaften"),
   paymentTableId: getManagedTableId("mitgliedschaftszahlungen"),

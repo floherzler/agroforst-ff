@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/auth-store";
+import { formatPickupSlotRange } from "@/features/pickup/pickup-schedule";
 import { sendVerificationEmail as sendVerificationEmailRequest } from "@/lib/appwrite/appwriteAuth";
 import { listBestellungen } from "@/lib/appwrite/appwriteOrders";
 import {
@@ -912,6 +913,17 @@ function AccountSignedInView() {
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                           <span>Menge: {Number.isFinite(order.menge) ? `${order.menge} ${order.einheit}` : "—"}</span>
                           <span>Gesamt: {formatMoney(order.preisGesamt)}</span>
+                        </div>
+                        <div className="mt-3 rounded-[1rem] border border-border/60 bg-background/72 px-3 py-3 text-sm text-muted-foreground">
+                          <p className="font-medium text-foreground">
+                            {formatPickupSlotRange(
+                              order.pickupSlotStart,
+                              order.pickupSlotEnd,
+                              order.pickupSlotLabel,
+                            )}
+                          </p>
+                          {order.pickupLocation ? <p className="mt-1">{order.pickupLocation}</p> : null}
+                          {order.pickupNote ? <p className="mt-1">{order.pickupNote}</p> : null}
                         </div>
                       </div>
                     );

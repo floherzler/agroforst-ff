@@ -27,6 +27,11 @@ const placeOrderInputSchema = z.object({
       anzahl: z.number().int().positive(),
     }),
   ).optional(),
+  pickupSlot: z.object({
+    start: z.iso.datetime(),
+    end: z.iso.datetime(),
+    label: z.string().trim().min(1),
+  }),
   userMail: z.email(),
 }).superRefine((value, context) => {
   if (!value.menge && (!value.staffeln || value.staffeln.length === 0)) {
@@ -105,6 +110,7 @@ export async function placeOrderRequest(input: {
   membershipId: string;
   menge?: number;
   staffeln?: Array<{ teilung: number; anzahl: number }>;
+  pickupSlot: { start: string; end: string; label: string };
   userMail: string;
 }): Promise<void> {
   const parsedInput = placeOrderInputSchema.parse(input);
@@ -114,6 +120,7 @@ export async function placeOrderRequest(input: {
     mitgliedschaft_id: parsedInput.membershipId,
     menge: parsedInput.menge,
     staffeln: parsedInput.staffeln,
+    pickup_slot: parsedInput.pickupSlot,
     benutzer_email: parsedInput.userMail,
   });
 }

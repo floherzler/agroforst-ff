@@ -798,16 +798,12 @@ export function OfferEditor({
                       }
                     />
                   </label>
-                  <label className="flex flex-col gap-2 text-sm font-medium">
-                    Abholung möglich ab
-                    <Input
-                      type="datetime-local"
-                      value={offerForm.pickupAt}
-                      onChange={(event) =>
-                        state.setOfferForm((current: any) => ({ ...current, pickupAt: event.target.value }))
-                      }
-                    />
-                  </label>
+                  <div className="rounded-[1.1rem] border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                    <div className="font-medium text-foreground">Abholung</div>
+                    <div className="mt-1">
+                      Verwendet globale Abholfenster aus zentraler Abholkonfiguration.
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -1241,10 +1237,7 @@ export function OfferTable({
                   Erntefenster: {formatHarvestRange(state.selectedOffer.ernteProjektion)}
                 </span>
                 <span>
-                  Abholung:{" "}
-                  {state.selectedOffer.pickupAt
-                    ? new Date(state.selectedOffer.pickupAt).toLocaleString("de-DE")
-                    : "-"}
+                  Abholung: Globale Abholfenster
                 </span>
                 <span>
                   Tags: {state.selectedOffer.tags.length > 0 ? state.selectedOffer.tags.join(", ") : "-"}

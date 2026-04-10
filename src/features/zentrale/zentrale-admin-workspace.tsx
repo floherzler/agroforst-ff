@@ -60,6 +60,8 @@ import { useZentraleAdmin } from "@/features/zentrale/use-zentrale-admin";
 import { listAdminMembershipPayments, listAdminMemberships, type MembershipPayment, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
 import { listBackofficeEvents } from "@/lib/appwrite/appwriteEvents";
 import { verifyPayment } from "@/lib/appwrite/appwriteFunctions";
+import { getPickupConfig, upsertPickupConfig } from "@/lib/appwrite/appwritePickupConfig";
+import { createDefaultPickupConfig, pickupWeekdayLabel } from "@/features/pickup/pickup-schedule";
 import { cn } from "@/lib/utils";
 import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
 import { listBieteSucheEintraege } from "@/lib/appwrite/appwriteExchange";
@@ -78,6 +80,13 @@ type ProductDraftMeta = {
 type ProductDraftRecord = {
   form: ProductFormState;
   meta: ProductDraftMeta;
+};
+type AsyncState = { state: "idle" | "loading" | "success" | "error"; message?: string };
+type PickupConfigFormState = {
+  horizonDays: string;
+  location: string;
+  note: string;
+  weeklySlots: Array<{ weekday: PickupWeeklySlotRule["weekday"]; startTime: string; endTime: string; active: boolean }>;
 };
 type ProductTarget = { kind: "new" } | { kind: "existing"; id: string };
 type OfferTarget = { kind: "new" } | { kind: "existing"; id: string };
@@ -246,6 +255,26 @@ function updatePreisStaffelAt(
   patch: Partial<PreisStaffelFormState>,
 ) {
   return staffeln.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...patch } : entry));
+}
+
+function pickupConfigToFormState(config: PickupConfig | null): PickupConfigFormState {
+  const resolved = config ?? {
+    id: "global",
+    createdAt: new Date(0).toISOString(),
+    ...createDefaultPickupConfig(),
+  };
+
+  return {
+    horizonDays: String(resolved.horizonDays),
+    location: resolved.location ?? "",
+    note: resolved.note ?? "",
+    weeklySlots: resolved.weeklySlots.map((slot) => ({
+      weekday: slot.weekday,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      active: slot.active,
+    })),
+  };
 }
 
 function CompactSection({
@@ -929,9 +958,9 @@ function OfferSheetEditor({
                 <Label>Saat-/Pflanzdatum</Label>
                 <Input type="date" value={current.saatPflanzDatum} onChange={(event) => state.setOfferForm((entry) => ({ ...entry, saatPflanzDatum: event.target.value }))} />
               </div>
-              <div className="grid gap-2">
-                <Label>Abholung möglich ab</Label>
-                <Input type="datetime-local" value={current.pickupAt} onChange={(event) => state.setOfferForm((entry) => ({ ...entry, pickupAt: event.target.value }))} />
+              <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                <div className="font-medium text-foreground">Abholung</div>
+                <div className="mt-1">Verwendet globale Abholfenster aus zentraler Abholkonfiguration.</div>
               </div>
 
               <div className="grid gap-3">
@@ -1279,6 +1308,42 @@ export function ZentraleAdminWorkspace({
   const [paymentActionState, setPaymentActionState] = useState<{ paymentId: string | null; message?: string; tone?: "success" | "error" }>({
     paymentId: null,
   });
+  const [pickupConfigForm, setPickupConfigForm] = useState<PickupConfigFormState>(pickupConfigToFormState(null));
+  const [pickupConfigState, setPickupConfigState] = useState<AsyncState>({ state: "idle" });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPickup() {
+      setPickupConfigState({ state: "loading" });
+
+      try {
+        const config = await getPickupConfig();
+        if (!active) {
+          return;
+        }
+
+        setPickupConfigForm(pickupConfigToFormState(config));
+        setPickupConfigState({ state: "idle" });
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setPickupConfigForm(pickupConfigToFormState(null));
+        setPickupConfigState({
+          state: "error",
+          message: error instanceof Error ? error.message : "Abholkonfiguration konnte nicht geladen werden.",
+        });
+      }
+    }
+
+    void loadPickup();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const membershipsById = useMemo(
     () => new Map(memberships.map((membership) => [membership.id, membership])),
@@ -1395,6 +1460,38 @@ export function ZentraleAdminWorkspace({
 
   function selectOfficeEvent(event: BackofficeEvent) {
     setActiveSheet({ kind: "office", id: event.id });
+  }
+
+  async function savePickupConfig() {
+    setPickupConfigState({ state: "loading" });
+
+    try {
+      const horizonDays = Number(pickupConfigForm.horizonDays);
+      if (!Number.isInteger(horizonDays) || horizonDays <= 0) {
+        throw new Error("Horizont muss eine ganze Zahl größer als 0 sein.");
+      }
+
+      for (const slot of pickupConfigForm.weeklySlots) {
+        if (!/^\d{2}:\d{2}$/.test(slot.startTime) || !/^\d{2}:\d{2}$/.test(slot.endTime)) {
+          throw new Error("Jeder Abholslot braucht Start- und Endzeit im Format HH:MM.");
+        }
+      }
+
+      const saved = await upsertPickupConfig({
+        horizonDays,
+        location: pickupConfigForm.location.trim() || undefined,
+        note: pickupConfigForm.note.trim() || undefined,
+        weeklySlots: pickupConfigForm.weeklySlots,
+      });
+
+      setPickupConfigForm(pickupConfigToFormState(saved));
+      setPickupConfigState({ state: "success", message: "Abholkonfiguration gespeichert." });
+    } catch (error) {
+      setPickupConfigState({
+        state: "error",
+        message: error instanceof Error ? error.message : "Abholkonfiguration konnte nicht gespeichert werden.",
+      });
+    }
   }
 
   const selectedPayment =
@@ -1530,6 +1627,110 @@ export function ZentraleAdminWorkspace({
                 </Button>
               }
             >
+          <div className="mb-4 rounded-2xl border border-border/70 bg-background/80 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">Globale Abholfenster</div>
+                <div className="text-sm text-muted-foreground">Diese Termine gelten für alle Bestellungen.</div>
+              </div>
+              <Button size="sm" onClick={() => void savePickupConfig()} disabled={pickupConfigState.state === "loading"}>
+                {pickupConfigState.state === "loading" ? "Speichert..." : "Abholung speichern"}
+              </Button>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="grid gap-2">
+                <Label>Horizont</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={pickupConfigForm.horizonDays}
+                  onChange={(event) => setPickupConfigForm((current) => ({ ...current, horizonDays: event.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Abholort</Label>
+                <Input
+                  value={pickupConfigForm.location}
+                  onChange={(event) => setPickupConfigForm((current) => ({ ...current, location: event.target.value }))}
+                  placeholder="z. B. Agroforst FF, Wittstock"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Hinweis</Label>
+                <Input
+                  value={pickupConfigForm.note}
+                  onChange={(event) => setPickupConfigForm((current) => ({ ...current, note: event.target.value }))}
+                  placeholder="z. B. bitte pünktlich abholen"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {pickupConfigForm.weeklySlots.map((slot, index) => (
+                <div key={`${slot.weekday}-${index}`} className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="font-medium text-foreground">{pickupWeekdayLabel(slot.weekday)}</div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={slot.active ? "default" : "outline"}
+                      onClick={() =>
+                        setPickupConfigForm((current) => ({
+                          ...current,
+                          weeklySlots: current.weeklySlots.map((entry, entryIndex) =>
+                            entryIndex === index ? { ...entry, active: !entry.active } : entry,
+                          ),
+                        }))
+                      }
+                    >
+                      {slot.active ? "Aktiv" : "Inaktiv"}
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Von</Label>
+                      <Input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(event) =>
+                          setPickupConfigForm((current) => ({
+                            ...current,
+                            weeklySlots: current.weeklySlots.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, startTime: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Bis</Label>
+                      <Input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(event) =>
+                          setPickupConfigForm((current) => ({
+                            ...current,
+                            weeklySlots: current.weeklySlots.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, endTime: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {pickupConfigState.message ? (
+              <div className={cn("mt-3 text-sm", pickupConfigState.state === "error" ? "text-rose-700" : "text-emerald-700")}>
+                {pickupConfigState.message}
+              </div>
+            ) : null}
+          </div>
+
           <div className="mb-3 max-w-sm">
             <Input value={state.offerFilter} onChange={(event) => state.setOfferFilter(event.target.value)} placeholder="Angebote filtern" />
           </div>

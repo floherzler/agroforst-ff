@@ -5,6 +5,30 @@ interface PreisStaffel {
   label: string;
 }
 
+interface PickupWeeklySlotRule {
+  weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  startTime: string;
+  endTime: string;
+  active: boolean;
+}
+
+interface PickupConfig {
+  id: string;
+  createdAt: string;
+  horizonDays: number;
+  location?: string;
+  note?: string;
+  weeklySlots: PickupWeeklySlotRule[];
+}
+
+interface PickupSlot {
+  id: string;
+  start: string;
+  end: string;
+  label: string;
+  weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+}
+
 interface Angebot {
   id: string;
   createdAt: string;
@@ -88,6 +112,11 @@ interface Bestellung {
   bestellteTeilungen: number[];
   bestellteTeilungsAnzahlen: number[];
   bestellteTeilpreiseEur: number[];
+  pickupSlotStart?: string;
+  pickupSlotEnd?: string;
+  pickupSlotLabel?: string;
+  pickupLocation?: string;
+  pickupNote?: string;
 }
 
 interface BackofficeEvent {

@@ -95,14 +95,15 @@ if (!database?.$id || !bucket?.$id) {
 const lines = [
   `APPWRITE_DATABASE_ID=${database.$id}`,
   `APPWRITE_BUCKET_PRODUCT_IMAGES_ID=${bucket.$id}`,
-  "APPWRITE_TABLE_PRODUCTS_ID=products",
-  "APPWRITE_TABLE_OFFERS_ID=offers",
-  "APPWRITE_TABLE_MEMBERSHIPS_ID=memberships",
-  "APPWRITE_TABLE_PAYMENTS_ID=membership_payments",
-  "APPWRITE_TABLE_ORDERS_ID=orders",
-  "APPWRITE_TABLE_BLOG_POSTS_ID=blog_posts",
-  "APPWRITE_TABLE_CUSTOMER_MESSAGES_ID=customer_messages",
-  "APPWRITE_TABLE_BACKOFFICE_EVENTS_ID=backoffice_events",
+  "APPWRITE_TABLE_PRODUCTS_ID=produkte",
+  "APPWRITE_TABLE_OFFERS_ID=angebote",
+  "APPWRITE_TABLE_MEMBERSHIPS_ID=mitgliedschaften",
+  "APPWRITE_TABLE_PAYMENTS_ID=mitgliedschaftszahlungen",
+  "APPWRITE_TABLE_ORDERS_ID=bestellungen",
+  "APPWRITE_TABLE_PICKUP_CONFIG_ID=abholkonfiguration",
+  "APPWRITE_TABLE_BLOG_POSTS_ID=blog_beitraege",
+  "APPWRITE_TABLE_CUSTOMER_MESSAGES_ID=kunden_nachrichten",
+  "APPWRITE_TABLE_BACKOFFICE_EVENTS_ID=backoffice_ereignisse",
 ];
 
 process.stdout.write(`${lines.join("\n")}\n`);
