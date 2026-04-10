@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
+  ArrowRightLeft,
   ArrowRight,
   Boxes,
   CalendarRange,
@@ -25,6 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   OfferBoard,
+  BieteSucheEditor,
+  BieteSucheTable,
   OfferEditor,
   OfferTable,
   OperationsBoard,
@@ -36,6 +39,7 @@ import {
 } from "@/features/zentrale/admin-ui";
 import { useZentraleAdmin } from "@/features/zentrale/use-zentrale-admin";
 import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
+import { listBieteSucheEintraege } from "@/lib/appwrite/appwriteExchange";
 import { cn } from "@/lib/utils";
 
 type VariantSlug = "classic" | "operations" | "compact";
@@ -186,11 +190,13 @@ function SectionCard({
 function ClassicVariant({
   initialProdukte,
   initialStaffeln,
+  initialBieteSucheEintraege,
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
+  initialBieteSucheEintraege: BieteSucheEintrag[];
 }) {
-  const state = useZentraleAdmin({ initialProdukte, initialStaffeln });
+  const state = useZentraleAdmin({ initialProdukte, initialStaffeln, initialBieteSucheEintraege });
 
   return (
     <main className="min-h-screen w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -263,6 +269,17 @@ function ClassicVariant({
                   <CalendarRange data-icon="inline-start" />
                   Saisonangebote
                 </Button>
+                <Button
+                  variant={state.activePanel === "biete-suche" ? "default" : "outline"}
+                  className={cn(
+                    "h-auto justify-start rounded-[1.2rem] px-4 py-3 text-left",
+                    state.activePanel === "biete-suche" ? "bg-earth-500 text-white hover:bg-earth-600" : "",
+                  )}
+                  onClick={() => state.setActivePanel("biete-suche")}
+                >
+                  <ArrowRightLeft data-icon="inline-start" />
+                  Biete / Suche
+                </Button>
               </div>
               <Separator className="my-5" />
               <div className="grid gap-3">
@@ -276,6 +293,12 @@ function ClassicVariant({
                   <div className="text-xs uppercase tracking-[0.2em] text-earth-400">Aktives Angebot</div>
                   <div className="mt-2 text-sm font-medium text-earth-700">
                     {state.selectedOffer ? state.selectedOffer.id : "Kein Angebot im Fokus"}
+                  </div>
+                </div>
+                <div className="rounded-[1.25rem] bg-white/70 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-earth-400">Aktiver Biete/Suche-Eintrag</div>
+                  <div className="mt-2 text-sm font-medium text-earth-700">
+                    {state.selectedBieteSuche ? state.selectedBieteSuche.titel : "Kein Eintrag im Fokus"}
                   </div>
                 </div>
               </div>
@@ -299,7 +322,7 @@ function ClassicVariant({
                   <ProductTable state={state} caption="Auswahl und Kontrolle im Tabellenformat" />
                 </div>
               </>
-            ) : (
+            ) : state.activePanel === "angebote" ? (
               <>
                 <SectionCard
                   title="Angebotslage"
@@ -313,6 +336,23 @@ function ClassicVariant({
                   <OfferTable state={state} caption="Preis-, Mengen- und Terminprüfung" />
                 </div>
               </>
+            ) : (
+              <>
+                <SectionCard
+                  title="Austauschfläche"
+                  description="Frei gepflegte Gesuche und Angebote mit Tag-Logik für Maschinen, Nachbarschaftshilfe und ähnliche Themen."
+                  badge={`${state.visibleBieteSucheEintraege.length} sichtbar`}
+                >
+                  <BieteSucheTable
+                    state={state}
+                    caption="Alle Biete/Suche-Einträge mit Modus, Hinweisen und Schlagworten."
+                  />
+                </SectionCard>
+                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                  <BieteSucheEditor state={state} />
+                  <BieteSucheTable state={state} caption="Schneller Zugriff und Detailkontrolle" />
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -324,11 +364,13 @@ function ClassicVariant({
 function OperationsVariant({
   initialProdukte,
   initialStaffeln,
+  initialBieteSucheEintraege,
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
+  initialBieteSucheEintraege: BieteSucheEintrag[];
 }) {
-  const state = useZentraleAdmin({ initialProdukte, initialStaffeln });
+  const state = useZentraleAdmin({ initialProdukte, initialStaffeln, initialBieteSucheEintraege });
 
   return (
     <main className="min-h-screen w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -432,18 +474,22 @@ function OperationsVariant({
               <CardContent className="pt-5">
                 <Tabs
                   value={state.activePanel}
-                  onValueChange={(value) => state.setActivePanel(value as "produkte" | "angebote")}
+                  onValueChange={(value) => state.setActivePanel(value as "produkte" | "angebote" | "biete-suche")}
                   className="gap-4"
                 >
-                  <TabsList className="grid w-full grid-cols-2 bg-white/5">
+                  <TabsList className="grid w-full grid-cols-3 bg-white/5">
                     <TabsTrigger value="produkte">Produkte</TabsTrigger>
                     <TabsTrigger value="angebote">Angebote</TabsTrigger>
+                    <TabsTrigger value="biete-suche">Biete / Suche</TabsTrigger>
                   </TabsList>
                   <TabsContent value="produkte" className="m-0">
                     <ProductEditor state={state} compact />
                   </TabsContent>
                   <TabsContent value="angebote" className="m-0">
                     <OfferEditor state={state} compact />
+                  </TabsContent>
+                  <TabsContent value="biete-suche" className="m-0">
+                    <BieteSucheEditor state={state} compact />
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -463,6 +509,21 @@ function OperationsVariant({
                 <OfferTable state={state} caption="Preis- und Mengenkontrolle" />
               </CardContent>
             </Card>
+
+            <Card className="border-white/10 bg-white/[0.03] text-slate-50">
+              <CardHeader className="border-b border-white/10">
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowRightLeft />
+                  Biete/Suche-Monitor
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Freie Hofgesuche und Angebote mit Tags, Modus und Kurzdetails.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-5">
+                <BieteSucheTable state={state} caption="Austausch-Einträge im Überblick" />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -473,11 +534,13 @@ function OperationsVariant({
 function CompactVariant({
   initialProdukte,
   initialStaffeln,
+  initialBieteSucheEintraege,
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
+  initialBieteSucheEintraege: BieteSucheEintrag[];
 }) {
-  const state = useZentraleAdmin({ initialProdukte, initialStaffeln });
+  const state = useZentraleAdmin({ initialProdukte, initialStaffeln, initialBieteSucheEintraege });
 
   return (
     <main className="min-h-screen w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -499,6 +562,9 @@ function CompactVariant({
               </Badge>
               <Badge variant="outline" className="border-earth-500/15 bg-white/50 text-earth-500">
                 {state.staffeln.length} Angebote
+              </Badge>
+              <Badge variant="outline" className="border-earth-500/15 bg-white/50 text-earth-500">
+                {state.bieteSucheEintraege.length} Biete/Suche
               </Badge>
               <Badge variant="outline" className="border-earth-500/15 bg-white/50 text-earth-500">
                 {state.formatCurrency(state.totalExpectedRevenue)}
@@ -541,13 +607,14 @@ function CompactVariant({
             <CardContent className="h-[calc(78vh-7rem)] p-0">
               <Tabs
                 value={state.activePanel}
-                onValueChange={(value) => state.setActivePanel(value as "produkte" | "angebote")}
+                onValueChange={(value) => state.setActivePanel(value as "produkte" | "angebote" | "biete-suche")}
                 className="flex h-full flex-col gap-0"
               >
                 <div className="border-b border-earth-500/10 px-4 py-3">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="produkte">Produktbearbeitung</TabsTrigger>
                     <TabsTrigger value="angebote">Angebotsbearbeitung</TabsTrigger>
+                    <TabsTrigger value="biete-suche">Biete / Suche</TabsTrigger>
                   </TabsList>
                 </div>
                 <ScrollArea className="h-full px-4 py-4">
@@ -556,6 +623,9 @@ function CompactVariant({
                   </TabsContent>
                   <TabsContent value="angebote" className="m-0">
                     <OfferEditor state={state} compact />
+                  </TabsContent>
+                  <TabsContent value="biete-suche" className="m-0">
+                    <BieteSucheEditor state={state} compact />
                   </TabsContent>
                 </ScrollArea>
               </Tabs>
@@ -577,13 +647,13 @@ function CompactVariant({
 
             <Card className="zentrale-panel flex-1">
               <CardHeader className="border-b border-earth-500/10">
-                <CardTitle className="text-earth-700">Saison-Staffeln</CardTitle>
+                <CardTitle className="text-earth-700">Biete / Suche</CardTitle>
                 <CardDescription className="text-earth-500">
-                  Angebote nach Produkt, Jahr und Verfügbarkeit.
+                  Freie Gesuche und Angebote mit Tags und Kurzinfos.
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-[calc(39vh-4rem)] overflow-auto pt-4">
-                <OfferTable state={state} dense />
+                <BieteSucheTable state={state} dense />
               </CardContent>
             </Card>
           </div>
@@ -596,14 +666,20 @@ function CompactVariant({
 export function ZentraleVariantPage({ variant }: { variant: VariantSlug }) {
   const [produkte, setProdukte] = useState<Produkt[] | null>(null);
   const [staffeln, setStaffeln] = useState<Staffel[] | null>(null);
+  const [bieteSucheEintraege, setBieteSucheEintraege] = useState<BieteSucheEintrag[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [produkteResponse, staffelnResponse] = await Promise.all([listAlleProdukte(), listStaffeln()]);
+        const [produkteResponse, staffelnResponse, bieteSucheResponse] = await Promise.all([
+          listAlleProdukte(),
+          listStaffeln(),
+          listBieteSucheEintraege(),
+        ]);
         setProdukte(produkteResponse as unknown as Produkt[]);
         setStaffeln(staffelnResponse as unknown as Staffel[]);
+        setBieteSucheEintraege(bieteSucheResponse);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -616,18 +692,18 @@ export function ZentraleVariantPage({ variant }: { variant: VariantSlug }) {
     return <ZentraleError message={error} />;
   }
 
-  if (!produkte || !staffeln) {
+  if (!produkte || !staffeln || !bieteSucheEintraege) {
     return <ZentraleLoading />;
   }
 
   switch (variant) {
     case "classic":
-      return <ClassicVariant initialProdukte={produkte} initialStaffeln={staffeln} />;
+      return <ClassicVariant initialProdukte={produkte} initialStaffeln={staffeln} initialBieteSucheEintraege={bieteSucheEintraege} />;
     case "operations":
-      return <OperationsVariant initialProdukte={produkte} initialStaffeln={staffeln} />;
+      return <OperationsVariant initialProdukte={produkte} initialStaffeln={staffeln} initialBieteSucheEintraege={bieteSucheEintraege} />;
     case "compact":
-      return <CompactVariant initialProdukte={produkte} initialStaffeln={staffeln} />;
+      return <CompactVariant initialProdukte={produkte} initialStaffeln={staffeln} initialBieteSucheEintraege={bieteSucheEintraege} />;
     default:
-      return <ClassicVariant initialProdukte={produkte} initialStaffeln={staffeln} />;
+      return <ClassicVariant initialProdukte={produkte} initialStaffeln={staffeln} initialBieteSucheEintraege={bieteSucheEintraege} />;
   }
 }

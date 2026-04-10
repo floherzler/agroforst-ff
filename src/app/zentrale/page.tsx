@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BriefcaseBusiness, CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, ReceiptText, Sprout, Upload, Boxes } from "lucide-react";
+import { ArrowRightLeft, BriefcaseBusiness, CheckCircle2, CircleAlert, ImagePlus, Link2, Plus, ReceiptText, Sprout, Upload, Boxes } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProductCard } from "@/features/zentrale/product-card";
-import { OfferEditor, OfferTable } from "@/features/zentrale/admin-ui";
+import { BieteSucheEditor, BieteSucheTable, OfferEditor, OfferTable } from "@/features/zentrale/admin-ui";
 import {
   displayProductName,
   displayValueLabel,
@@ -41,6 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
+import { listBieteSucheEintraege } from "@/lib/appwrite/appwriteExchange";
 import {
   listAdminMembershipPayments,
   listAdminMemberships,
@@ -77,7 +78,7 @@ type ProductStatusTone = {
   variant: "default" | "secondary" | "outline";
 };
 
-type AdminPanel = "produkte" | "angebote" | "zahlungen" | "office";
+type AdminPanel = "produkte" | "angebote" | "biete-suche" | "zahlungen" | "office";
 type PaymentFilter = "alle" | "offen" | "warten" | "teilbezahlt" | "bezahlt" | "fehlgeschlagen" | "storniert";
 
 function formatAdminDate(value?: string | null, withTime = false) {
@@ -992,12 +993,14 @@ function InlineProductEditor({
 function ZentraleWorkspace({
   initialProdukte,
   initialStaffeln,
+  initialBieteSucheEintraege,
   initialPayments,
   initialMemberships,
   initialBackofficeEvents,
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
+  initialBieteSucheEintraege: BieteSucheEintrag[];
   initialPayments: MembershipPayment[];
   initialMemberships: MembershipRecord[];
   initialBackofficeEvents: BackofficeEvent[];
@@ -1005,6 +1008,7 @@ function ZentraleWorkspace({
   const state = useZentraleAdmin({
     initialProdukte,
     initialStaffeln,
+    initialBieteSucheEintraege,
   });
   const [drafts, setDrafts] = useState<Record<string, ProductDraftRecord>>({});
   const [editorTarget, setEditorTarget] = useState<EditorTarget>(null);
@@ -1382,6 +1386,10 @@ function ZentraleWorkspace({
             <Boxes className="size-4" />
             Angebote
           </RowButton>
+          <RowButton active={activePanel === "biete-suche"} onClick={() => setActivePanel("biete-suche")}>
+            <ArrowRightLeft className="size-4" />
+            Biete / Suche
+          </RowButton>
           <RowButton active={activePanel === "zahlungen"} onClick={() => setActivePanel("zahlungen")}>
             <ReceiptText className="size-4" />
             Zahlungen
@@ -1450,6 +1458,21 @@ function ZentraleWorkspace({
 
             <OfferTable state={state} caption="Angebote nach Produkt, Jahr, Preis und Verfügbarkeit." />
             <OfferEditor state={state} />
+          </>
+        ) : activePanel === "biete-suche" ? (
+          <>
+            <div className="flex items-center justify-between gap-3 rounded-[1.4rem] border border-border/70 bg-surface-card px-4 py-3">
+              <div>
+                <div className={cn(textRecipes({ role: "label" }), "text-sm text-foreground")}>Biete / Suche</div>
+              </div>
+              <Button onClick={() => state.createBieteSucheDraft()}>
+                <Plus data-icon="inline-start" />
+                Neuer Eintrag
+              </Button>
+            </div>
+
+            <BieteSucheTable state={state} caption="Biete/Suche-Einträge mit Modus, Tags und Hinweisen." />
+            <BieteSucheEditor state={state} />
           </>
         ) : activePanel === "zahlungen" ? (
           <section className="grid gap-4">
@@ -1618,6 +1641,7 @@ function ZentraleWorkspace({
 export default function Page() {
   const [produkte, setProdukte] = useState<Produkt[] | null>(null);
   const [staffeln, setStaffeln] = useState<Staffel[] | null>(null);
+  const [bieteSucheEintraege, setBieteSucheEintraege] = useState<BieteSucheEintrag[] | null>(null);
   const [payments, setPayments] = useState<MembershipPayment[] | null>(null);
   const [memberships, setMemberships] = useState<MembershipRecord[] | null>(null);
   const [backofficeEvents, setBackofficeEvents] = useState<BackofficeEvent[] | null>(null);
@@ -1628,9 +1652,10 @@ export default function Page() {
 
     async function load() {
       try {
-        const [produkteResponse, staffelnResponse, paymentsResponse, membershipsResponse, backofficeEventsResponse] = await Promise.all([
+        const [produkteResponse, staffelnResponse, bieteSucheResponse, paymentsResponse, membershipsResponse, backofficeEventsResponse] = await Promise.all([
           listAlleProdukte(),
           listStaffeln(),
+          listBieteSucheEintraege(),
           listAdminMembershipPayments({ limit: 200 }),
           listAdminMemberships({ limit: 200 }),
           listBackofficeEvents({ limit: 100 }),
@@ -1642,6 +1667,7 @@ export default function Page() {
 
         setProdukte(produkteResponse as unknown as Produkt[]);
         setStaffeln(staffelnResponse as unknown as Staffel[]);
+        setBieteSucheEintraege(bieteSucheResponse);
         setPayments(paymentsResponse);
         setMemberships(membershipsResponse);
         setBackofficeEvents(backofficeEventsResponse);
@@ -1665,7 +1691,7 @@ export default function Page() {
     return <AdminError message={error} />;
   }
 
-  if (!produkte || !staffeln || !payments || !memberships || !backofficeEvents) {
+  if (!produkte || !staffeln || !bieteSucheEintraege || !payments || !memberships || !backofficeEvents) {
     return <AdminLoading />;
   }
 
@@ -1673,6 +1699,7 @@ export default function Page() {
     <ZentraleWorkspace
       initialProdukte={produkte}
       initialStaffeln={staffeln}
+      initialBieteSucheEintraege={bieteSucheEintraege}
       initialPayments={payments}
       initialMemberships={memberships}
       initialBackofficeEvents={backofficeEvents}

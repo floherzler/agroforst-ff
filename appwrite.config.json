@@ -386,6 +386,87 @@
             ]
         },
         {
+            "$id": "biete_suche",
+            "databaseId": "agroforst",
+            "name": "Biete/Suche",
+            "enabled": true,
+            "rowSecurity": false,
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "titel",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "modus",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "beschreibung",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "tags",
+                    "type": "varchar",
+                    "required": false,
+                    "array": true,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "hinweis",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "biete_suche_titel_ft",
+                    "type": "fulltext",
+                    "attributes": [
+                        "titel"
+                    ],
+                    "lengths": [
+                        0
+                    ]
+                },
+                {
+                    "key": "biete_suche_modus_key",
+                    "type": "key",
+                    "attributes": [
+                        "modus"
+                    ],
+                    "lengths": [
+                        0
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "mitgliedschaften",
             "databaseId": "agroforst",
             "name": "Mitgliedschaften",

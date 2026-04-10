@@ -22,6 +22,7 @@ import { Route as KontoRouteImport } from './routes/konto'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as BlogRouteImport } from './routes/blog'
+import { Route as BieteSucheRouteImport } from './routes/biete-suche'
 import { Route as BestellungenRouteImport } from './routes/bestellungen'
 import { Route as AgbsRouteImport } from './routes/agbs'
 import { Route as IndexRouteImport } from './routes/index'
@@ -97,6 +98,11 @@ const BlogRoute = BlogRouteImport.update({
   path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BieteSucheRoute = BieteSucheRouteImport.update({
+  id: '/biete-suche',
+  path: '/biete-suche',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BestellungenRoute = BestellungenRouteImport.update({
   id: '/bestellungen',
   path: '/bestellungen',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agbs': typeof AgbsRoute
   '/bestellungen': typeof BestellungenRoute
+  '/biete-suche': typeof BieteSucheRoute
   '/blog': typeof BlogRoute
   '/datenschutz': typeof DatenschutzRoute
   '/impressum': typeof ImpressumRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agbs': typeof AgbsRoute
   '/bestellungen': typeof BestellungenRoute
+  '/biete-suche': typeof BieteSucheRoute
   '/blog': typeof BlogRoute
   '/datenschutz': typeof DatenschutzRoute
   '/impressum': typeof ImpressumRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agbs': typeof AgbsRoute
   '/bestellungen': typeof BestellungenRoute
+  '/biete-suche': typeof BieteSucheRoute
   '/blog': typeof BlogRoute
   '/datenschutz': typeof DatenschutzRoute
   '/impressum': typeof ImpressumRoute
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agbs'
     | '/bestellungen'
+    | '/biete-suche'
     | '/blog'
     | '/datenschutz'
     | '/impressum'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agbs'
     | '/bestellungen'
+    | '/biete-suche'
     | '/blog'
     | '/datenschutz'
     | '/impressum'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agbs'
     | '/bestellungen'
+    | '/biete-suche'
     | '/blog'
     | '/datenschutz'
     | '/impressum'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgbsRoute: typeof AgbsRoute
   BestellungenRoute: typeof BestellungenRoute
+  BieteSucheRoute: typeof BieteSucheRoute
   BlogRoute: typeof BlogRoute
   DatenschutzRoute: typeof DatenschutzRoute
   ImpressumRoute: typeof ImpressumRoute
@@ -403,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/biete-suche': {
+      id: '/biete-suche'
+      path: '/biete-suche'
+      fullPath: '/biete-suche'
+      preLoaderRoute: typeof BieteSucheRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bestellungen': {
       id: '/bestellungen'
       path: '/bestellungen'
@@ -491,6 +511,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgbsRoute: AgbsRoute,
   BestellungenRoute: BestellungenRoute,
+  BieteSucheRoute: BieteSucheRoute,
   BlogRoute: BlogRoute,
   DatenschutzRoute: DatenschutzRoute,
   ImpressumRoute: ImpressumRoute,

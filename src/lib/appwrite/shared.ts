@@ -21,6 +21,7 @@ export const appwriteConfig = {
   eventTableId: getManagedTableId("backoffice_ereignisse"),
   productTableId: getManagedTableId("produkte"),
   offerTableId: getManagedTableId("angebote"),
+  exchangeTableId: getManagedTableId("biete_suche"),
   orderTableId: getManagedTableId("bestellungen"),
   postTableId: getManagedTableId("blog_beitraege"),
   membershipTableId: getManagedTableId("mitgliedschaften"),

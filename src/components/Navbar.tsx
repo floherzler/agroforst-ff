@@ -11,6 +11,7 @@ export default function Navbar() {
   const { user } = useAuthStore();
   const pathname = useLocation({ select: (state) => state.pathname });
   const isProductsPage = pathname.startsWith("/produkte");
+  const isBieteSuchePage = pathname.startsWith("/biete-suche");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -68,20 +69,29 @@ export default function Navbar() {
 
             <div
               id="site-mobile-nav"
-              className={`flex flex-1 flex-col gap-3 lg:max-w-4xl lg:flex-row lg:items-center lg:justify-end ${
-                isMobileMenuOpen ? "flex" : "hidden"
-              } lg:flex`}
+              className={`flex flex-1 flex-col gap-3 lg:max-w-4xl lg:flex-row lg:items-center lg:justify-end ${isMobileMenuOpen ? "flex" : "hidden"
+                } lg:flex`}
             >
               <div className="flex flex-col gap-3 lg:w-full lg:max-w-[44rem] lg:flex-row lg:items-center lg:justify-end">
                 <div className="flex flex-col gap-2 rounded-[1.4rem] border border-border/60 bg-white/55 p-3 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:flex-row lg:items-center lg:justify-end">
                   <Link
                     to="/produkte"
                     className={`inline-flex min-h-12 w-full items-center justify-center rounded-full border px-4 py-3 text-base font-medium no-underline transition-colors lg:min-h-10 lg:w-auto lg:px-4 lg:py-2 lg:text-sm lg:self-auto ${isProductsPage
-                        ? "border-lilac-300 bg-[color:var(--color-accent)] text-lilac-900 shadow-accent-lilac"
-                        : "border-lilac-200/60 bg-background/80 text-foreground hover:bg-[color:var(--color-accent)]/80"
+                      ? "border-lilac-300 bg-[color:var(--color-accent)] text-lilac-900 shadow-accent-lilac"
+                      : "border-lilac-200/60 bg-background/80 text-foreground hover:bg-[color:var(--color-accent)]/80"
                       }`}
                   >
                     Produkte
+                  </Link>
+
+                  <Link
+                    to="/biete-suche"
+                    className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border px-4 py-3 text-base font-medium no-underline transition-colors lg:min-h-10 lg:w-auto lg:px-4 lg:py-2 lg:text-sm ${isBieteSuchePage
+                      ? "border-lilac-300 bg-[color:var(--color-accent)] text-lilac-900 shadow-accent-lilac"
+                      : "border-lilac-200/60 bg-background/80 text-foreground hover:bg-[color:var(--color-accent)]/80"
+                      }`}
+                  >
+                    Biete/Suche
                   </Link>
 
                   <div className="group/soon relative w-full lg:w-auto">
@@ -90,8 +100,6 @@ export default function Navbar() {
                       className="inline-flex min-h-12 w-full cursor-help items-center justify-center gap-x-2 gap-y-1 rounded-full border border-border/75 bg-muted/80 px-4 py-3 text-sm font-medium text-muted-foreground transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--duration-base)] ease-[var(--ease-emphasized)] group-hover/soon:border-lilac-300/80 group-hover/soon:bg-[color:var(--color-accent)] group-hover/soon:text-lilac-900 group-hover/soon:shadow-accent-lilac lg:min-h-10 lg:w-auto lg:flex-wrap lg:justify-start lg:px-3 lg:py-2 lg:text-[0.77rem]"
                     >
                       <Clock3 className="size-3.5 shrink-0" />
-                      <span>Biete/Suche</span>
-                      <span className="text-border/90 group-hover/soon:text-lilac-400/90">•</span>
                       <span>Blog</span>
                     </span>
                     <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full border border-lilac-200/80 bg-background/96 px-3 py-1 text-[0.68rem] font-medium tracking-[0.08em] text-lilac-800 opacity-0 shadow-brand-soft backdrop-blur transition-all duration-200 group-hover/soon:translate-y-0 group-hover/soon:opacity-100 group-focus-within/soon:translate-y-0 group-focus-within/soon:opacity-100 translate-y-1 whitespace-nowrap">

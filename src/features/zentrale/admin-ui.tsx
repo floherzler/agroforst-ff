@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 
 import {
   Activity,
+  ArrowRightLeft,
   ArrowRight,
   BookText,
   Boxes,
@@ -38,6 +39,8 @@ import {
   hauptkategorieValues,
   lebensdauerValues,
   offerUnits,
+  splitList,
+  type BieteSucheFormState,
   type FunctionStatus,
   type OfferFormState,
   type PreisStaffelFormState,
@@ -51,21 +54,29 @@ import { cn } from "@/lib/utils";
 type SharedAdminState = {
   produkte: Produkt[];
   staffeln: Staffel[];
+  bieteSucheEintraege: BieteSucheEintrag[];
   productById: Map<string, Produkt>;
   selectedProductId: string | null;
   selectedOfferId: string | null;
+  selectedBieteSucheId: string | null;
   selectedProduct: Produkt | null;
   selectedOffer: Staffel | null;
+  selectedBieteSuche: BieteSucheEintrag | null;
   productForm: ProductFormState;
   offerForm: OfferFormState;
+  bieteSucheForm: BieteSucheFormState;
   productStatus: FunctionStatus;
   offerStatus: FunctionStatus;
+  bieteSucheStatus: FunctionStatus;
   productFilter: string;
   offerFilter: string;
-  activePanel: "produkte" | "angebote";
+  bieteSucheFilter: string;
+  activePanel: "produkte" | "angebote" | "biete-suche";
   visibleProducts: Produkt[];
   visibleOffers: Staffel[];
+  visibleBieteSucheEintraege: BieteSucheEintrag[];
   offersForSelectedProduct: Staffel[];
+  bieteSucheTags: string[];
   totalProjectedQuantity: number;
   totalAvailableQuantity: number;
   totalExpectedRevenue: number;
@@ -75,16 +86,22 @@ type SharedAdminState = {
   productImagePreviewUrl?: string;
   setProductForm: React.Dispatch<React.SetStateAction<any>>;
   setOfferForm: React.Dispatch<React.SetStateAction<any>>;
+  setBieteSucheForm: React.Dispatch<React.SetStateAction<any>>;
   setProductFilter: (value: string) => void;
   setOfferFilter: (value: string) => void;
-  setActivePanel: (value: "produkte" | "angebote") => void;
+  setBieteSucheFilter: (value: string) => void;
+  setActivePanel: (value: "produkte" | "angebote" | "biete-suche") => void;
   setProductImageFile: (file: File | null) => void;
   saveProduct: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   saveOffer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  saveBieteSuche: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   resetProductForm: () => void;
   resetOfferForm: () => void;
+  resetBieteSucheForm: () => void;
   selectProduct: (productId: string) => void;
   selectOffer: (offerId: string) => void;
+  selectBieteSuche: (entryId: string) => void;
+  createBieteSucheDraft: (mode?: BieteSucheModus) => void;
 };
 
 export function StatusMessage({ status }: { status: FunctionStatus }) {
@@ -890,6 +907,177 @@ export function OfferEditor({
   );
 }
 
+export function BieteSucheEditor({
+  state,
+  compact = false,
+}: {
+  state: SharedAdminState;
+  compact?: boolean;
+}) {
+  const { bieteSucheForm, selectedBieteSuche, bieteSucheStatus } = state;
+
+  return (
+    <Card className="border-border/80 bg-card/95 shadow-brand-soft">
+      <CardHeader className={compact ? "gap-2 px-4 py-4" : "gap-2"}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <CardTitle>{selectedBieteSuche ? "Eintrag bearbeiten" : "Eintrag anlegen"}</CardTitle>
+            <CardDescription>
+              Gesuche und Angebote außerhalb des Produktkatalogs verwalten.
+            </CardDescription>
+          </div>
+          <Badge variant="outline">Live</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className={compact ? "px-4 pb-4 pt-0" : undefined}>
+        <form className="flex flex-col gap-4" onSubmit={state.saveBieteSuche}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Eintrags-ID
+              <Input
+                value={bieteSucheForm.id}
+                onChange={(event) =>
+                  state.setBieteSucheForm((current: BieteSucheFormState) => ({ ...current, id: event.target.value }))
+                }
+                placeholder="Leer lassen für Auto-ID"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Modus
+              <Select
+                value={bieteSucheForm.modus}
+                onValueChange={(value) =>
+                  state.setBieteSucheForm((current: BieteSucheFormState) => ({
+                    ...current,
+                    modus: value as BieteSucheModus,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Modus wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="biete">Biete</SelectItem>
+                  <SelectItem value="suche">Suche</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Titel
+            <Input
+              value={bieteSucheForm.titel}
+              onChange={(event) =>
+                state.setBieteSucheForm((current: BieteSucheFormState) => ({
+                  ...current,
+                  titel: event.target.value,
+                }))
+              }
+              placeholder="z. B. Kartoffelroder gesucht oder Mostpresse verfügbar"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Beschreibung
+            <Textarea
+              value={bieteSucheForm.beschreibung}
+              onChange={(event) =>
+                state.setBieteSucheForm((current: BieteSucheFormState) => ({
+                  ...current,
+                  beschreibung: event.target.value,
+                }))
+              }
+              placeholder="Was wird angeboten oder gesucht, in welchem Umfang und mit welchem Hintergrund?"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Tags
+            <Input
+              value={bieteSucheForm.tags}
+              onChange={(event) =>
+                state.setBieteSucheForm((current: BieteSucheFormState) => ({
+                  ...current,
+                  tags: event.target.value,
+                }))
+              }
+              placeholder="z. B. Maschinen, Nachbarschaftshilfe, Verleih"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Hinweis / Kontakt
+            <Input
+              value={bieteSucheForm.hinweis}
+              onChange={(event) =>
+                state.setBieteSucheForm((current: BieteSucheFormState) => ({
+                  ...current,
+                  hinweis: event.target.value,
+                }))
+              }
+              placeholder="z. B. Abholung in Wittstock, Kontakt über das Hofteam"
+            />
+          </label>
+
+          {state.bieteSucheTags.length > 0 ? (
+            <div className="rounded-[1.2rem] border border-border/70 bg-background/60 p-4">
+              <div className="text-sm font-medium">Vorhandene Tags</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {state.bieteSucheTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs transition hover:bg-muted"
+                    onClick={() =>
+                      state.setBieteSucheForm((current: BieteSucheFormState) => {
+                        const values = splitList(current.tags);
+                        if (values.some((value) => value.toLowerCase() === tag.toLowerCase())) {
+                          return current;
+                        }
+
+                        return {
+                          ...current,
+                          tags: [...values, tag].join(", "),
+                        };
+                      })
+                    }
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={bieteSucheStatus.state === "loading"}
+              className={cn(buttonVariants({ variant: "default", size: "lg" }), "min-w-[12rem] px-4")}
+            >
+              {bieteSucheStatus.state === "loading"
+                ? "Speichert..."
+                : selectedBieteSuche
+                  ? "Eintrag aktualisieren"
+                  : "Eintrag anlegen"}
+            </button>
+            <button
+              type="button"
+              onClick={state.resetBieteSucheForm}
+              className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "min-w-[11rem] px-4")}
+            >
+              Neues Formular
+            </button>
+          </div>
+
+          <StatusMessage status={bieteSucheStatus} />
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProductTable({
   state,
   dense = false,
@@ -1060,6 +1248,101 @@ export function OfferTable({
                 </span>
                 <span>
                   Tags: {state.selectedOffer.tags.length > 0 ? state.selectedOffer.tags.join(", ") : "-"}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function BieteSucheTable({
+  state,
+  dense = false,
+  caption,
+}: {
+  state: SharedAdminState;
+  dense?: boolean;
+  caption?: string;
+}) {
+  return (
+    <Card className="border-border/80 bg-card/95 shadow-brand-soft">
+      <CardHeader className={dense ? "gap-3 px-4 py-4" : "gap-3"}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <CardTitle>Biete/Suche-Liste</CardTitle>
+            <CardDescription>
+              {caption ?? "Live-Liste aller Einträge mit Modus, Tags und Kurzbeschreibung."}
+            </CardDescription>
+          </div>
+          <Badge variant="secondary">{state.visibleBieteSucheEintraege.length} Einträge</Badge>
+        </div>
+        <Input
+          value={state.bieteSucheFilter}
+          onChange={(event) => state.setBieteSucheFilter(event.target.value)}
+          placeholder="Nach Titel, Modus, Tags oder Hinweis filtern"
+        />
+      </CardHeader>
+      <CardContent className={dense ? "px-4 pb-4 pt-0" : "flex flex-col gap-4 overflow-x-auto"}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Titel</TableHead>
+              <TableHead>Modus</TableHead>
+              <TableHead>Tags</TableHead>
+              <TableHead>Hinweis</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {state.visibleBieteSucheEintraege.map((entry) => (
+              <TableRow
+                key={entry.id}
+                className={entry.id === state.selectedBieteSucheId ? "bg-muted/60" : "cursor-pointer"}
+                onClick={() => state.selectBieteSuche(entry.id)}
+              >
+                <TableCell>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">{entry.titel}</span>
+                    <span className="text-xs text-muted-foreground">{entry.id}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={entry.modus === "biete" ? "default" : "secondary"}>
+                    {entry.modus === "biete" ? "Biete" : "Suche"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-2">
+                    {entry.tags.length > 0 ? entry.tags.map((tag) => (
+                      <Badge key={tag} variant="outline">{tag}</Badge>
+                    )) : "-"}
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{entry.hinweis ?? "-"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        {state.selectedBieteSuche ? (
+          <>
+            <Separator />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Aktuell gewählter Eintrag</span>
+                <span className="text-muted-foreground">{state.selectedBieteSuche.titel}</span>
+                <span>{state.selectedBieteSuche.id}</span>
+              </div>
+              <div className="grid gap-1 text-sm text-muted-foreground">
+                <span>Modus: {state.selectedBieteSuche.modus === "biete" ? "Biete" : "Suche"}</span>
+                <span>Hinweis: {state.selectedBieteSuche.hinweis ?? "-"}</span>
+                <span>
+                  Tags: {state.selectedBieteSuche.tags.length > 0 ? state.selectedBieteSuche.tags.join(", ") : "-"}
+                </span>
+                <span>
+                  Beschreibung: {state.selectedBieteSuche.beschreibung?.trim() || "-"}
                 </span>
               </div>
             </div>
@@ -1502,6 +1785,28 @@ export function WorkbenchBrowser({
                 <span className="text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
                 <span className="truncate">{displayProductName(state.productById.get(offer.produktId))}</span>
                 <span className="text-xs text-muted-foreground">{offer.year ?? "-"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border/70 bg-background/85 xl:col-span-2">
+          <div className="border-b border-border/70 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Biete / Suche
+          </div>
+          <div className="flex max-h-[18rem] flex-col overflow-auto">
+            {state.visibleBieteSucheEintraege.map((entry, index) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => state.selectBieteSuche(entry.id)}
+                className={cn(
+                  "grid grid-cols-[2.5rem_1fr_auto] items-center gap-3 border-b border-border/50 px-3 py-2 text-left font-mono text-sm last:border-b-0",
+                  entry.id === state.selectedBieteSucheId ? "bg-amber-50 text-amber-900" : "hover:bg-muted/70",
+                )}
+              >
+                <span className="text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                <span className="truncate">{entry.titel}</span>
+                <span className="text-xs text-muted-foreground">{entry.modus}</span>
               </button>
             ))}
           </div>

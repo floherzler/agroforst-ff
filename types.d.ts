@@ -60,6 +60,18 @@ interface BlogPost {
   updatedAt: string;
 }
 
+type BieteSucheModus = "biete" | "suche";
+
+interface BieteSucheEintrag {
+  id: string;
+  createdAt: string;
+  titel: string;
+  modus: BieteSucheModus;
+  beschreibung?: string;
+  tags: string[];
+  hinweis?: string;
+}
+
 interface Bestellung {
   id: string;
   createdAt: string;

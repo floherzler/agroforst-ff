@@ -438,6 +438,9 @@ function ensureIndexes(databaseId, table) {
       continue;
     }
 
+    const hasExplicitLengths =
+      Array.isArray(index.lengths) && index.lengths.some((value) => value !== 0 && value !== null);
+
     console.log(`Creating index ${table.$id}.${index.key}`);
     runCli([
       "tables-db",
@@ -453,7 +456,7 @@ function ensureIndexes(databaseId, table) {
       "--columns",
       ...(index.attributes ?? []),
       ...(Array.isArray(index.orders) ? ["--orders", ...index.orders] : []),
-      ...(Array.isArray(index.lengths)
+      ...(hasExplicitLengths
         ? ["--lengths", ...index.lengths.map((value) => String(value))]
         : []),
     ]);

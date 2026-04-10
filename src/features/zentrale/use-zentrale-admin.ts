@@ -14,8 +14,10 @@ import {
 
 import {
   applyRealtimeRecord,
+  bieteSucheToFormState,
   canonicalUnit,
   displayProductName,
+  emptyBieteSucheForm,
   emptyOfferForm,
   emptyProductForm,
   formatCurrency,
@@ -30,31 +32,43 @@ import {
   slugifyProduktId,
   splitList,
   splitMonths,
+  type BieteSucheFormState,
   type FunctionStatus,
   type OfferFormState,
   type ProductFormState,
 } from "@/features/zentrale/admin-domain";
 import { getOfferDisplayUnitPrice } from "@/features/catalog/catalog";
+import {
+  subscribeToBieteSucheEintraege,
+  upsertBieteSucheEintrag,
+} from "@/lib/appwrite/appwriteExchange";
 
 export function useZentraleAdmin({
   initialProdukte,
   initialStaffeln,
+  initialBieteSucheEintraege = [],
 }: {
   initialProdukte: Produkt[];
   initialStaffeln: Staffel[];
+  initialBieteSucheEintraege?: BieteSucheEintrag[];
 }) {
   const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
   const [produkte, setProdukte] = useState<Produkt[]>(initialProdukte);
   const [staffeln, setStaffeln] = useState<Staffel[]>(initialStaffeln);
+  const [bieteSucheEintraege, setBieteSucheEintraege] = useState<BieteSucheEintrag[]>(initialBieteSucheEintraege);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [selectedBieteSucheId, setSelectedBieteSucheId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm());
   const [offerForm, setOfferForm] = useState<OfferFormState>(emptyOfferForm());
+  const [bieteSucheForm, setBieteSucheForm] = useState<BieteSucheFormState>(emptyBieteSucheForm());
   const [productStatus, setProductStatus] = useState<FunctionStatus>({ state: "idle" });
   const [offerStatus, setOfferStatus] = useState<FunctionStatus>({ state: "idle" });
+  const [bieteSucheStatus, setBieteSucheStatus] = useState<FunctionStatus>({ state: "idle" });
   const [productFilter, setProductFilter] = useState("");
   const [offerFilter, setOfferFilter] = useState("");
-  const [activePanel, setActivePanel] = useState<"produkte" | "angebote">("produkte");
+  const [bieteSucheFilter, setBieteSucheFilter] = useState("");
+  const [activePanel, setActivePanel] = useState<"produkte" | "angebote" | "biete-suche">("produkte");
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [productImageObjectUrl, setProductImageObjectUrl] = useState<string | null>(null);
 
@@ -67,6 +81,10 @@ export function useZentraleAdmin({
     selectedOfferId === null
       ? null
       : staffeln.find((offer) => offer.id === selectedOfferId) ?? null;
+  const selectedBieteSuche =
+    selectedBieteSucheId === null
+      ? null
+      : bieteSucheEintraege.find((entry) => entry.id === selectedBieteSucheId) ?? null;
   const generatedProductId = selectedProduct?.id ?? slugifyProduktId(productForm.name, productForm.sorte);
   const productImagePreviewUrl = productImageObjectUrl
     ?? (productForm.imageId.trim()
@@ -126,6 +144,26 @@ export function useZentraleAdmin({
           return left.id.localeCompare(right.id, "de");
         })
     : [];
+
+  const visibleBieteSucheEintraege = [...bieteSucheEintraege]
+    .filter((entry) => {
+      const search = bieteSucheFilter.trim().toLowerCase();
+      if (!search) {
+        return true;
+      }
+
+      return [entry.id, entry.titel, entry.modus, entry.beschreibung ?? "", entry.hinweis ?? "", ...entry.tags]
+        .join(" ")
+        .toLowerCase()
+        .includes(search);
+    })
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+
+  const bieteSucheTags = Array.from(
+    new Set(
+      bieteSucheEintraege.flatMap((entry) => entry.tags.map((tag) => tag.trim()).filter(Boolean)),
+    ),
+  ).sort((left, right) => left.localeCompare(right, "de"));
 
   const totalProjectedQuantity = staffeln.reduce((sum, offer) => sum + (offer.menge ?? 0), 0);
   const totalAvailableQuantity = staffeln.reduce((sum, offer) => sum + (offer.mengeVerfuegbar ?? 0), 0);
@@ -208,6 +246,15 @@ export function useZentraleAdmin({
   }, [selectedOffer, selectedProductId]);
 
   useEffect(() => {
+    if (selectedBieteSuche) {
+      setBieteSucheForm(bieteSucheToFormState(selectedBieteSuche));
+      return;
+    }
+
+    setBieteSucheForm(emptyBieteSucheForm());
+  }, [selectedBieteSuche]);
+
+  useEffect(() => {
     const unsubscribeOffers = subscribeToStaffeln(({ type, record }) => {
       setStaffeln((current) => applyRealtimeRecord(current, type, record));
     });
@@ -215,10 +262,14 @@ export function useZentraleAdmin({
     const unsubscribeProducts = subscribeToProdukte(({ type, record }) => {
       setProdukte((current) => applyRealtimeRecord(current, type, record));
     });
+    const unsubscribeBieteSuche = subscribeToBieteSucheEintraege(({ type, record }) => {
+      setBieteSucheEintraege((current) => applyRealtimeRecord(current, type, record));
+    });
 
     return () => {
       unsubscribeOffers();
       unsubscribeProducts();
+      unsubscribeBieteSuche();
     };
   }, []);
 
@@ -372,6 +423,37 @@ export function useZentraleAdmin({
     }
   }
 
+  async function saveBieteSuche(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBieteSucheStatus({ state: "loading" });
+
+    try {
+      const saved = await upsertBieteSucheEintrag({
+        id: bieteSucheForm.id.trim() || undefined,
+        titel: bieteSucheForm.titel.trim(),
+        modus: bieteSucheForm.modus,
+        beschreibung: bieteSucheForm.beschreibung.trim() || undefined,
+        tags: splitList(bieteSucheForm.tags),
+        hinweis: bieteSucheForm.hinweis.trim() || undefined,
+      });
+
+      setSelectedBieteSucheId(saved.id);
+      setActivePanel("biete-suche");
+      setBieteSucheStatus({
+        state: "success",
+        message: selectedBieteSucheId
+          ? "Biete/Suche-Eintrag wurde aktualisiert."
+          : "Biete/Suche-Eintrag wurde angelegt und ist direkt sichtbar.",
+      });
+    } catch (rawError) {
+      const message =
+        rawError instanceof Error
+          ? rawError.message
+          : String(rawError ?? "Biete/Suche-Eintrag konnte nicht gespeichert werden.");
+      setBieteSucheStatus({ state: "error", message });
+    }
+  }
+
   function resetProductForm() {
     setSelectedProductId(null);
     setProductStatus({ state: "idle" });
@@ -383,6 +465,12 @@ export function useZentraleAdmin({
     setSelectedOfferId(null);
     setOfferStatus({ state: "idle" });
     setOfferForm(emptyOfferForm(selectedProductId ?? ""));
+  }
+
+  function resetBieteSucheForm() {
+    setSelectedBieteSucheId(null);
+    setBieteSucheStatus({ state: "idle" });
+    setBieteSucheForm(emptyBieteSucheForm());
   }
 
   function selectProduct(productId: string) {
@@ -401,6 +489,12 @@ export function useZentraleAdmin({
     setActivePanel("angebote");
   }
 
+  function selectBieteSuche(entryId: string) {
+    setSelectedBieteSucheId(entryId);
+    setBieteSucheStatus({ state: "idle" });
+    setActivePanel("biete-suche");
+  }
+
   function createProductDraft() {
     setSelectedProductId(null);
     setProductStatus({ state: "idle" });
@@ -416,24 +510,39 @@ export function useZentraleAdmin({
     setActivePanel("angebote");
   }
 
+  function createBieteSucheDraft(mode: BieteSucheModus = "biete") {
+    setSelectedBieteSucheId(null);
+    setBieteSucheStatus({ state: "idle" });
+    setBieteSucheForm({ ...emptyBieteSucheForm(), modus: mode });
+    setActivePanel("biete-suche");
+  }
+
   return {
     produkte,
     staffeln,
+    bieteSucheEintraege,
     productById,
     selectedProductId,
     selectedOfferId,
+    selectedBieteSucheId,
     selectedProduct,
     selectedOffer,
+    selectedBieteSuche,
     productForm,
     offerForm,
+    bieteSucheForm,
     productStatus,
     offerStatus,
+    bieteSucheStatus,
     productFilter,
     offerFilter,
+    bieteSucheFilter,
     activePanel,
     visibleProducts,
     visibleOffers,
+    visibleBieteSucheEintraege,
     offersForSelectedProduct,
+    bieteSucheTags,
     totalProjectedQuantity,
     totalAvailableQuantity,
     totalExpectedRevenue,
@@ -443,19 +552,25 @@ export function useZentraleAdmin({
     productImagePreviewUrl,
     setProductForm,
     setOfferForm,
+    setBieteSucheForm,
     setProductFilter,
     setOfferFilter,
+    setBieteSucheFilter,
     setActivePanel,
     setProductImageFile,
     saveProduct,
     publishProduct,
     saveOffer,
+    saveBieteSuche,
     resetProductForm,
     resetOfferForm,
+    resetBieteSucheForm,
     createProductDraft,
     createOfferDraft,
+    createBieteSucheDraft,
     selectProduct,
     selectOffer,
+    selectBieteSuche,
     formatCurrency,
   };
 }

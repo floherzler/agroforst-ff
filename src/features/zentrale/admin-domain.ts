@@ -93,6 +93,15 @@ export type OfferFormState = {
   preisStaffeln: PreisStaffelFormState[];
 };
 
+export type BieteSucheFormState = {
+  id: string;
+  titel: string;
+  modus: BieteSucheModus;
+  beschreibung: string;
+  tags: string;
+  hinweis: string;
+};
+
 export type PreisStaffelFormState = {
   teilung: string;
   paketPreisEur: string;
@@ -281,6 +290,17 @@ export function emptyOfferForm(defaultProductId = ""): OfferFormState {
   };
 }
 
+export function emptyBieteSucheForm(): BieteSucheFormState {
+  return {
+    id: "",
+    titel: "",
+    modus: "biete",
+    beschreibung: "",
+    tags: "",
+    hinweis: "",
+  };
+}
+
 export function productToFormState(product: Produkt): ProductFormState {
   return {
     id: product.id,
@@ -344,6 +364,17 @@ export function offerToFormState(offer: Staffel): OfferFormState {
 
 export function formatTeilungPreviewLabel(teilung: number, einheit: string): string {
   return formatTeilungLabel(teilung, canonicalUnit(einheit) || einheit);
+}
+
+export function bieteSucheToFormState(entry: BieteSucheEintrag): BieteSucheFormState {
+  return {
+    id: entry.id,
+    titel: entry.titel,
+    modus: entry.modus,
+    beschreibung: entry.beschreibung ?? "",
+    tags: joinList(entry.tags),
+    hinweis: entry.hinweis ?? "",
+  };
 }
 
 export function parsePreisStaffeln(
