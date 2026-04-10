@@ -94,10 +94,23 @@ body {
 }
 
 .home-hero-downcue {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 248, 239, 0.1);
-  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 248, 239, 0.08)),
+    rgba(255, 248, 239, 0.08);
+  color: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 16px 34px -22px rgba(10, 18, 14, 0.58);
   opacity: 1;
+}
+
+.home-hero-downcue:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 248, 239, 0.12)),
+    rgba(255, 248, 239, 0.12);
+  color: white;
 }
 
 .home-hero-downcue:disabled {
@@ -329,7 +342,7 @@ body {
   position: absolute;
   inset: -1px;
   overflow: hidden;
-  opacity: 0.88;
+  opacity: 1;
 }
 
 .home-hero-media::after {
@@ -337,8 +350,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(20, 29, 25, 0.08), rgba(20, 29, 25, 0.26)),
-    linear-gradient(90deg, rgba(20, 29, 25, 0.52) 0%, rgba(20, 29, 25, 0.24) 32%, rgba(20, 29, 25, 0.12) 58%, rgba(20, 29, 25, 0.44) 100%);
+    linear-gradient(180deg, rgba(20, 29, 25, 0.03), rgba(20, 29, 25, 0.16)),
+    linear-gradient(90deg, rgba(20, 29, 25, 0.34) 0%, rgba(20, 29, 25, 0.12) 32%, rgba(20, 29, 25, 0.05) 58%, rgba(20, 29, 25, 0.28) 100%);
   pointer-events: none;
 }
 
@@ -353,18 +366,18 @@ body {
   position: absolute;
   inset: 0;
   display: block;
-  filter: saturate(0.94) contrast(1) brightness(0.96);
+  filter: saturate(1.08) contrast(1.08) brightness(1.08);
 }
 
 @media (max-width: 1023px) {
   .home-hero-media {
-    opacity: 0.72;
+    opacity: 0.94;
   }
 
   .home-hero-media::after {
     background:
-      linear-gradient(180deg, rgba(20, 29, 25, 0.16), rgba(20, 29, 25, 0.38)),
-      linear-gradient(90deg, rgba(20, 29, 25, 0.62) 0%, rgba(20, 29, 25, 0.42) 38%, rgba(20, 29, 25, 0.56) 100%);
+      linear-gradient(180deg, rgba(20, 29, 25, 0.08), rgba(20, 29, 25, 0.24)),
+      linear-gradient(90deg, rgba(20, 29, 25, 0.44) 0%, rgba(20, 29, 25, 0.22) 38%, rgba(20, 29, 25, 0.34) 100%);
   }
 }
 

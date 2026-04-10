@@ -521,37 +521,37 @@ export default function HomePage() {
         </div>
 
         <div className="relative flex flex-col items-center gap-8 text-center">
-          <div className="flex max-w-4xl flex-col items-center gap-5 lg:max-w-[56rem]">
-            <h1 className="text-display-brand text-balance text-white lg:max-w-[11ch]">
+          <div className="flex max-w-3xl flex-col items-center gap-3 lg:max-w-[48rem]">
+            <h1 className="text-display-brand text-balance text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.32)] lg:max-w-[11ch]">
               Landwirtschaft mit Weitblick
             </h1>
-            <p className="max-w-2xl text-base leading-7 text-white/78 sm:text-lg">
-              Natürlich ökologisch.
+            <p className="max-w-2xl text-base leading-7 text-white/84 drop-shadow-[0_1px_6px_rgba(0,0,0,0.24)] sm:text-lg">
+              Aus der Ostprignitz.
             </p>
           </div>
 
           <div className="flex flex-col items-center gap-3">
-            <Button
-              type="button"
-              size="lg"
-              variant="secondary"
-              disabled
-              className="home-hero-downcue rounded-full px-6"
-            >
-              Produkte entdecken
-              <ArrowDown data-icon="inline-end" />
+            <Button asChild size="lg" variant="secondary" className="home-hero-downcue rounded-full px-6">
+              <a href="#sonderangebote">
+                Produkte entdecken
+                <ArrowDown data-icon="inline-end" />
+              </a>
             </Button>
           </div>
         </div>
       </section>
 
-      <Card tone="strong" className="home-live-products-panel overflow-hidden rounded-[2rem]">
+      <Card
+        id="sonderangebote"
+        tone="strong"
+        className="home-live-products-panel overflow-hidden rounded-[2rem] scroll-mt-8 sm:scroll-mt-12"
+      >
         <CardHeader className="gap-3 border-b border-border/70">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex max-w-2xl flex-col gap-2">
               <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span className="font-display text-[2rem] leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
-                  Aktuelle Angebote
+                  Sonderangebote
                 </span>
                 <Button asChild size="sm" variant="outline" className="rounded-full w-fit">
                   <Link to="/produkte">
