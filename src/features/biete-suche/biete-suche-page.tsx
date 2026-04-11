@@ -15,6 +15,15 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { listBieteSucheEintraege, subscribeToBieteSucheEintraege } from "@/lib/appwrite/appwriteExchange";
 import { applyRealtimeRecord } from "@/features/zentrale/admin-domain";
 
+function getModeBadgeClassName(modus: BieteSucheModus) {
+  return modus === "biete"
+    ? "border-permdal-300 bg-permdal-100 text-permdal-800"
+    : "border-lilac-300 bg-lilac-100 text-lilac-800";
+}
+
+const tagPillClassName =
+  "border-border/70 bg-background/95 text-foreground shadow-[0_1px_2px_rgba(23,2,6,0.08),0_6px_14px_rgba(23,2,6,0.05)]";
+
 export default function BieteSuchePage() {
   const [entries, setEntries] = useState<BieteSucheEintrag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +118,7 @@ export default function BieteSuchePage() {
     <PageShell>
       <PageHeader
         title="Biete/Suche"
-        badge="Agroforst Austausch"
+        badge="Austausch mit dem Agroforst"
         description="Hier sammeln wir, was wir gerade anbieten oder suchen."
         actions={
           <div className="flex flex-wrap gap-2">
@@ -134,7 +143,7 @@ export default function BieteSuchePage() {
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <Badge variant="secondary">{loading ? "Lädt..." : `${entries.length} Einträge gesamt`}</Badge>
             <Badge variant="outline">{loading ? "Abgleich läuft" : `${visibleEntries.length} sichtbar`}</Badge>
-            {selectedTag !== "alle" ? <Badge variant="outline">Tag: {selectedTag}</Badge> : null}
+            {selectedTag !== "alle" ? <Badge variant="outline" className={tagPillClassName}>Tag: #{selectedTag}</Badge> : null}
           </div>
 
           <Tabs value={selectedMode} onValueChange={(value) => setSelectedMode(value as "alle" | BieteSucheModus)}>
@@ -172,7 +181,7 @@ export default function BieteSuchePage() {
                   onClick={() => setSelectedTag(tag)}
                   className={`rounded-full border px-3 py-2 text-sm transition ${selectedTag === tag ? "border-primary bg-primary text-primary-foreground" : "border-border/70 bg-background hover:bg-muted"}`}
                 >
-                  {tag}
+                  #{tag}
                 </button>
               ))}
             </div>
@@ -208,7 +217,7 @@ export default function BieteSuchePage() {
               <CardHeader className="gap-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col gap-2">
-                    <Badge variant={entry.modus === "biete" ? "default" : "secondary"}>
+                    <Badge variant="outline" className={getModeBadgeClassName(entry.modus)}>
                       {entry.modus === "biete" ? "Biete" : "Suche"}
                     </Badge>
                     <CardTitle className="text-xl">{entry.titel}</CardTitle>
@@ -227,7 +236,7 @@ export default function BieteSuchePage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {entry.tags.length > 0 ? entry.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">{tag}</Badge>
+                    <Badge key={tag} variant="outline" className={tagPillClassName}>#{tag}</Badge>
                   )) : <Badge variant="outline">Ohne Tag</Badge>}
                 </div>
               </CardContent>

@@ -45,6 +45,8 @@ const placeOrderInputSchema = z.object({
 
 const membershipRequestInputSchema = z.object({
   type: z.enum(["privat", "business", "betrieb"]),
+  agbVersion: z.string().trim().min(1),
+  agbAcceptedAt: z.iso.datetime(),
 });
 
 const verifyPaymentInputSchema = z.object({
@@ -127,6 +129,8 @@ export async function placeOrderRequest(input: {
 
 export async function requestMembership(input: {
   type: "privat" | "business" | "betrieb";
+  agbVersion: string;
+  agbAcceptedAt: string;
 }): Promise<{ membership?: MembershipRecord }> {
   const parsedInput = membershipRequestInputSchema.parse(input);
   const payload = await executeValidatedFunction<ExecutionPayload>(
@@ -134,6 +138,8 @@ export async function requestMembership(input: {
     {
       mitgliedschaftstyp:
         parsedInput.type === "business" ? "betrieb" : parsedInput.type,
+      agb_version: parsedInput.agbVersion,
+      agb_accepted_at: parsedInput.agbAcceptedAt,
     },
   );
 

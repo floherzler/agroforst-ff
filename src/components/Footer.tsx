@@ -82,6 +82,10 @@ export default function Footer() {
             <div className="w-full border-t border-[var(--color-soil-900)]/8 pt-4 text-xs text-[var(--color-soil-500)]">
               &copy; {new Date().getFullYear()} Agroforst Frank Fege
             </div>
+
+            <p className="text-[0.7rem] leading-relaxed text-[var(--color-soil-500)]">
+              🍪 Login braucht nur technisch nötige Session-Daten.
+            </p>
           </div>
         </div>
       </div>

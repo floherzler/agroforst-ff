@@ -661,6 +661,22 @@
                     "encrypt": null
                 },
                 {
+                    "key": "agb_version",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "agb_accepted_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
                     "key": "letzte_zahlung_id",
                     "type": "varchar",
                     "required": false,

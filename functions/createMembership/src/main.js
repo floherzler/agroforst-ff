@@ -96,6 +96,10 @@ function compactObject(value) {
     );
 }
 
+function readRequiredString(value) {
+    return typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
+}
+
 export default async ({ req, res, log, error }) => {
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
@@ -108,6 +112,16 @@ export default async ({ req, res, log, error }) => {
         if (!membershipType) {
             return fail(res, "Missing or invalid mitgliedschaftstyp", 400);
         }
+        const agbVersion = readRequiredString(body.agb_version ?? body.agbVersion ?? body.terms_version);
+        const agbAcceptedAtRaw = readRequiredString(body.agb_accepted_at ?? body.agbAcceptedAt ?? body.terms_accepted_at);
+        if (!agbVersion || !agbAcceptedAtRaw) {
+            return fail(res, "Missing AGB acceptance metadata", 400);
+        }
+        const agbAcceptedDate = new Date(agbAcceptedAtRaw);
+        if (Number.isNaN(agbAcceptedDate.getTime())) {
+            return fail(res, "Missing AGB acceptance metadata", 400);
+        }
+        const agbAcceptedAt = agbAcceptedDate.toISOString();
 
         const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
         const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
@@ -163,6 +177,8 @@ export default async ({ req, res, log, error }) => {
                 guthaben_start_eur: Number(body.guthaben_start_eur ?? body.credit_start_eur ?? 0) || 0,
                 guthaben_aktuell_eur: Number(body.guthaben_aktuell_eur ?? body.credit_balance_eur ?? 0) || 0,
                 rechnungsadresse: typeof (body.rechnungsadresse ?? body.billing_address) === "string" ? (body.rechnungsadresse ?? body.billing_address) : undefined,
+                agb_version: agbVersion,
+                agb_accepted_at: agbAcceptedAt,
             }),
             permissions: buildUserPermissions(callerId),
         });

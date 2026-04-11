@@ -24,6 +24,7 @@ import {
   type MembershipRecord,
 } from "@/lib/appwrite/appwriteMemberships";
 import { requestMembership as requestMembershipAction } from "@/lib/appwrite/appwriteFunctions";
+import { legalConfig } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,9 @@ function translateMembershipError(message: string) {
   }
   if (lowered.includes("forbidden") && lowered.includes("email")) {
     return "Bitte verifiziere zuerst deine E-Mail-Adresse.";
+  }
+  if (lowered.includes("missing agb")) {
+    return "Bitte bestätige zuerst die AGB für den Mitgliedschaftsantrag.";
   }
   if (lowered.includes("not configured")) {
     return "Die Mitgliedschaften sind derzeit noch nicht vollständig konfiguriert.";
@@ -335,6 +339,7 @@ function AccountSignedInView() {
   const [isMembershipsLoading, setIsMembershipsLoading] = React.useState(true);
   const [isOrdersLoading, setIsOrdersLoading] = React.useState(true);
   const [membershipType, setMembershipType] = React.useState<MembershipKind>("privat");
+  const [agbAccepted, setAgbAccepted] = React.useState(false);
   const [membershipRequestState, setMembershipRequestState] = React.useState<AsyncState>({ state: "idle" });
   const [verificationState, setVerificationState] = React.useState<AsyncState>({ state: "idle" });
   const [copiedRef, setCopiedRef] = React.useState<string | null>(null);
@@ -441,10 +446,21 @@ function AccountSignedInView() {
       });
       return;
     }
+    if (!agbAccepted) {
+      setMembershipRequestState({
+        state: "error",
+        message: "Bitte bestätige zuerst die AGB für den Mitgliedschaftsantrag.",
+      });
+      return;
+    }
 
     setMembershipRequestState({ state: "loading" });
     try {
-      const response = await requestMembershipAction({ type: membershipType });
+      const response = await requestMembershipAction({
+        type: membershipType,
+        agbVersion: legalConfig.agbVersion,
+        agbAcceptedAt: new Date().toISOString(),
+      });
 
       if (response.membership) {
         setMemberships((current) => {
@@ -465,7 +481,7 @@ function AccountSignedInView() {
         message: error instanceof Error ? translateMembershipError(error.message) : "Der Antrag ist fehlgeschlagen.",
       });
     }
-  }, [loadMemberships, membershipType, user]);
+  }, [agbAccepted, loadMemberships, membershipType, user]);
 
   const handleCopy = React.useCallback(async (value: string) => {
     if (!value || typeof navigator === "undefined" || !navigator.clipboard) return;
@@ -825,9 +841,26 @@ function AccountSignedInView() {
                           <Sprout className="size-4" />
                           {membershipTypeLabel(membershipType)} beantragen
                         </span>
-                      )}
+                        )}
                     </Button>
                   </div>
+
+                  <label className="mt-4 flex items-start gap-3 rounded-[1.1rem] border border-border/70 bg-background/70 px-4 py-3 text-sm text-[var(--color-soil-700)]">
+                    <input
+                      type="checkbox"
+                      checked={agbAccepted}
+                      onChange={(event) => setAgbAccepted(event.target.checked)}
+                      className="mt-1 size-4 rounded border-border"
+                    />
+                    <span>
+                      Ich habe die{" "}
+                      <Link to="/agbs" className="font-medium text-foreground underline underline-offset-4">
+                        AGB
+                      </Link>{" "}
+                      in Version {legalConfig.agbVersion} gelesen und akzeptiere
+                      sie für diesen Mitgliedschaftsantrag.
+                    </span>
+                  </label>
 
                   {membershipRequestState.message ? (
                     <p

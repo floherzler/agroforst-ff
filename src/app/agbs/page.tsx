@@ -10,12 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { legalConfig, legalConfigStatus } from "@/lib/legal";
 import { Download, Printer } from "lucide-react";
 
 const pdfUrl = process.env.NEXT_PUBLIC_AGB_PDF_URL ?? "";
-const lastUpdated =
-  process.env.NEXT_PUBLIC_AGB_LAST_UPDATED ??
-  new Intl.DateTimeFormat("de-DE").format(new Date());
+const lastUpdated = legalConfig.agbLastUpdated;
 
 export default function AgbPage() {
   const handlePrint = React.useCallback(() => {
@@ -69,9 +68,12 @@ export default function AgbPage() {
               </p>
               <p className="text-muted-foreground">
                 Diese AGB regeln die Mitgliedschaften und Bestellungen bei
-                Agroforst Frank Fege (nachfolgend &quot;wir&quot;/&quot;uns&quot;/&quot;Agroforst&quot;).
+                Agroforstbetrieb Frank Fege (nachfolgend &quot;wir&quot;/&quot;uns&quot;/&quot;Agroforst&quot;).
                 Abweichende Bedingungen der Kundinnen und Kunden finden keine
                 Anwendung.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                AGB-Version: {legalConfig.agbVersion}
               </p>
             </section>
 
@@ -83,14 +85,20 @@ export default function AgbPage() {
               </h2>
               <ul className="space-y-3 text-muted-foreground">
                 <li>
-                  Vertragspartner ist: <strong>Agroforst Frank Fege</strong>,
-                  Anschrift, E-Mail; USt-ID: ....
+                  Vertragspartner ist <strong>{legalConfig.businessName}</strong>.
+                  Die aktuellen Anbieterangaben und Kontaktwege ergeben sich aus
+                  dem{" "}
+                  <a href="/impressum" className="text-primary underline underline-offset-4">
+                    Impressum
+                  </a>
+                  .
                 </li>
                 <li>
                   Diese AGB gelten für:
                   <ul className="mt-2 space-y-1 pl-5">
                     <li className="list-disc">
-                      Privatkunden-Mitgliedschaften (Prepaid-Guthaben),
+                      Privatkunden-Mitgliedschaften als jährlicher Planungsbeitrag
+                      mit internem Nutzungsguthaben,
                     </li>
                     <li className="list-disc">
                       Business-Kunden (Bestellung auf Rechnung),
@@ -110,8 +118,15 @@ export default function AgbPage() {
               <h2 className="text-2xl font-semibold">2. Leistungen &amp; Plattform</h2>
               <ul className="space-y-3 text-muted-foreground">
                 <li>
-                  Wir bieten landwirtschaftliche Produkte und Dienstleistungen in
-                  saisonaler Verfügbarkeit an.
+                  Wir bieten saisonale landwirtschaftliche Produkte nach
+                  Verfügbarkeit an. Die Mitgliedschaft dient der Absatz-, Ernte-
+                  und Anbauplanung und verschafft Zugang zu verfügbaren Angeboten
+                  innerhalb der Laufzeit.
+                </li>
+                <li>
+                  Es besteht kein Anspruch auf eine jederzeitige Verfügbarkeit,
+                  auf bestimmte Produkte, Sorten, Erntemengen oder bestimmte
+                  Erntezeitpunkte.
                 </li>
                 <li>
                   Unsere Website bzw. Plattform wird unter Einsatz externer Dienste
@@ -130,7 +145,7 @@ export default function AgbPage() {
 
               <div className="space-y-3">
                 <h3 className="text-xl font-semibold">
-                  3.1 Privatkund:innen (Prepaid-Guthaben)
+                  3.1 Privatkund:innen (Planungsbeitrag mit Nutzungsguthaben)
                 </h3>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>
@@ -138,9 +153,10 @@ export default function AgbPage() {
                     ab. Die Aktivierung erfolgt ab Zahlungseingang.
                   </li>
                   <li>
-                    Das gewählte Guthaben (EUR) wird der Mitgliedschaft
-                    gutgeschrieben und kann innerhalb der Laufzeit für Bestellungen
-                    eingesetzt werden.
+                    Die Mitgliedschaft ist ein jährlicher Planungsbeitrag mit
+                    internem Nutzungsguthaben. Das gewählte Guthaben (EUR) wird
+                    der Mitgliedschaft gutgeschrieben und kann innerhalb der
+                    Laufzeit für verfügbare Angebote eingesetzt werden.
                   </li>
                   <li>
                     Laufzeit: Standardmäßig 12 Monate ab Aktivierung. Wir behalten
@@ -148,12 +164,15 @@ export default function AgbPage() {
                     Mitgliedschaften bleiben unberührt.
                   </li>
                   <li>
-                    Restguthaben: Nicht verbrauchtes Guthaben am Laufzeitende
-                    verfällt ohne Auszahlung. Wir bemühen uns, vor Ablauf zumutbare
-                    Alternativen anzubieten (z.&nbsp;B. andere Produkte, saisonale
-                    Ersatzangebote).
+                    Das Nutzungsguthaben ist nicht auszahlbar, nicht verzinslich
+                    und nicht übertragbar.
                   </li>
-                  <li>Widerruf: siehe Ziffer 9 (Besonderheiten bei Lebensmitteln).</li>
+                  <li>
+                    Wir bemühen uns fortlaufend, verfügbare Produkte anzubieten.
+                    Ein Anspruch auf bestimmte Produkte oder auf einen
+                    durchgehenden Sortimentsumfang besteht nicht.
+                  </li>
+                  <li>Widerruf der Mitgliedschaft: siehe Ziffer 9.</li>
                 </ul>
               </div>
 
@@ -197,6 +216,10 @@ export default function AgbPage() {
                     E-Mail, Firmendaten) sind unverzüglich mitzuteilen.
                   </li>
                   <li>
+                    Bei Beantragung der Mitgliedschaft wird die jeweils aktuelle
+                    AGB-Version dokumentiert.
+                  </li>
+                  <li>
                     Wir können eine Mitgliedschaft aus wichtigem Grund (z.&nbsp;B.
                     Missbrauch) kündigen.
                   </li>
@@ -216,14 +239,21 @@ export default function AgbPage() {
                   Mindestbestellwerte enthalten.
                 </li>
                 <li>
-                  Logistik (Abholung bzw. Lieferung) wird - insbesondere in der
-                  Startphase - individuell abgestimmt. Eine flächendeckende
-                  Lieferung ist nicht garantiert.
+                  Aktuell erfolgt die Ausgabe ausschließlich per Abholung. Eine
+                  Lieferung ist derzeit nicht Vertragsbestandteil.
                 </li>
                 <li>
-                  Bestellungen sind verbindlich und werden mit
-                  Verfügbarkeitsprüfung bestätigt. Bei Prepaid-Mitgliedschaften wird
-                  das Guthaben entsprechend reserviert bzw. belastet.
+                  Verbindlich ist ausschließlich das bestätigte Abholfenster am
+                  benannten Abholort. Bestellungen werden mit
+                  Verfügbarkeitsprüfung bestätigt. Bei Privat-Mitgliedschaften
+                  wird das Nutzungsguthaben entsprechend reserviert oder belastet.
+                </li>
+                <li>
+                  Wird eine bestätigte Bestellung nicht im vereinbarten
+                  Abholfenster abgeholt und wurde sie nicht rechtzeitig vorher
+                  umgebucht oder storniert, verfällt das Bezugsrecht auf diese
+                  Bestellung. Eine Erstattung oder Rückgutschrift erfolgt in
+                  diesem Fall nicht.
                 </li>
               </ul>
             </section>
@@ -240,9 +270,9 @@ export default function AgbPage() {
                   (konkrete Ausweisung gemäß rechtlicher Vorgabe).
                 </li>
                 <li>
-                  Privatkundschaft: Zahlung im Voraus (Guthabenaufladung). Nutzung
-                  des Guthabens für Bestellungen bis zur Höhe des verfügbaren
-                  Saldos.
+                  Privatkundschaft: Zahlung des Planungsbeitrags im Voraus.
+                  Nutzung des internen Guthabens für Bestellungen bis zur Höhe
+                  des verfügbaren Saldos.
                 </li>
                 <li>
                   Business: Zahlung auf Rechnung bzw. nach individueller
@@ -265,14 +295,17 @@ export default function AgbPage() {
               <ul className="space-y-3 text-muted-foreground">
                 <li>
                   Unvorhergesehene Gründe (z.&nbsp;B. Wetter- bzw. Ernteausfälle,
-                  Schädlingsdruck, höhere Gewalt) können zu Stornierungen oder
-                  Teilbelieferungen führen.
+                  Schädlingsdruck, Lagerungsverluste, Verderb, logistische
+                  Engpässe, betriebliche Priorisierung oder höhere Gewalt) können
+                  zu Stornierungen, Mengenkürzungen oder Angebotslücken führen.
                 </li>
                 <li>
                   Folge:
                   <ul className="mt-1 space-y-1 pl-5">
                     <li className="list-disc">
-                      Bei Prepaid: belastetes Guthaben wird wieder gutgeschrieben.
+                      Bei Privat-Mitgliedschaften: bereits belastetes oder
+                      reserviertes Guthaben wird für nicht erfüllbare
+                      Bestellungen wieder gutgeschrieben.
                     </li>
                     <li className="list-disc">
                       Bei Rechnung: bereits gezahlte Beträge werden erstattet bzw.
@@ -291,14 +324,26 @@ export default function AgbPage() {
 
             <section className="space-y-3">
               <h2 className="text-2xl font-semibold">
-                7. Ersatz- &amp; Alternativprodukte
+                7. Restguthaben, Ersatz- &amp; Alternativprodukte
               </h2>
-              <p className="text-muted-foreground">
-                Am Laufzeitende einer Privat-Mitgliedschaft kann es sein, dass nicht
-                alle gewünschten Produkte verfügbar sind. Wir bieten zumutbare
-                Ersatzprodukte an (z.&nbsp;B. saisonale Alternativen). Eine Auszahlung
-                des Restguthabens erfolgt nicht.
-              </p>
+              <ul className="space-y-2 text-muted-foreground">
+                <li>
+                  Am Laufzeitende einer Privat-Mitgliedschaft kann es sein, dass
+                  nicht alle gewünschten Produkte verfügbar sind. Wir können
+                  zumutbare Ersatz- oder Alternativprodukte anbieten
+                  (z.&nbsp;B. saisonale Alternativen).
+                </li>
+                <li>
+                  Nicht verbrauchtes Restguthaben verfällt grundsätzlich am
+                  Laufzeitende ohne Auszahlung.
+                </li>
+                <li>
+                  Wenn wir bis zum Laufzeitende jedoch keine zumutbare
+                  Einlösungschance durch verfügbare Produkte oder Ersatzangebote
+                  ermöglicht haben, verlängern wir die Einlösefrist einmalig
+                  befristet oder gewähren ein entsprechendes Ersatzguthaben.
+                </li>
+              </ul>
             </section>
 
             <Separator className="print:opacity-60" />
@@ -329,15 +374,16 @@ export default function AgbPage() {
 
               <div className="space-y-2 text-muted-foreground">
                 <p className="font-medium">
-                  Mitgliedschaft (Prepaid-Guthaben):
+                  Mitgliedschaft:
                 </p>
                 <ul className="space-y-2 pl-5">
                   <li className="list-disc">
-                    Bei digitaler bzw. vertraglicher Leistung ohne physische
-                    Lieferung kann Widerruf binnen 14 Tagen ab Vertragsschluss
-                    möglich sein, sofern die Leistung nicht bereits vollständig
-                    erbracht oder begonnen wurde (z.&nbsp;B. durch Einsatz des
-                    Guthabens).
+                    Für die Mitgliedschaft gelten die gesetzlichen
+                    Widerrufsrechte für Verbraucherinnen und Verbraucher. Ein
+                    Widerruf kann ausgeschlossen oder vorzeitig erlöschen, wenn
+                    wir mit der Ausführung der Leistung auf ausdrücklichen Wunsch
+                    vor Ablauf der Widerrufsfrist beginnen und die gesetzlichen
+                    Voraussetzungen hierfür erfüllt sind.
                   </li>
                   <li className="list-disc">
                     Wir bitten um Hinweis, wenn ein Widerruf gewünscht ist; Details
@@ -348,17 +394,17 @@ export default function AgbPage() {
 
               <div className="space-y-2 text-muted-foreground">
                 <p className="font-medium">
-                  Lebensmittel &amp; schnell verderbliche Waren:
+                  Bestellungen von Lebensmitteln &amp; schnell verderblichen Waren:
                 </p>
                 <p>
-                  Für versiegelte bzw. leicht verderbliche Waren kann das
+                  Für konkrete Bestellungen versiegelter oder leicht verderblicher
+                  Waren kann das
                   Widerrufsrecht ausgeschlossen sein (&sect;&nbsp;312g Abs. 2 BGB).
                 </p>
               </div>
 
               <p className="text-muted-foreground">
-                Individuelle Vereinbarungen (Abos/Abholungen) können weitere
-                Ausnahmen begründen. Gesetzliche Rechte bleiben unberührt.
+                Gesetzliche Rechte bleiben unberührt.
               </p>
             </section>
 
@@ -448,9 +494,14 @@ export default function AgbPage() {
                 </li>
                 <li>
                   Bei wesentlichen Änderungen informieren wir vorab. Widerspricht
-                  die Kundin oder der Kunde nicht innerhalb von 14 Tagen, gelten die Änderungen als genehmigt (gilt
-                  nicht für wesentliche Leistungs-/Preisänderungen bei laufenden
-                  Verträgen, die einer ausdrücklichen Zustimmung bedürfen).
+                  die Kundin oder der Kunde nicht innerhalb von 14 Tagen, gilt
+                  dies nur für nicht wesentliche Anpassungen als Zustimmung.
+                </li>
+                <li>
+                  Änderungen von Kernpunkten laufender Mitgliedschaften,
+                  insbesondere von Leistung, Laufzeit, Preislogik oder
+                  Verfallsregeln, gelten nur für neue Mitgliedschaften oder nach
+                  ausdrücklicher Zustimmung.
                 </li>
               </ul>
             </section>
@@ -502,12 +553,18 @@ export default function AgbPage() {
               <h2 className="text-2xl font-semibold">16. Kontakt &amp; Impressum</h2>
               <ul className="space-y-2 text-muted-foreground">
                 <li>
-                  <strong>Agroforst Frank Fege</strong>, Anschrift.
+                  <strong>{legalConfig.businessName}</strong>
+                  {legalConfigStatus.hasAddress
+                    ? `, ${legalConfig.addressLines.join(", ")}.`
+                    : "."}
                 </li>
                 <li>
-                  E-Mail: mail@web.de &middot; Telefon: ....
+                  E-Mail: {legalConfig.email}
+                  {legalConfig.phone ? ` · Telefon: ${legalConfig.phone}` : ""}
                 </li>
-                <li>Vertretungsberechtigte Person: ....</li>
+                <li>
+                  Vertretungsberechtigte Person: {legalConfig.ownerName}
+                </li>
                 <a href="/impressum" className="text-primary underline underline-offset-4">
                   Impressum
                 </a>

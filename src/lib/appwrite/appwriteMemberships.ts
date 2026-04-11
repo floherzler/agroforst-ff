@@ -30,6 +30,8 @@ const mitgliedschaftDocumentSchema = appwriteDocumentMetaSchema.extend({
   guthaben_aktuell_eur: z.unknown().optional(),
   guthaben_start_eur: z.unknown().optional(),
   rechnungsadresse: z.string().nullable().optional(),
+  agb_version: z.string().nullable().optional(),
+  agb_accepted_at: z.string().nullable().optional(),
 });
 
 const membershipListInputSchema = z.object({
@@ -68,6 +70,8 @@ export type MembershipRecord = {
   kontingentAktuell?: number;
   kontingentStart?: number;
   adresse?: string;
+  agbVersion?: string;
+  agbAcceptedAt?: string;
   payments: MembershipPayment[];
 };
 
@@ -158,6 +162,8 @@ export function normalizeMembership(raw: unknown): MembershipRecord {
     kontingentAktuell: parseOptionalNumber(parsed.guthaben_aktuell_eur),
     kontingentStart: parseOptionalNumber(parsed.guthaben_start_eur),
     adresse: parseOptionalString(parsed.rechnungsadresse ?? undefined),
+    agbVersion: parseOptionalString(parsed.agb_version ?? undefined),
+    agbAcceptedAt: parseOptionalString(parsed.agb_accepted_at ?? undefined),
     payments: [],
   };
 }
