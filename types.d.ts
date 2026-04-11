@@ -108,6 +108,7 @@ interface Bestellung {
   produktName?: string;
   preisGesamt: number;
   preisEinheit: number;
+  reservierterBetragEur?: number;
   status: string;
   bestellteTeilungen: number[];
   bestellteTeilungsAnzahlen: number[];
@@ -117,6 +118,14 @@ interface Bestellung {
   pickupSlotLabel?: string;
   pickupLocation?: string;
   pickupNote?: string;
+  cancelDeadlineAt?: string;
+  storniertAm?: string;
+  storniertVon?: string;
+  stornoGrund?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  erfuelltAm?: string;
+  erfuelltVon?: string;
 }
 
 interface BackofficeEvent {

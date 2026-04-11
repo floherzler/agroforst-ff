@@ -43,6 +43,7 @@ export default function Page() {
     bieteSucheEintraege: BieteSucheEintrag[];
     payments: MembershipPayment[];
     memberships: MembershipRecord[];
+    orders: Bestellung[];
     backofficeEvents: BackofficeEvent[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export default function Page() {
 
     async function load() {
       try {
-        const [produkte, staffeln, bieteSucheEintraege, payments, memberships, backofficeEvents] = await loadZentraleAdminData();
+        const [produkte, staffeln, bieteSucheEintraege, payments, memberships, orders, backofficeEvents] = await loadZentraleAdminData();
         if (!active) return;
 
         setData({
@@ -61,6 +62,7 @@ export default function Page() {
           bieteSucheEintraege,
           payments,
           memberships,
+          orders,
           backofficeEvents,
         });
       } catch (rawError) {
@@ -91,6 +93,7 @@ export default function Page() {
       initialBieteSucheEintraege={data.bieteSucheEintraege}
       initialPayments={data.payments}
       initialMemberships={data.memberships}
+      initialOrders={data.orders}
       initialBackofficeEvents={data.backofficeEvents}
     />
   );

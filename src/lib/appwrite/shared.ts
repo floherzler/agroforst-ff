@@ -27,11 +27,15 @@ export const appwriteConfig = {
   postTableId: getManagedTableId("blog_beitraege"),
   membershipTableId: getManagedTableId("mitgliedschaften"),
   paymentTableId: getManagedTableId("mitgliedschaftszahlungen"),
+  commerceEventTableId: getManagedTableId("commerce_events"),
   feedbackTableId: getManagedTableId("kunden_nachrichten"),
   feedbackFunctionId: getManagedFunctionId("submitFeedback"),
   orderFunctionId: getManagedFunctionId("createOrder"),
+  orderLifecycleFunctionId: getManagedFunctionId("manageOrder"),
   membershipFunctionId: getManagedFunctionId("createMembership"),
+  membershipLifecycleFunctionId: getManagedFunctionId("manageMembership"),
   paymentVerifyFunctionId: getManagedFunctionId("verifyPayment"),
+  membershipCronFunctionId: getManagedFunctionId("updateMemberships"),
 };
 
 export const appwriteDocumentMetaSchema = z.object({

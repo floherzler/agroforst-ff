@@ -20,6 +20,22 @@
             "commands": "npm install --omit=dev"
         },
         {
+            "$id": "manageOrder",
+            "name": "manageOrder",
+            "runtime": "node-22",
+            "path": "functions/manageOrder",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        },
+        {
+            "$id": "manageMembership",
+            "name": "manageMembership",
+            "runtime": "node-22",
+            "path": "functions/manageMembership",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        },
+        {
             "$id": "submitFeedback",
             "name": "submitFeedback",
             "runtime": "node-22",
@@ -32,6 +48,14 @@
             "name": "verifyPayment",
             "runtime": "node-22",
             "path": "functions/verifyPayment",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        },
+        {
+            "$id": "updateMemberships",
+            "name": "updateMemberships",
+            "runtime": "node-22",
+            "path": "functions/updateMemberships",
             "entrypoint": "src/main.js",
             "commands": "npm install --omit=dev"
         }
@@ -699,6 +723,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "client_request_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": null
                 }
             ],
             "indexes": [
@@ -717,6 +750,16 @@
                     "type": "unique",
                     "attributes": [
                         "mitgliedsnummer"
+                    ],
+                    "lengths": [
+                        0
+                    ]
+                },
+                {
+                    "key": "mitgliedschaften_client_request_unique",
+                    "type": "unique",
+                    "attributes": [
+                        "client_request_id"
                     ],
                     "lengths": [
                         0
@@ -928,6 +971,15 @@
                     "max": 1.7976931348623157e+308
                 },
                 {
+                    "key": "reservierter_betrag_eur",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
                     "key": "abholung_ab",
                     "type": "datetime",
                     "required": false,
@@ -975,6 +1027,13 @@
                     "encrypt": null
                 },
                 {
+                    "key": "cancel_deadline_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
                     "key": "produkt_name",
                     "type": "varchar",
                     "required": true,
@@ -995,6 +1054,62 @@
                         "erfuellt",
                         "storniert"
                     ]
+                },
+                {
+                    "key": "storniert_am",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "storniert_von",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "storno_grund",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "confirmed_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "confirmed_by",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "erfuellt_am",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "erfuellt_von",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": null
                 },
                 {
                     "key": "bestellte_teilungen",
@@ -1022,6 +1137,15 @@
                     "default": null,
                     "min": 0,
                     "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "client_request_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": null
                 }
             ],
             "indexes": [
@@ -1030,6 +1154,123 @@
                     "type": "key",
                     "attributes": [
                         "benutzer_id"
+                    ],
+                    "lengths": [
+                        0
+                    ]
+                },
+                {
+                    "key": "bestellungen_client_request_unique",
+                    "type": "unique",
+                    "attributes": [
+                        "client_request_id"
+                    ],
+                    "lengths": [
+                        0
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "commerce_events",
+            "databaseId": "agroforst",
+            "name": "Commerce Events",
+            "enabled": true,
+            "rowSecurity": true,
+            "$permissions": [
+                "read(\"label:admin\")",
+                "update(\"label:admin\")",
+                "delete(\"label:admin\")"
+            ],
+            "columns": [
+                {
+                    "key": "entity_type",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 48,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "entity_id",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "action",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "actor_type",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "actor_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "request_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 80,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "payload_json",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": null
+                },
+                {
+                    "key": "created_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "commerce_events_entity_key",
+                    "type": "key",
+                    "attributes": [
+                        "entity_type",
+                        "entity_id"
+                    ],
+                    "lengths": [
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "key": "commerce_events_request_key",
+                    "type": "key",
+                    "attributes": [
+                        "request_id"
                     ],
                     "lengths": [
                         0

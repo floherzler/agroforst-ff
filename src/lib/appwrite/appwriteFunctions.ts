@@ -20,6 +20,7 @@ const functionExecutionSchema = z.object({
 const placeOrderInputSchema = z.object({
   angebotId: z.string().trim().min(1),
   membershipId: z.string().trim().min(1),
+  clientRequestId: z.string().trim().min(1),
   menge: z.number().positive().optional(),
   staffeln: z.array(
     z.object({
@@ -47,6 +48,7 @@ const membershipRequestInputSchema = z.object({
   type: z.enum(["privat", "business", "betrieb"]),
   agbVersion: z.string().trim().min(1),
   agbAcceptedAt: z.iso.datetime(),
+  clientRequestId: z.string().trim().min(1),
 });
 
 const verifyPaymentInputSchema = z.object({
@@ -56,6 +58,18 @@ const verifyPaymentInputSchema = z.object({
   amount: z.number().finite().optional(),
   note: z.string().trim().optional(),
   force: z.boolean().optional(),
+});
+
+const manageOrderInputSchema = z.object({
+  orderId: z.string().trim().min(1),
+  action: z.enum(["cancel_by_user", "cancel_by_admin", "confirm", "mark_picked_up"]),
+  note: z.string().trim().optional(),
+});
+
+const manageMembershipInputSchema = z.object({
+  membershipId: z.string().trim().min(1),
+  action: z.enum(["activate_by_admin", "cancel_by_admin", "expire_by_system"]),
+  note: z.string().trim().optional(),
 });
 
 const feedbackMessageInputSchema = z.object({
@@ -114,6 +128,7 @@ async function executeValidatedFunction<TOutput = unknown>(
 export async function placeOrderRequest(input: {
   angebotId: string;
   membershipId: string;
+  clientRequestId: string;
   menge?: number;
   staffeln?: Array<{ teilung: number; anzahl: number }>;
   pickupSlot: { start: string; end: string; label: string };
@@ -124,6 +139,7 @@ export async function placeOrderRequest(input: {
   await executeValidatedFunction<void>(appwriteConfig.orderFunctionId, {
     angebot_id: parsedInput.angebotId,
     mitgliedschaft_id: parsedInput.membershipId,
+    client_request_id: parsedInput.clientRequestId,
     menge: parsedInput.menge,
     staffeln: parsedInput.staffeln,
     pickup_slot: parsedInput.pickupSlot,
@@ -135,6 +151,7 @@ export async function requestMembership(input: {
   type: "privat" | "business" | "betrieb";
   agbVersion: string;
   agbAcceptedAt: string;
+  clientRequestId: string;
 }): Promise<{ membership?: MembershipRecord }> {
   const parsedInput = membershipRequestInputSchema.parse(input);
   const payload = await executeValidatedFunction<ExecutionPayload>(
@@ -144,6 +161,7 @@ export async function requestMembership(input: {
         parsedInput.type === "business" ? "betrieb" : parsedInput.type,
       agb_version: parsedInput.agbVersion,
       agb_accepted_at: parsedInput.agbAcceptedAt,
+      client_request_id: parsedInput.clientRequestId,
     },
   );
 
@@ -172,6 +190,35 @@ export async function verifyPayment(input: {
       betrag: parsedInput.amount,
       notiz: parsedInput.note,
       force: parsedInput.force,
+    },
+  );
+}
+
+export async function manageOrder(input: {
+  orderId: string;
+  action: "cancel_by_user" | "cancel_by_admin" | "confirm" | "mark_picked_up";
+  note?: string;
+}): Promise<void> {
+  const parsedInput = manageOrderInputSchema.parse(input);
+  await executeValidatedFunction<void>(appwriteConfig.orderLifecycleFunctionId, {
+    order_id: parsedInput.orderId,
+    action: parsedInput.action,
+    note: parsedInput.note,
+  });
+}
+
+export async function manageMembership(input: {
+  membershipId: string;
+  action: "activate_by_admin" | "cancel_by_admin" | "expire_by_system";
+  note?: string;
+}): Promise<void> {
+  const parsedInput = manageMembershipInputSchema.parse(input);
+  await executeValidatedFunction<void>(
+    appwriteConfig.membershipLifecycleFunctionId,
+    {
+      membership_id: parsedInput.membershipId,
+      action: parsedInput.action,
+      note: parsedInput.note,
     },
   );
 }

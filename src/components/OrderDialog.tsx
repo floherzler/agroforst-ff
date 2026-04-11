@@ -35,6 +35,14 @@ function getPendingMembership(memberships: MembershipRecord[]) {
   return memberships.find((membership) => (membership.status ?? "").toLowerCase() === "beantragt") ?? null;
 }
 
+function createClientRequestId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `order-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function OrderDialog({ angebot }: Props) {
   const { user, hydrated } = useAuthStore();
   const navigate = useNavigate();
@@ -49,6 +57,7 @@ export default function OrderDialog({ angebot }: Props) {
   const [pickupConfigLoading, setPickupConfigLoading] = React.useState(false);
   const [pickupConfigError, setPickupConfigError] = React.useState<string | null>(null);
   const [selectedPickupSlotId, setSelectedPickupSlotId] = React.useState<string>("");
+  const [clientRequestId, setClientRequestId] = React.useState<string>(() => createClientRequestId());
 
   const userMail = user?.email ?? "";
   const hasPreisStaffeln = angebot.preisStaffeln.length > 0;
@@ -232,6 +241,7 @@ export default function OrderDialog({ angebot }: Props) {
       await placeOrderRequest({
         angebotId: angebot.id,
         membershipId: activeMembership.id,
+        clientRequestId,
         menge: hasPreisStaffeln ? undefined : legacyRequestedAmount ?? undefined,
         staffeln: hasPreisStaffeln
           ? staffelSummary.selected.map((staffel) => ({
@@ -251,10 +261,12 @@ export default function OrderDialog({ angebot }: Props) {
       setStaffelSelection(
         Object.fromEntries(angebot.preisStaffeln.map((staffel) => [String(staffel.teilung), 0])),
       );
+      setClientRequestId(createClientRequestId());
       toast.success("Bestellung erfolgreich angefragt. Du wirst zum Produktkatalog weitergeleitet.");
       await navigate({ to: "/produkte" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Senden.");
+      setClientRequestId((current) => current || createClientRequestId());
     } finally {
       setSubmitting(false);
     }

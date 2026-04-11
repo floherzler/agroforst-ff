@@ -12,6 +12,18 @@
       "entrypoint": "src/main.js",
       "commands": "npm install --omit=dev"
     },
+    "manageOrder": {
+      "source": "functions/manageOrder",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
+    "manageMembership": {
+      "source": "functions/manageMembership",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
     "submitFeedback": {
       "source": "functions/submitFeedback",
       "runtime": "node-22",
@@ -20,6 +32,12 @@
     },
     "verifyPayment": {
       "source": "functions/verifyPayment",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
+    "updateMemberships": {
+      "source": "functions/updateMemberships",
       "runtime": "node-22",
       "entrypoint": "src/main.js",
       "commands": "npm install --omit=dev"

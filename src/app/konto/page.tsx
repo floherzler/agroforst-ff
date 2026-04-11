@@ -23,7 +23,10 @@ import {
   type MembershipPayment,
   type MembershipRecord,
 } from "@/lib/appwrite/appwriteMemberships";
-import { requestMembership as requestMembershipAction } from "@/lib/appwrite/appwriteFunctions";
+import {
+  manageOrder as manageOrderAction,
+  requestMembership as requestMembershipAction,
+} from "@/lib/appwrite/appwriteFunctions";
 import { legalConfig } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +39,14 @@ import { Separator } from "@/components/ui/separator";
 type OrderRecord = Awaited<ReturnType<typeof listBestellungen>>[number];
 type MembershipKind = "privat" | "betrieb";
 type AsyncState = { state: "idle" | "loading" | "success" | "error"; message?: string };
+
+function createClientRequestId(prefix: string) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function formatDate(value?: string | null, withTime = false) {
   if (!value) return "—";
@@ -126,6 +137,42 @@ function orderStatusMeta(value?: string | null) {
   if (normalized === "storniert") return { label: "Storniert", variant: "destructive" as const };
 
   return { label: value || "Unbekannt", variant: "outline" as const };
+}
+
+function translateOrderError(message: string) {
+  const lowered = message.toLowerCase();
+
+  if (lowered.includes("cancel deadline")) {
+    return "Die Stornofrist für diese Bestellung ist abgelaufen.";
+  }
+  if (lowered.includes("owner")) {
+    return "Diese Bestellung kann nur vom zugehörigen Konto storniert werden.";
+  }
+  if (lowered.includes("only pending or confirmed")) {
+    return "Nur angefragte oder bestätigte Bestellungen können storniert werden.";
+  }
+  if (lowered.includes("unauthenticated")) {
+    return "Die Sitzung ist abgelaufen. Bitte melde dich erneut an.";
+  }
+
+  return message || "Die Bestellung konnte nicht geändert werden.";
+}
+
+function canUserCancelOrder(order: OrderRecord) {
+  const normalizedStatus = (order.status ?? "").toLowerCase();
+  if (!["angefragt", "bestaetigt"].includes(normalizedStatus)) {
+    return false;
+  }
+  if (!order.cancelDeadlineAt) {
+    return false;
+  }
+
+  const deadline = new Date(order.cancelDeadlineAt);
+  if (Number.isNaN(deadline.getTime())) {
+    return false;
+  }
+
+  return deadline.getTime() > Date.now();
 }
 
 function translateMembershipError(message: string) {
@@ -343,6 +390,10 @@ function AccountSignedInView() {
   const [membershipRequestState, setMembershipRequestState] = React.useState<AsyncState>({ state: "idle" });
   const [verificationState, setVerificationState] = React.useState<AsyncState>({ state: "idle" });
   const [copiedRef, setCopiedRef] = React.useState<string | null>(null);
+  const [membershipClientRequestId, setMembershipClientRequestId] = React.useState<string>(() => createClientRequestId("membership"));
+  const [orderActionState, setOrderActionState] = React.useState<{ orderId: string | null; message?: string; tone?: "success" | "error" }>({
+    orderId: null,
+  });
 
   const hasPrivateMembership = React.useMemo(
     () => memberships.some((entry) => (entry.typ ?? "").toLowerCase() === "privat"),
@@ -460,6 +511,7 @@ function AccountSignedInView() {
         type: membershipType,
         agbVersion: legalConfig.agbVersion,
         agbAcceptedAt: new Date().toISOString(),
+        clientRequestId: membershipClientRequestId,
       });
 
       if (response.membership) {
@@ -475,13 +527,14 @@ function AccountSignedInView() {
         state: "success",
         message: `${membershipTypeLabel(membershipType)}-Mitgliedschaft wurde beantragt.`,
       });
+      setMembershipClientRequestId(createClientRequestId("membership"));
     } catch (error) {
       setMembershipRequestState({
         state: "error",
         message: error instanceof Error ? translateMembershipError(error.message) : "Der Antrag ist fehlgeschlagen.",
       });
     }
-  }, [agbAccepted, loadMemberships, membershipType, user]);
+  }, [agbAccepted, loadMemberships, membershipClientRequestId, membershipType, user]);
 
   const handleCopy = React.useCallback(async (value: string) => {
     if (!value || typeof navigator === "undefined" || !navigator.clipboard) return;
@@ -496,6 +549,38 @@ function AccountSignedInView() {
       setCopiedRef(null);
     }
   }, []);
+
+  const cancelOrder = React.useCallback(async (order: OrderRecord) => {
+    if (!canUserCancelOrder(order)) {
+      setOrderActionState({
+        orderId: null,
+        tone: "error",
+        message: "Diese Bestellung kann nicht mehr storniert werden.",
+      });
+      return;
+    }
+
+    setOrderActionState({ orderId: order.id });
+
+    try {
+      await manageOrderAction({
+        orderId: order.id,
+        action: "cancel_by_user",
+      });
+      await loadOrders();
+      setOrderActionState({
+        orderId: null,
+        tone: "success",
+        message: "Bestellung wurde storniert.",
+      });
+    } catch (error) {
+      setOrderActionState({
+        orderId: null,
+        tone: "error",
+        message: error instanceof Error ? translateOrderError(error.message) : "Die Bestellung konnte nicht storniert werden.",
+      });
+    }
+  }, [loadOrders]);
 
   if (!user) return null;
 
@@ -916,6 +1001,18 @@ function AccountSignedInView() {
                 <CardDescription>Die letzten Bestellungen deines Kontos.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                {orderActionState.message ? (
+                  <div
+                    className={cn(
+                      "rounded-[1rem] border px-3 py-3 text-sm",
+                      orderActionState.tone === "error"
+                        ? "border-rose-300/70 bg-rose-50 text-rose-900"
+                        : "border-emerald-300/70 bg-emerald-50 text-emerald-900",
+                    )}
+                  >
+                    {orderActionState.message}
+                  </div>
+                ) : null}
                 {isOrdersLoading ? (
                   <div className="rounded-[1.2rem] border border-border/70 bg-background/70 px-4 py-8 text-center text-sm text-muted-foreground">
                     Bestellungen werden geladen…
@@ -927,6 +1024,8 @@ function AccountSignedInView() {
                 ) : (
                   orders.map((order) => {
                     const status = orderStatusMeta(order.status);
+                    const canCancel = canUserCancelOrder(order);
+                    const isOrderActionPending = orderActionState.orderId === order.id;
                     return (
                       <div
                         key={order.id}
@@ -946,6 +1045,7 @@ function AccountSignedInView() {
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                           <span>Menge: {Number.isFinite(order.menge) ? `${order.menge} ${order.einheit}` : "—"}</span>
                           <span>Gesamt: {formatMoney(order.preisGesamt)}</span>
+                          {order.cancelDeadlineAt ? <span>Storno bis: {formatDate(order.cancelDeadlineAt, true)}</span> : null}
                         </div>
                         <div className="mt-3 rounded-[1rem] border border-border/60 bg-background/72 px-3 py-3 text-sm text-muted-foreground">
                           <p className="font-medium text-foreground">
@@ -958,6 +1058,26 @@ function AccountSignedInView() {
                           {order.pickupLocation ? <p className="mt-1">{order.pickupLocation}</p> : null}
                           {order.pickupNote ? <p className="mt-1">{order.pickupNote}</p> : null}
                         </div>
+                        {canCancel ? (
+                          <div className="mt-3 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isOrderActionPending}
+                              onClick={() => void cancelOrder(order)}
+                            >
+                              {isOrderActionPending ? (
+                                <>
+                                  <Loader2 className="size-4 animate-spin" />
+                                  Storniert…
+                                </>
+                              ) : (
+                                "Bestellung stornieren"
+                              )}
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })

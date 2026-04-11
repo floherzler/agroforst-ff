@@ -13,6 +13,8 @@ import {
   Save,
   Sprout,
   Pencil,
+  ShoppingCart,
+  Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -59,14 +61,16 @@ import { formatHarvestRange, getOfferPriceSummary } from "@/features/catalog/cat
 import { useZentraleAdmin } from "@/features/zentrale/use-zentrale-admin";
 import { listAdminMembershipPayments, listAdminMemberships, type MembershipPayment, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
 import { listBackofficeEvents } from "@/lib/appwrite/appwriteEvents";
-import { verifyPayment } from "@/lib/appwrite/appwriteFunctions";
+import { verifyPayment, manageMembership, manageOrder } from "@/lib/appwrite/appwriteFunctions";
 import { getPickupConfig, upsertPickupConfig } from "@/lib/appwrite/appwritePickupConfig";
 import { createDefaultPickupConfig, pickupWeekdayLabel } from "@/features/pickup/pickup-schedule";
 import { cn } from "@/lib/utils";
 import { listAlleProdukte, listStaffeln } from "@/lib/appwrite/appwriteProducts";
 import { listBieteSucheEintraege } from "@/lib/appwrite/appwriteExchange";
+import { listBestellungen } from "@/lib/appwrite/appwriteOrders";
 
 type PaymentFilter = "alle" | "offen" | "warten" | "teilbezahlt" | "bezahlt" | "fehlgeschlagen" | "storniert";
+type AdminOrderRecord = Awaited<ReturnType<typeof listBestellungen>>[number];
 
 type ProductWorkflowState = "clean" | "dirty" | "draftSaved" | "livePublished";
 type ProductDraftMeta = {
@@ -155,6 +159,53 @@ function membershipTypeLabel(value?: string | null) {
   if (normalized === "privat" || normalized === "private") return "Privat";
   if (normalized === "betrieb" || normalized === "business") return "Betrieb";
   return value || "—";
+}
+
+function membershipStatusMeta(value?: string | null) {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "aktiv" || normalized === "active") return { label: "Aktiv", className: "border-emerald-300/80 bg-emerald-100 text-emerald-900" };
+  if (normalized === "beantragt" || normalized === "pending") return { label: "Beantragt", className: "border-amber-300/80 bg-amber-100 text-amber-900" };
+  if (normalized === "abgelaufen" || normalized === "expired") return { label: "Abgelaufen", className: "border-slate-300/80 bg-slate-100 text-slate-900" };
+  if (normalized === "storniert" || normalized === "cancelled") return { label: "Storniert", className: "border-rose-300/80 bg-rose-100 text-rose-900" };
+  return { label: value || "Unbekannt", className: "border-border bg-muted text-foreground" };
+}
+
+function orderStatusMeta(value?: string | null) {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "angefragt") return { label: "Angefragt", className: "border-sky-300/80 bg-sky-100 text-sky-900" };
+  if (normalized === "bestaetigt" || normalized === "bestätigt") return { label: "Bestätigt", className: "border-emerald-300/80 bg-emerald-100 text-emerald-900" };
+  if (normalized === "erfuellt") return { label: "Erfüllt", className: "border-lime-300/80 bg-lime-100 text-lime-900" };
+  if (normalized === "storniert") return { label: "Storniert", className: "border-rose-300/80 bg-rose-100 text-rose-900" };
+  return { label: value || "Unbekannt", className: "border-border bg-muted text-foreground" };
+}
+
+function canAdminActivateMembership(membership: MembershipRecord) {
+  const status = (membership.status ?? "").toLowerCase();
+  const type = (membership.typ ?? "").toLowerCase();
+  const paymentStatus = (membership.bezahlStatus ?? "").toLowerCase();
+
+  if (status !== "beantragt") {
+    return false;
+  }
+
+  return type === "betrieb" || paymentStatus === "bezahlt" || paymentStatus === "paid";
+}
+
+function canAdminCancelMembership(membership: MembershipRecord) {
+  const status = (membership.status ?? "").toLowerCase();
+  return status === "beantragt" || status === "aktiv";
+}
+
+function canAdminConfirmOrder(order: AdminOrderRecord) {
+  return (order.status ?? "").toLowerCase() === "angefragt";
+}
+
+function canAdminMarkPickedUp(order: AdminOrderRecord) {
+  return (order.status ?? "").toLowerCase() === "bestaetigt";
+}
+
+function canAdminCancelOrder(order: AdminOrderRecord) {
+  return ["angefragt", "bestaetigt"].includes((order.status ?? "").toLowerCase());
 }
 
 function eventReferenceLabel(event: BackofficeEvent) {
@@ -313,13 +364,15 @@ function TableActionButton({
   children,
   onClick,
   variant = "outline",
+  disabled = false,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   variant?: "outline" | "secondary" | "default";
+  disabled?: boolean;
 }) {
   return (
-    <Button size="sm" variant={variant} onClick={onClick}>
+    <Button size="sm" variant={variant} onClick={onClick} disabled={disabled}>
       {children}
     </Button>
   );
@@ -1284,6 +1337,7 @@ export function ZentraleAdminWorkspace({
   initialBieteSucheEintraege,
   initialPayments,
   initialMemberships,
+  initialOrders,
   initialBackofficeEvents,
 }: {
   initialProdukte: Produkt[];
@@ -1291,6 +1345,7 @@ export function ZentraleAdminWorkspace({
   initialBieteSucheEintraege: BieteSucheEintrag[];
   initialPayments: MembershipPayment[];
   initialMemberships: MembershipRecord[];
+  initialOrders: AdminOrderRecord[];
   initialBackofficeEvents: BackofficeEvent[];
 }) {
   const state = useZentraleAdmin({
@@ -1300,13 +1355,20 @@ export function ZentraleAdminWorkspace({
   });
   const [drafts, setDrafts] = useState<Record<string, ProductDraftRecord>>({});
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
-  const [activePanel, setActivePanel] = useState<"produkte" | "angebote" | "biete-suche" | "zahlungen" | "office">("produkte");
+  const [activePanel, setActivePanel] = useState<"produkte" | "angebote" | "biete-suche" | "zahlungen" | "mitgliedschaften" | "bestellungen" | "office">("produkte");
   const [payments, setPayments] = useState<MembershipPayment[]>(initialPayments);
   const [memberships, setMemberships] = useState<MembershipRecord[]>(initialMemberships);
+  const [orders, setOrders] = useState<AdminOrderRecord[]>(initialOrders);
   const [backofficeEvents] = useState<BackofficeEvent[]>(initialBackofficeEvents);
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("alle");
   const [paymentActionState, setPaymentActionState] = useState<{ paymentId: string | null; message?: string; tone?: "success" | "error" }>({
     paymentId: null,
+  });
+  const [membershipActionState, setMembershipActionState] = useState<{ membershipId: string | null; message?: string; tone?: "success" | "error" }>({
+    membershipId: null,
+  });
+  const [orderActionState, setOrderActionState] = useState<{ orderId: string | null; message?: string; tone?: "success" | "error" }>({
+    orderId: null,
   });
   const [pickupConfigForm, setPickupConfigForm] = useState<PickupConfigFormState>(pickupConfigToFormState(null));
   const [pickupConfigState, setPickupConfigState] = useState<AsyncState>({ state: "idle" });
@@ -1418,14 +1480,16 @@ export function ZentraleAdminWorkspace({
     setActiveSheet({ kind: "exchange", target: { kind: "new" } });
   }
 
-  async function reloadPaymentData() {
-    const [paymentsResponse, membershipsResponse] = await Promise.all([
+  async function reloadCommerceData() {
+    const [paymentsResponse, membershipsResponse, ordersResponse] = await Promise.all([
       listAdminMembershipPayments({ limit: 200 }),
       listAdminMemberships({ limit: 200 }),
+      listBestellungen({ limit: 200 }),
     ]);
 
     setPayments(paymentsResponse);
     setMemberships(membershipsResponse);
+    setOrders(ordersResponse);
   }
 
   async function handleConfirmPayment(payment: MembershipPayment) {
@@ -1439,7 +1503,7 @@ export function ZentraleAdminWorkspace({
         amount: paymentAmount(payment) ?? undefined,
       });
 
-      await reloadPaymentData();
+      await reloadCommerceData();
       setPaymentActionState({
         paymentId: null,
         tone: "success",
@@ -1450,6 +1514,66 @@ export function ZentraleAdminWorkspace({
         paymentId: null,
         tone: "error",
         message: error instanceof Error ? error.message : "Die Zahlung konnte nicht bestätigt werden.",
+      });
+    }
+  }
+
+  async function handleMembershipAction(
+    membership: MembershipRecord,
+    action: "activate_by_admin" | "cancel_by_admin",
+  ) {
+    setMembershipActionState({ membershipId: membership.id });
+
+    try {
+      await manageMembership({
+        membershipId: membership.id,
+        action,
+      });
+      await reloadCommerceData();
+      setMembershipActionState({
+        membershipId: null,
+        tone: "success",
+        message:
+          action === "activate_by_admin"
+            ? `Mitgliedschaft ${membership.membershipNumber || membership.id} wurde aktiviert.`
+            : `Mitgliedschaft ${membership.membershipNumber || membership.id} wurde storniert.`,
+      });
+    } catch (error) {
+      setMembershipActionState({
+        membershipId: null,
+        tone: "error",
+        message: error instanceof Error ? error.message : "Mitgliedschaft konnte nicht geändert werden.",
+      });
+    }
+  }
+
+  async function handleOrderAction(
+    order: AdminOrderRecord,
+    action: "cancel_by_admin" | "confirm" | "mark_picked_up",
+  ) {
+    setOrderActionState({ orderId: order.id });
+
+    try {
+      await manageOrder({
+        orderId: order.id,
+        action,
+      });
+      await reloadCommerceData();
+      setOrderActionState({
+        orderId: null,
+        tone: "success",
+        message:
+          action === "confirm"
+            ? `Bestellung ${order.id} wurde bestätigt.`
+            : action === "mark_picked_up"
+              ? `Bestellung ${order.id} wurde als abgeholt markiert.`
+              : `Bestellung ${order.id} wurde storniert.`,
+      });
+    } catch (error) {
+      setOrderActionState({
+        orderId: null,
+        tone: "error",
+        message: error instanceof Error ? error.message : "Bestellung konnte nicht geändert werden.",
       });
     }
   }
@@ -1526,6 +1650,14 @@ export function ZentraleAdminWorkspace({
                 <ReceiptText data-icon="inline-start" />
                 Zahlungen
               </TabsTrigger>
+              <TabsTrigger value="mitgliedschaften">
+                <Users data-icon="inline-start" />
+                Mitgliedschaften
+              </TabsTrigger>
+              <TabsTrigger value="bestellungen">
+                <ShoppingCart data-icon="inline-start" />
+                Bestellungen
+              </TabsTrigger>
               <TabsTrigger value="office">
                 <BriefcaseBusiness data-icon="inline-start" />
                 Office
@@ -1543,6 +1675,32 @@ export function ZentraleAdminWorkspace({
               )}
             >
               {paymentActionState.message}
+            </div>
+          ) : null}
+
+          {membershipActionState.message ? (
+            <div
+              className={cn(
+                "rounded-xl border px-4 py-3 text-sm",
+                membershipActionState.tone === "success"
+                  ? "border-emerald-300/70 bg-emerald-50 text-emerald-900"
+                  : "border-rose-300/70 bg-rose-50 text-rose-900",
+              )}
+            >
+              {membershipActionState.message}
+            </div>
+          ) : null}
+
+          {orderActionState.message ? (
+            <div
+              className={cn(
+                "rounded-xl border px-4 py-3 text-sm",
+                orderActionState.tone === "success"
+                  ? "border-emerald-300/70 bg-emerald-50 text-emerald-900"
+                  : "border-rose-300/70 bg-rose-50 text-rose-900",
+              )}
+            >
+              {orderActionState.message}
             </div>
           ) : null}
 
@@ -1902,6 +2060,153 @@ export function ZentraleAdminWorkspace({
             </CompactSection>
           </TabsContent>
 
+          <TabsContent value="mitgliedschaften" className="mt-0 w-full">
+            <CompactSection
+              id="zentrale-mitgliedschaften"
+              title="Mitgliedschaften"
+              description="Anträge aktivieren oder stoppen. Privat erst nach bestätigter Zahlung."
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mitgliedschaft</TableHead>
+                    <TableHead>Typ</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Zahlung</TableHead>
+                    <TableHead>Guthaben</TableHead>
+                    <TableHead className="w-[15rem] text-right">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberships.map((membership) => {
+                    const status = membershipStatusMeta(membership.status);
+                    const payment = paymentStatusMeta(membership.bezahlStatus);
+                    const isPending = membershipActionState.membershipId === membership.id;
+
+                    return (
+                      <TableRow key={membership.id}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{membership.membershipNumber || membership.id}</span>
+                            <span className="text-xs text-muted-foreground">{formatAdminDate(membership.beantragungsDatum, true)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{membershipTypeLabel(membership.typ)}</TableCell>
+                        <TableCell>
+                          <Badge className={status.className} variant="outline">{status.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={payment.className} variant="outline">{payment.label}</Badge>
+                        </TableCell>
+                        <TableCell>{formatCurrency(membership.kontingentAktuell ?? membership.kontingentStart ?? undefined)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {canAdminActivateMembership(membership) ? (
+                              <Button
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => void handleMembershipAction(membership, "activate_by_admin")}
+                              >
+                                {isPending ? "Aktiviert..." : "Aktivieren"}
+                              </Button>
+                            ) : null}
+                            {canAdminCancelMembership(membership) ? (
+                              <TableActionButton
+                                variant="secondary"
+                                disabled={isPending}
+                                onClick={() => void handleMembershipAction(membership, "cancel_by_admin")}
+                              >
+                                {isPending ? "Speichert..." : "Stornieren"}
+                              </TableActionButton>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CompactSection>
+          </TabsContent>
+
+          <TabsContent value="bestellungen" className="mt-0 w-full">
+            <CompactSection
+              id="zentrale-bestellungen"
+              title="Bestellungen"
+              description="Strikte Freigabe: anfragen bestätigen, Abholung markieren oder vor Abholung stornieren."
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bestellung</TableHead>
+                    <TableHead>Produkt</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Abholung</TableHead>
+                    <TableHead>Betrag</TableHead>
+                    <TableHead className="w-[18rem] text-right">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => {
+                    const status = orderStatusMeta(order.status);
+                    const isPending = orderActionState.orderId === order.id;
+
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-mono text-xs">{order.id}</span>
+                            <span className="text-xs text-muted-foreground">{order.userId || "—"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{order.produktName || "—"}</TableCell>
+                        <TableCell>
+                          <Badge className={status.className} variant="outline">{status.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 text-sm">
+                            <span>{formatAdminDate(order.pickupSlotStart, true)}</span>
+                            {order.cancelDeadlineAt ? (
+                              <span className="text-xs text-muted-foreground">Storno bis {formatAdminDate(order.cancelDeadlineAt, true)}</span>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatCurrency(order.preisGesamt)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {canAdminConfirmOrder(order) ? (
+                              <Button size="sm" disabled={isPending} onClick={() => void handleOrderAction(order, "confirm")}>
+                                {isPending ? "Bestätigt..." : "Bestätigen"}
+                              </Button>
+                            ) : null}
+                            {canAdminMarkPickedUp(order) ? (
+                              <Button size="sm" variant="secondary" disabled={isPending} onClick={() => void handleOrderAction(order, "mark_picked_up")}>
+                                {isPending ? "Speichert..." : "Abgeholt"}
+                              </Button>
+                            ) : null}
+                            {canAdminCancelOrder(order) ? (
+                              <TableActionButton
+                                variant="outline"
+                                disabled={isPending}
+                                onClick={() => void handleOrderAction(order, "cancel_by_admin")}
+                              >
+                                {isPending ? "Speichert..." : "Stornieren"}
+                              </TableActionButton>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CompactSection>
+          </TabsContent>
+
           <TabsContent value="office" className="mt-0 w-full">
             <CompactSection
               id="zentrale-office"
@@ -1971,6 +2276,7 @@ export function loadZentraleAdminData() {
     listBieteSucheEintraege(),
     listAdminMembershipPayments({ limit: 200 }),
     listAdminMemberships({ limit: 200 }),
+    listBestellungen({ limit: 200 }),
     listBackofficeEvents({ limit: 100 }),
   ]);
 }

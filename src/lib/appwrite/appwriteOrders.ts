@@ -9,6 +9,7 @@ import {
   createRealtimeChangeType,
   ensureConfigured,
   parseNumber,
+  parseOptionalNumber,
   parseOptionalString,
   parseRelationId,
   RealtimeChange,
@@ -26,13 +27,22 @@ const orderDocumentSchema = appwriteDocumentMetaSchema.extend({
   pickup_slot_label: z.string().optional(),
   pickup_location: z.string().optional(),
   pickup_note: z.string().optional(),
+  cancel_deadline_at: z.string().optional(),
   produkt_name: z.string().optional(),
   gesamtpreis_eur: z.unknown().optional(),
   preis_pro_einheit_eur: z.unknown().optional(),
+  reservierter_betrag_eur: z.unknown().optional(),
   bestellte_teilungen: z.unknown().optional(),
   bestellte_teilungs_anzahlen: z.unknown().optional(),
   bestellte_teilpreise_eur: z.unknown().optional(),
   status: z.string().optional(),
+  storniert_am: z.string().optional(),
+  storniert_von: z.string().optional(),
+  storno_grund: z.string().optional(),
+  confirmed_at: z.string().optional(),
+  confirmed_by: z.string().optional(),
+  erfuellt_am: z.string().optional(),
+  erfuellt_von: z.string().optional(),
 });
 
 const orderListInputSchema = z.object({
@@ -101,6 +111,7 @@ export function normalizeBestellung(raw: unknown): Bestellung {
     produktName: parseOptionalString(parsed.produkt_name),
     preisGesamt: parseNumber(parsed.gesamtpreis_eur),
     preisEinheit: parseNumber(parsed.preis_pro_einheit_eur),
+    reservierterBetragEur: parseOptionalNumber(parsed.reservierter_betrag_eur),
     status: normalizeOrderStatus(parsed.status) ?? "",
     bestellteTeilungen: parseNumericArray(parsed.bestellte_teilungen),
     bestellteTeilungsAnzahlen: parseNumericArray(parsed.bestellte_teilungs_anzahlen),
@@ -110,6 +121,14 @@ export function normalizeBestellung(raw: unknown): Bestellung {
     pickupSlotLabel: parseOptionalString(parsed.pickup_slot_label),
     pickupLocation: parseOptionalString(parsed.pickup_location),
     pickupNote: parseOptionalString(parsed.pickup_note),
+    cancelDeadlineAt: parseOptionalString(parsed.cancel_deadline_at),
+    storniertAm: parseOptionalString(parsed.storniert_am),
+    storniertVon: parseOptionalString(parsed.storniert_von),
+    stornoGrund: parseOptionalString(parsed.storno_grund),
+    confirmedAt: parseOptionalString(parsed.confirmed_at),
+    confirmedBy: parseOptionalString(parsed.confirmed_by),
+    erfuelltAm: parseOptionalString(parsed.erfuellt_am),
+    erfuelltVon: parseOptionalString(parsed.erfuellt_von),
   };
 }
 

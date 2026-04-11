@@ -1,10 +1,12 @@
 import {
     Client,
     ID,
+    Operator,
     Permission,
     Role,
     TablesDB,
     Users,
+    Query,
 } from "node-appwrite";
 
 const DEFAULT_DATABASE_ID = "agroforst";
@@ -14,6 +16,7 @@ const DEFAULT_MEMBERSHIPS_TABLE_ID = "mitgliedschaften";
 const DEFAULT_ORDERS_TABLE_ID = "bestellungen";
 const DEFAULT_BACKOFFICE_EVENTS_TABLE_ID = "backoffice_ereignisse";
 const DEFAULT_PICKUP_CONFIG_TABLE_ID = "abholkonfiguration";
+const DEFAULT_COMMERCE_EVENTS_TABLE_ID = "commerce_events";
 const ADMIN_LABEL = "admin";
 const PICKUP_CONFIG_DOCUMENT_ID = "global";
 const PICKUP_TIMEZONE = "Europe/Berlin";
@@ -49,9 +52,9 @@ async function extractBody(req, log) {
 
     try {
         body = await req.json();
-        log(`[placeOrder] Parsed JSON body keys: ${Object.keys(body).join(",")}`);
+        log(`[createOrder] Parsed JSON body keys: ${Object.keys(body).join(",")}`);
     } catch {
-        log("[placeOrder] No JSON body provided");
+        log("[createOrder] No JSON body provided");
     }
 
     if (!Object.keys(body).length && req?.bodyJson && typeof req.bodyJson === "object") {
@@ -100,7 +103,7 @@ function normalizeWeightUnit(unit) {
     return value;
 }
 
-function calculateTotalPrice(quantity, unit, unitPriceEur) {
+function calculateTotalPrice(quantity, unitPriceEur) {
     return Number((quantity * unitPriceEur).toFixed(2));
 }
 
@@ -335,7 +338,62 @@ async function readPickupConfig(tables, databaseId, tableId) {
     }
 }
 
+function getCancelDeadlineIso(pickupStartIso) {
+    const pickupStart = new Date(pickupStartIso);
+    if (Number.isNaN(pickupStart.getTime())) {
+        return "";
+    }
+
+    const local = zonedDateParts(pickupStart, PICKUP_TIMEZONE);
+    return berlinLocalToUtc(local.year, local.month, local.day - 1, 16, 0).toISOString();
+}
+
+async function rollbackTransaction(tables, transactionId, log) {
+    if (!transactionId) {
+        return;
+    }
+
+    try {
+        await tables.updateTransaction(transactionId, "rollback");
+    } catch {
+        log("[createOrder] Transaction rollback failed");
+    }
+}
+
+async function writeCommerceEvent({
+    tables,
+    databaseId,
+    tableId,
+    transactionId,
+    entityType,
+    entityId,
+    action,
+    actorType,
+    actorId,
+    requestId,
+    payload,
+}) {
+    await tables.createRow({
+        databaseId,
+        tableId,
+        rowId: ID.unique(),
+        transactionId,
+        data: compactObject({
+            entity_type: entityType,
+            entity_id: entityId,
+            action,
+            actor_type: actorType,
+            actor_id: actorId,
+            request_id: requestId,
+            payload_json: payload ? JSON.stringify(payload) : undefined,
+            created_at: new Date().toISOString(),
+        }),
+    });
+}
+
 export default async ({ req, res, log, error }) => {
+    let transactionId = "";
+
     try {
         const callerId = readHeader(req, "x-appwrite-user-id");
         if (!callerId) {
@@ -348,6 +406,7 @@ export default async ({ req, res, log, error }) => {
         const membershipId = String(
             body.mitgliedschaft ?? body.mitgliedschaft_id ?? body.membership ?? body.membership_id ?? body.mitgliedschaftID ?? url.searchParams.get("mitgliedschaftID") ?? ""
         ).trim();
+        const clientRequestId = String(body.client_request_id ?? body.clientRequestId ?? "").trim();
         const quantity = Number(body.menge ?? body.quantity ?? url.searchParams.get("menge"));
         const requestedStaffeln = normalizeStaffelInput(body.staffeln);
         const requestedPickupSlot =
@@ -365,8 +424,8 @@ export default async ({ req, res, log, error }) => {
             return fail(res, "Ungueltige Preisstaffeln im Request.", 400);
         }
 
-        if (!offerId || !membershipId || (!hasLegacyQuantity && !hasStaffeln)) {
-            return fail(res, "Invalid input: require { angebot_id, mitgliedschaft_id, menge > 0 } or { staffeln[] }", 400);
+        if (!offerId || !membershipId || !clientRequestId || (!hasLegacyQuantity && !hasStaffeln)) {
+            return fail(res, "Invalid input: require { angebot_id, mitgliedschaft_id, client_request_id, menge > 0 } or { staffeln[] }", 400);
         }
 
         if (!pickupSlotStart || !pickupSlotEnd || !pickupSlotLabel) {
@@ -387,6 +446,8 @@ export default async ({ req, res, log, error }) => {
             readEnv("APPWRITE_TABLE_BACKOFFICE_EVENTS_ID") || DEFAULT_BACKOFFICE_EVENTS_TABLE_ID;
         const pickupConfigTableId =
             readEnv("APPWRITE_TABLE_PICKUP_CONFIG_ID") || DEFAULT_PICKUP_CONFIG_TABLE_ID;
+        const commerceEventsTableId =
+            readEnv("APPWRITE_TABLE_COMMERCE_EVENTS_ID") || DEFAULT_COMMERCE_EVENTS_TABLE_ID;
 
         if (!endpoint || !projectId || !apiKey) {
             return fail(res, "Function endpoint, project ID, or API key is not configured", 500);
@@ -395,8 +456,29 @@ export default async ({ req, res, log, error }) => {
         const client = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
         const tables = new TablesDB(client);
         const users = new Users(client);
-        const pickupConfig = await readPickupConfig(tables, databaseId, pickupConfigTableId);
 
+        const existingByRequest = await tables.listRows({
+            databaseId,
+            tableId: ordersTableId,
+            queries: [
+                Query.equal("benutzer_id", callerId),
+                Query.equal("client_request_id", clientRequestId),
+                Query.limit(1),
+            ],
+        });
+        if (existingByRequest.total > 0) {
+            const existingOrder = existingByRequest.rows[0];
+            return ok(res, {
+                success: true,
+                idempotent: true,
+                orderId: existingOrder.$id,
+                gesamtpreis_eur: Number(existingOrder.gesamtpreis_eur ?? 0),
+                reservierter_betrag_eur: Number(existingOrder.reservierter_betrag_eur ?? 0),
+                membership: membershipId,
+            });
+        }
+
+        const pickupConfig = await readPickupConfig(tables, databaseId, pickupConfigTableId);
         if (!pickupConfig || pickupConfig.weeklySlots.length === 0 || pickupConfig.horizonDays <= 0) {
             return fail(res, "Pickup configuration is missing.", 409);
         }
@@ -434,17 +516,14 @@ export default async ({ req, res, log, error }) => {
         const canonicalUnit = normalizeWeightUnit(offer.einheit);
         const preisstaffelMap = createPreisstaffelMap(offer);
         const offerHasPreisstaffeln = preisstaffelMap.size > 0;
-        const orderBreakdown = hasStaffeln
-            ? requestedStaffeln
-            : [];
+        const orderBreakdown = hasStaffeln ? requestedStaffeln : [];
+
         if (hasStaffeln && !offerHasPreisstaffeln) {
             return fail(res, "Dieses Angebot hat keine Preisstaffeln.", 409);
         }
-
         if (offerHasPreisstaffeln && !hasStaffeln) {
             return fail(res, "Preisstaffeln muessen explizit ausgewaehlt werden.", 400);
         }
-
         if (offerHasPreisstaffeln && hasStaffeln) {
             for (const entry of orderBreakdown) {
                 if (!preisstaffelMap.has(entry.teilung)) {
@@ -476,7 +555,7 @@ export default async ({ req, res, log, error }) => {
                 productName = [product.name, product.sorte].filter(Boolean).join(" - ");
             }
         } catch {
-            log("[placeOrder] Product lookup failed, using fallback");
+            log("[createOrder] Product lookup failed, using fallback");
         }
 
         if (!productName) {
@@ -493,29 +572,62 @@ export default async ({ req, res, log, error }) => {
                     .reduce((sum, entry) => sum + (Number(preisstaffelMap.get(entry.teilung) ?? 0) * entry.anzahl), 0)
                     .toFixed(2)
             )
-            : calculateTotalPrice(effectiveQuantity, canonicalUnit, Number(offer.preis_pro_einheit_eur ?? 0));
+            : calculateTotalPrice(effectiveQuantity, Number(offer.preis_pro_einheit_eur ?? 0));
         const unitPriceEur = Number((totalPriceEur / effectiveQuantity).toFixed(4));
-        const nextAvailableQuantity = availableQuantity - effectiveQuantity;
-        const nextAllocatedQuantity = Number(offer.menge_reserviert ?? 0) + effectiveQuantity;
+        const membershipType = String(membership.mitgliedschaftstyp ?? "").trim().toLowerCase();
+        const requiresCreditReservation = membershipType === "privat";
+        const reservationAmountEur = requiresCreditReservation ? Number(totalPriceEur.toFixed(2)) : 0;
+        const currentBalanceEur = Number(membership.guthaben_aktuell_eur ?? 0);
+
+        if (requiresCreditReservation && currentBalanceEur < reservationAmountEur) {
+            return fail(res, "Not enough membership credit", 409, {
+                available: currentBalanceEur,
+                requested: reservationAmountEur,
+            });
+        }
+
+        const caller = await users.get(callerId);
+        const userEmail = String(caller?.email ?? body.benutzer_email ?? "").trim();
+        const nowIso = new Date().toISOString();
+        const cancelDeadlineIso = getCancelDeadlineIso(matchingPickupSlot.start);
+        if (!cancelDeadlineIso) {
+            return fail(res, "Pickup deadline is missing", 409);
+        }
+
+        const tx = await tables.createTransaction();
+        transactionId = tx?.$id ?? "";
 
         await tables.updateRow({
             databaseId,
             tableId: offersTableId,
             rowId: offerId,
+            transactionId,
             data: {
-                menge_verfuegbar: nextAvailableQuantity,
-                menge_reserviert: nextAllocatedQuantity,
+                menge_verfuegbar: Operator.decrement(effectiveQuantity),
+                menge_reserviert: Operator.increment(effectiveQuantity),
             },
         });
 
-        const nowIso = new Date().toISOString();
+        if (requiresCreditReservation) {
+            await tables.updateRow({
+                databaseId,
+                tableId: membershipsTableId,
+                rowId: membershipId,
+                transactionId,
+                data: {
+                    guthaben_aktuell_eur: Operator.decrement(reservationAmountEur),
+                },
+            });
+        }
+
         const order = await tables.createRow({
             databaseId,
             tableId: ordersTableId,
             rowId: ID.unique(),
+            transactionId,
             data: compactObject({
                 benutzer_id: callerId,
-                benutzer_email: "",
+                benutzer_email: userEmail || undefined,
                 mitgliedschaft: membershipId,
                 angebot: offerId,
                 menge: effectiveQuantity,
@@ -525,86 +637,102 @@ export default async ({ req, res, log, error }) => {
                 bestellte_teilungs_anzahlen: bestellteTeilungsAnzahlen.length > 0 ? bestellteTeilungsAnzahlen : undefined,
                 bestellte_teilpreise_eur: bestellteTeilpreiseEur.length > 0 ? bestellteTeilpreiseEur : undefined,
                 gesamtpreis_eur: totalPriceEur,
+                reservierter_betrag_eur: requiresCreditReservation ? reservationAmountEur : undefined,
                 abholung_ab: offer.abholung_ab ?? undefined,
                 pickup_slot_start: matchingPickupSlot.start,
                 pickup_slot_end: matchingPickupSlot.end,
                 pickup_slot_label: pickupSlotLabel || matchingPickupSlot.label,
                 pickup_location: pickupConfig.location || undefined,
                 pickup_note: pickupConfig.note || undefined,
+                cancel_deadline_at: cancelDeadlineIso,
                 produkt_name: productName,
                 status: "angefragt",
+                client_request_id: clientRequestId,
             }),
             permissions: buildUserPermissions(callerId),
         });
 
-        let userEmail = "";
-        try {
-            const user = await users.get(callerId);
-            userEmail = user?.email ?? "";
-            if (userEmail) {
-                await tables.updateRow({
-                    databaseId,
-                    tableId: ordersTableId,
-                    rowId: order.$id,
-                    data: { benutzer_email: userEmail },
-                });
-            }
-        } catch {
-            log("[placeOrder] Could not resolve user email");
-        }
+        await tables.createRow({
+            databaseId,
+            tableId: backofficeEventsTableId,
+            rowId: ID.unique(),
+            transactionId,
+            data: compactObject({
+                ereignistyp: "bestellung_erstellt",
+                bestellung_id: order.$id,
+                angebot_id: offerId,
+                benutzer_id: callerId,
+                benutzer_email: userEmail || undefined,
+                betreff: `Neue Bestellung: ${productName}`,
+                nachricht: [
+                    `Bestellung ${order.$id}`,
+                    `Produkt: ${productName}`,
+                    `Menge: ${effectiveQuantity} ${canonicalUnit}`,
+                    `Gesamt: ${totalPriceEur.toFixed(2)} EUR`,
+                    `Abholung: ${pickupSlotLabel || matchingPickupSlot.label}`,
+                    `Storno bis: ${cancelDeadlineIso}`,
+                ].filter(Boolean).join("\n"),
+                zugestellt: false,
+                erstellt_am: nowIso,
+            }),
+            permissions: [
+                Permission.read(Role.label(ADMIN_LABEL)),
+                Permission.update(Role.label(ADMIN_LABEL)),
+                Permission.delete(Role.label(ADMIN_LABEL)),
+            ],
+        });
 
-        try {
-            await tables.createRow({
-                databaseId,
-                tableId: backofficeEventsTableId,
-                rowId: ID.unique(),
-                data: compactObject({
-                    ereignistyp: "bestellung_erstellt",
-                    bestellung_id: order.$id,
-                    angebot_id: offerId,
-                    benutzer_id: callerId,
-                    benutzer_email: userEmail || undefined,
-                    betreff: `Neue Bestellung: ${productName}`,
-                    nachricht: [
-                        `Bestellung ${order.$id}`,
-                        `Produkt: ${productName}`,
-                        `Menge: ${effectiveQuantity} ${canonicalUnit}`,
-                        `Preis: ${unitPriceEur.toFixed(2)} EUR`,
-                        `Gesamt: ${totalPriceEur.toFixed(2)} EUR`,
-                        `Abholung: ${pickupSlotLabel || matchingPickupSlot.label}`,
-                        pickupConfig.location ? `Ort: ${pickupConfig.location}` : undefined,
-                        bestellteTeilungen.length > 0
-                            ? `Staffeln: ${bestellteTeilungen.map((teilung, index) => `${teilung} x ${bestellteTeilungsAnzahlen[index]}`).join(", ")}`
-                            : undefined,
-                    ].filter(Boolean).join("\n"),
-                    zugestellt: false,
-                    erstellt_am: nowIso,
-                }),
-                permissions: [
-                    Permission.read(Role.label(ADMIN_LABEL)),
-                    Permission.update(Role.label(ADMIN_LABEL)),
-                    Permission.delete(Role.label(ADMIN_LABEL)),
-                ],
-            });
-        } catch {
-            log("[placeOrder] Backoffice event write failed (non-fatal)");
-        }
+        await writeCommerceEvent({
+            tables,
+            databaseId,
+            tableId: commerceEventsTableId,
+            transactionId,
+            entityType: "order",
+            entityId: order.$id,
+            action: "requested",
+            actorType: "user",
+            actorId: callerId,
+            requestId: clientRequestId,
+            payload: {
+                offerId,
+                membershipId,
+                quantity: effectiveQuantity,
+                totalPriceEur,
+            },
+        });
+
+        await tables.updateTransaction(transactionId, "commit");
+        transactionId = "";
 
         return ok(
             res,
             {
                 success: true,
                 orderId: order.$id,
-                offer: { before: availableQuantity, after: nextAvailableQuantity },
                 gesamtpreis_eur: totalPriceEur,
+                reservierter_betrag_eur: reservationAmountEur,
                 membership: membership.$id,
+                cancel_deadline_at: cancelDeadlineIso,
             },
             201,
         );
     } catch (caughtError) {
         const msg = String(caughtError?.message ?? caughtError ?? "Unknown error");
         const stack = String(caughtError?.stack ?? "");
-        error(`[placeOrder] ${msg}`);
+        error(`[createOrder] ${msg}`);
+
+        try {
+            const endpoint = readEnv("APPWRITE_FUNCTION_API_ENDPOINT");
+            const projectId = readEnv("APPWRITE_FUNCTION_PROJECT_ID");
+            const apiKey = readEnv("APPWRITE_FUNCTION_API_KEY", "APPWRITE_API_KEY");
+            if (transactionId && endpoint && projectId && apiKey) {
+                const rollbackClient = new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
+                const rollbackTables = new TablesDB(rollbackClient);
+                await rollbackTransaction(rollbackTables, transactionId, log);
+            }
+        } catch {
+            // ignore rollback boot errors
+        }
 
         const debugOn = readEnv("APPWRITE_FUNCTION_DEBUG", "APP_DEBUG") === "1";
         if (debugOn) {
