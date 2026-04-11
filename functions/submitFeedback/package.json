@@ -1,0 +1,8 @@
+{
+  "name": "agroforst-function-submit-feedback",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "node-appwrite": "22.1.3"
+  }
+}

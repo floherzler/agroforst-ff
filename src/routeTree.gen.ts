@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZentraleRouteImport } from './routes/zentrale'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as UeberAffRouteImport } from './routes/ueber-aff'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as StaffelnRouteImport } from './routes/staffeln'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -20,6 +21,7 @@ import { Route as MarktplatzRouteImport } from './routes/marktplatz'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KontoRouteImport } from './routes/konto'
 import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as BieteSucheRouteImport } from './routes/biete-suche'
@@ -41,6 +43,11 @@ const ZentraleRoute = ZentraleRouteImport.update({
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UeberAffRoute = UeberAffRouteImport.update({
+  id: '/ueber-aff',
+  path: '/ueber-aff',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamRoute = TeamRouteImport.update({
@@ -86,6 +93,11 @@ const KontoRoute = KontoRouteImport.update({
 const ImpressumRoute = ImpressumRouteImport.update({
   id: '/impressum',
   path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DatenschutzRoute = DatenschutzRouteImport.update({
@@ -156,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/biete-suche': typeof BieteSucheRoute
   '/blog': typeof BlogRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/feedback': typeof FeedbackRoute
   '/impressum': typeof ImpressumRoute
   '/konto': typeof KontoRoute
   '/login': typeof LoginRoute
@@ -165,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/staffeln': typeof StaffelnRoute
   '/team': typeof TeamRoute
+  '/ueber-aff': typeof UeberAffRoute
   '/verify-email': typeof VerifyEmailRoute
   '/zentrale': typeof ZentraleRouteWithChildren
   '/angebote/$id': typeof AngeboteIdRoute
@@ -181,6 +195,7 @@ export interface FileRoutesByTo {
   '/biete-suche': typeof BieteSucheRoute
   '/blog': typeof BlogRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/feedback': typeof FeedbackRoute
   '/impressum': typeof ImpressumRoute
   '/konto': typeof KontoRoute
   '/login': typeof LoginRoute
@@ -190,6 +205,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/staffeln': typeof StaffelnRoute
   '/team': typeof TeamRoute
+  '/ueber-aff': typeof UeberAffRoute
   '/verify-email': typeof VerifyEmailRoute
   '/angebote/$id': typeof AngeboteIdRoute
   '/zentrale/classic': typeof ZentraleClassicRoute
@@ -206,6 +222,7 @@ export interface FileRoutesById {
   '/biete-suche': typeof BieteSucheRoute
   '/blog': typeof BlogRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/feedback': typeof FeedbackRoute
   '/impressum': typeof ImpressumRoute
   '/konto': typeof KontoRoute
   '/login': typeof LoginRoute
@@ -215,6 +232,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/staffeln': typeof StaffelnRoute
   '/team': typeof TeamRoute
+  '/ueber-aff': typeof UeberAffRoute
   '/verify-email': typeof VerifyEmailRoute
   '/zentrale': typeof ZentraleRouteWithChildren
   '/angebote/$id': typeof AngeboteIdRoute
@@ -233,6 +251,7 @@ export interface FileRouteTypes {
     | '/biete-suche'
     | '/blog'
     | '/datenschutz'
+    | '/feedback'
     | '/impressum'
     | '/konto'
     | '/login'
@@ -242,6 +261,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/staffeln'
     | '/team'
+    | '/ueber-aff'
     | '/verify-email'
     | '/zentrale'
     | '/angebote/$id'
@@ -258,6 +278,7 @@ export interface FileRouteTypes {
     | '/biete-suche'
     | '/blog'
     | '/datenschutz'
+    | '/feedback'
     | '/impressum'
     | '/konto'
     | '/login'
@@ -267,6 +288,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/staffeln'
     | '/team'
+    | '/ueber-aff'
     | '/verify-email'
     | '/angebote/$id'
     | '/zentrale/classic'
@@ -282,6 +304,7 @@ export interface FileRouteTypes {
     | '/biete-suche'
     | '/blog'
     | '/datenschutz'
+    | '/feedback'
     | '/impressum'
     | '/konto'
     | '/login'
@@ -291,6 +314,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/staffeln'
     | '/team'
+    | '/ueber-aff'
     | '/verify-email'
     | '/zentrale'
     | '/angebote/$id'
@@ -308,6 +332,7 @@ export interface RootRouteChildren {
   BieteSucheRoute: typeof BieteSucheRoute
   BlogRoute: typeof BlogRoute
   DatenschutzRoute: typeof DatenschutzRoute
+  FeedbackRoute: typeof FeedbackRoute
   ImpressumRoute: typeof ImpressumRoute
   KontoRoute: typeof KontoRoute
   LoginRoute: typeof LoginRoute
@@ -317,6 +342,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   StaffelnRoute: typeof StaffelnRoute
   TeamRoute: typeof TeamRoute
+  UeberAffRoute: typeof UeberAffRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ZentraleRoute: typeof ZentraleRouteWithChildren
   AngeboteIdRoute: typeof AngeboteIdRoute
@@ -337,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ueber-aff': {
+      id: '/ueber-aff'
+      path: '/ueber-aff'
+      fullPath: '/ueber-aff'
+      preLoaderRoute: typeof UeberAffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/team': {
@@ -400,6 +433,13 @@ declare module '@tanstack/react-router' {
       path: '/impressum'
       fullPath: '/impressum'
       preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/datenschutz': {
@@ -514,6 +554,7 @@ const rootRouteChildren: RootRouteChildren = {
   BieteSucheRoute: BieteSucheRoute,
   BlogRoute: BlogRoute,
   DatenschutzRoute: DatenschutzRoute,
+  FeedbackRoute: FeedbackRoute,
   ImpressumRoute: ImpressumRoute,
   KontoRoute: KontoRoute,
   LoginRoute: LoginRoute,
@@ -523,6 +564,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   StaffelnRoute: StaffelnRoute,
   TeamRoute: TeamRoute,
+  UeberAffRoute: UeberAffRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ZentraleRoute: ZentraleRouteWithChildren,
   AngeboteIdRoute: AngeboteIdRoute,

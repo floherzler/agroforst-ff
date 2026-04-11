@@ -58,6 +58,10 @@ const verifyPaymentInputSchema = z.object({
   force: z.boolean().optional(),
 });
 
+const feedbackMessageInputSchema = z.object({
+  text: z.string().trim().min(1),
+});
+
 type ExecutionPayload = {
   success?: boolean;
   error?: string;
@@ -170,4 +174,13 @@ export async function verifyPayment(input: {
       force: parsedInput.force,
     },
   );
+}
+
+export async function submitFeedbackMessage(input: {
+  text: string;
+}): Promise<void> {
+  const parsedInput = feedbackMessageInputSchema.parse(input);
+  await executeValidatedFunction<void>(appwriteConfig.feedbackFunctionId, {
+    text: parsedInput.text,
+  });
 }

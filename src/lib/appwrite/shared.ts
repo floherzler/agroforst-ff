@@ -28,6 +28,7 @@ export const appwriteConfig = {
   membershipTableId: getManagedTableId("mitgliedschaften"),
   paymentTableId: getManagedTableId("mitgliedschaftszahlungen"),
   feedbackTableId: getManagedTableId("kunden_nachrichten"),
+  feedbackFunctionId: getManagedFunctionId("submitFeedback"),
   orderFunctionId: getManagedFunctionId("createOrder"),
   membershipFunctionId: getManagedFunctionId("createMembership"),
   paymentVerifyFunctionId: getManagedFunctionId("verifyPayment"),

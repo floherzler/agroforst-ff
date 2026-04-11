@@ -8,11 +8,13 @@ export default function AboutSection() {
       </div>
       <div className="w-full md:w-1/2 text-center md:text-left">
         <h2 className="text-3xl font-bold text-gray-800">Agroforst Frank Fege</h2>
-        <p className="text-lg text-gray-700">Wir bauen tolle Sachen an, die ihr euch abholen könnt. Kontaktiert uns auch gerne für interessante Kooperationen mit regionaler Gastronomie!</p>
-        <p className="text-lg text-gray-700 mt-2">Ins Leben gerufen von Frank F. und seinem Team. Erfahre noch mehr:</p>
+        <p className="text-lg text-gray-700">
+          Wir bauen regionale Produkte an und zeigen, wie wir auf dem Hof arbeiten.
+        </p>
+        <p className="text-lg text-gray-700 mt-2">Mehr über Hof, Permdal und Team:</p>
         <div className="flex justify-center md:justify-start mt-4 space-x-4">
-          <Link to="/permdal"><button className="bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold shadow-md border-2 border-brown-600 hover:bg-brown-400 transition-all">Über Agroforst FF</button></Link>
-          <Link to="/team"><button className="bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold shadow-md border-2 border-brown-600 hover:bg-brown-400 transition-all">Über das Team</button></Link>
+          <Link to="/ueber-aff"><button className="bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold shadow-md border-2 border-brown-600 hover:bg-brown-400 transition-all">Über uns</button></Link>
+          <Link to="/permdal"><button className="bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold shadow-md border-2 border-brown-600 hover:bg-brown-400 transition-all">Permdal</button></Link>
         </div>
       </div>
     </div>

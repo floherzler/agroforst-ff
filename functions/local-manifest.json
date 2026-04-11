@@ -12,6 +12,12 @@
       "entrypoint": "src/main.js",
       "commands": "npm install --omit=dev"
     },
+    "submitFeedback": {
+      "source": "functions/submitFeedback",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
     "verifyPayment": {
       "source": "functions/verifyPayment",
       "runtime": "node-22",

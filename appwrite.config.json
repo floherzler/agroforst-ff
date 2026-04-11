@@ -20,6 +20,14 @@
             "commands": "npm install --omit=dev"
         },
         {
+            "$id": "submitFeedback",
+            "name": "submitFeedback",
+            "runtime": "node-22",
+            "path": "functions/submitFeedback",
+            "entrypoint": "src/main.js",
+            "commands": "npm install --omit=dev"
+        },
+        {
             "$id": "verifyPayment",
             "name": "verifyPayment",
             "runtime": "node-22",

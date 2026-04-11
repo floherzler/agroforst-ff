@@ -16,6 +16,7 @@ import {
   parseStringArray,
   RealtimeChange,
 } from "@/lib/appwrite/shared";
+import { submitFeedbackMessage as submitFeedbackMessageRequest } from "@/lib/appwrite/appwriteFunctions";
 
 const productDocumentSchema = appwriteDocumentMetaSchema.extend({
   name: z.string().min(1),
@@ -66,7 +67,6 @@ const blogPostDocumentSchema = appwriteDocumentMetaSchema.extend({
 });
 
 const feedbackInputSchema = z.object({
-  userId: z.string().trim().min(1),
   text: z.string().trim().min(1),
 });
 
@@ -580,25 +580,10 @@ export async function upsertAngebot(input: {
 }
 
 export async function submitFeedbackMessage(input: {
-  userId: string;
   text: string;
 }): Promise<void> {
   const parsedInput = feedbackInputSchema.parse(input);
-
-  await databases.createDocument(
-    ensureConfigured(appwriteConfig.databaseId, "Appwrite Datenbank"),
-    ensureConfigured(
-      appwriteConfig.feedbackTableId,
-      "Nachrichten-Tabelle",
-    ),
-    ID.unique(),
-    {
-      benutzer_id: parsedInput.userId,
-      nachrichtstyp: "feedback",
-      nachricht: parsedInput.text,
-      status: "neu",
-    },
-  );
+  await submitFeedbackMessageRequest({ text: parsedInput.text });
 }
 
 export function getProduktImagePreviewUrl(input: {

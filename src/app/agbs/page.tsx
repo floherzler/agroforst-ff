@@ -150,7 +150,8 @@ export default function AgbPage() {
                 <ul className="space-y-2 text-muted-foreground">
                   <li>
                     Privatkundinnen und -kunden schließen eine Jahres-Mitgliedschaft
-                    ab. Die Aktivierung erfolgt ab Zahlungseingang.
+                    ab. Vor dem Antrag muss ein verifiziertes Benutzerkonto
+                    vorliegen; die Aktivierung erfolgt ab Zahlungseingang.
                   </li>
                   <li>
                     Die Mitgliedschaft ist ein jährlicher Planungsbeitrag mit
@@ -172,7 +173,11 @@ export default function AgbPage() {
                     Ein Anspruch auf bestimmte Produkte oder auf einen
                     durchgehenden Sortimentsumfang besteht nicht.
                   </li>
-                  <li>Widerruf der Mitgliedschaft: siehe Ziffer 9.</li>
+                  <li>
+                    Bei Antrag werden die AGB-Version und der Zeitpunkt der
+                    Zustimmung dokumentiert. Widerruf der Mitgliedschaft: siehe
+                    Ziffer 9.
+                  </li>
                 </ul>
               </div>
 
@@ -217,7 +222,7 @@ export default function AgbPage() {
                   </li>
                   <li>
                     Bei Beantragung der Mitgliedschaft wird die jeweils aktuelle
-                    AGB-Version dokumentiert.
+                    AGB-Version zusammen mit dem Zustimmungszeitpunkt dokumentiert.
                   </li>
                   <li>
                     Wir können eine Mitgliedschaft aus wichtigem Grund (z.&nbsp;B.
@@ -249,9 +254,13 @@ export default function AgbPage() {
                   wird das Nutzungsguthaben entsprechend reserviert oder belastet.
                 </li>
                 <li>
+                  Eine Stornierung oder Umbuchung ist bis 16:00 Uhr am Vortag
+                  des bestätigten Abholfensters möglich. Danach ist die
+                  Bestellung verbindlich.
+                </li>
+                <li>
                   Wird eine bestätigte Bestellung nicht im vereinbarten
-                  Abholfenster abgeholt und wurde sie nicht rechtzeitig vorher
-                  umgebucht oder storniert, verfällt das Bezugsrecht auf diese
+                  Abholfenster abgeholt, verfällt das Bezugsrecht auf diese
                   Bestellung. Eine Erstattung oder Rückgutschrift erfolgt in
                   diesem Fall nicht.
                 </li>
@@ -334,14 +343,9 @@ export default function AgbPage() {
                   (z.&nbsp;B. saisonale Alternativen).
                 </li>
                 <li>
-                  Nicht verbrauchtes Restguthaben verfällt grundsätzlich am
-                  Laufzeitende ohne Auszahlung.
-                </li>
-                <li>
-                  Wenn wir bis zum Laufzeitende jedoch keine zumutbare
-                  Einlösungschance durch verfügbare Produkte oder Ersatzangebote
-                  ermöglicht haben, verlängern wir die Einlösefrist einmalig
-                  befristet oder gewähren ein entsprechendes Ersatzguthaben.
+                  Nicht verbrauchtes Restguthaben verfällt am Laufzeitende ohne
+                  Auszahlung. Eine Verlängerung oder Übertragung ist in dieser
+                  Fassung der AGB nicht vorgesehen.
                 </li>
               </ul>
             </section>

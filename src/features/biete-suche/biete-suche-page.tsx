@@ -123,6 +123,12 @@ export default function BieteSuchePage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
+              <Link to="/feedback">
+                Feedback
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
               <Link to="/">
                 Zur Startseite
                 <ArrowRight data-icon="inline-end" />

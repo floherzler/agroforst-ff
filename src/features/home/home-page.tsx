@@ -2,18 +2,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowRight, Info, Loader2, Mail, MapPin } from "lucide-react";
+import { ArrowDown, ArrowRight, Info } from "lucide-react";
 
 import { PageShell } from "@/components/base/page-shell";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import {
   Carousel,
   CarouselContent,
@@ -29,7 +23,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -41,17 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { useAuthStore } from "@/features/auth/auth-store";
-import {
-  listAngebote,
-  listProdukte,
-  submitFeedbackMessage,
-  subscribeToAngebote,
-  subscribeToProdukte,
-} from "@/lib/appwrite/appwriteProducts";
-import type { CarouselApi } from "@/components/ui/carousel";
-import { Label } from "@/components/ui/label";
+import { listAngebote, listProdukte, subscribeToAngebote, subscribeToProdukte } from "@/lib/appwrite/appwriteProducts";
 import {
   Popover,
   PopoverContent,
@@ -61,8 +44,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { InView } from "@/components/motion-primitives/in-view";
-import { TextLoop } from "@/components/motion-primitives/text-loop";
-// import { YearWheelSection } from "@/features/home/year-wheel-section";
 import {
   formatHarvestRange,
   getOfferDisplayUnitPrice,
@@ -88,20 +69,25 @@ const processSteps = [
   },
 ];
 
-const corePromises = [
-  "Prignitzer Produkte.",
-  "Direkter Draht.",
-  "Gemeinsamer Genuss.",
-];
-
-const feedbackOptions = [
-  "denkst.",
-  "suchst.",
-  "brauchst.",
-  "willst.",
-  "vermisst.",
-  "bietest.",
-  "dir wünschst.",
+const homeInfoCards = [
+  {
+    title: "Über uns",
+    text: "Team, Hof und die Idee hinter unserer Arbeit in kurz.",
+    href: "/ueber-aff",
+    cta: "Mehr erfahren",
+  },
+  {
+    title: "Permdal",
+    text: "Was das Statut bedeutet und warum wir es zeigen.",
+    href: "/permdal",
+    cta: "Zum Statut",
+  },
+  {
+    title: "Feedback",
+    text: "Wünsche, Hinweise und neue Ideen. Nur mit bestätigter E-Mail.",
+    href: "/feedback",
+    cta: "Feedback senden",
+  },
 ];
 
 const galleryImages = [
@@ -133,9 +119,6 @@ const galleryImages = [
 ];
 
 const heroVideoUrl = "/media/garten-1-schwenk-pingpong.mp4";
-
-const permdalCertificatePdfUrl = encodeURI("/img/statut_Permdal_öko.pdf");
-const permdalCertificateImageUrl = encodeURI("/img/statut_Permdal_öko.png");
 const liveProductCategories = ["Alle", "Obst", "Gemuese", "Kraeuter"] as const;
 type LiveProductCategory = (typeof liveProductCategories)[number];
 
@@ -234,16 +217,7 @@ function HeaderInfo({
 }
 
 export default function HomePage() {
-  const { user, createAccount, login } = useAuthStore();
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
-  const [feedbackText, setFeedbackText] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
-  const [signupError, setSignupError] = useState("");
-  const [signupSuccess, setSignupSuccess] = useState("");
-  const [isSigningUp, setIsSigningUp] = useState(false);
-  const [carouselApi, setCarouselApi] = React.useState<CarouselApi>();
-  const [currentSlide, setCurrentSlide] = React.useState(0);
   const [liveProducts, setLiveProducts] = React.useState<Produkt[]>([]);
   const [liveOffers, setLiveOffers] = React.useState<Angebot[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
@@ -339,24 +313,6 @@ export default function HomePage() {
     };
   }, []);
 
-  React.useEffect(() => {
-    if (!carouselApi) {
-      return;
-    }
-
-    setCurrentSlide(carouselApi.selectedScrollSnap());
-
-    const handleSelect = () => {
-      setCurrentSlide(carouselApi.selectedScrollSnap());
-    };
-
-    carouselApi.on("select", handleSelect);
-
-    return () => {
-      carouselApi.off("select", handleSelect);
-    };
-  }, [carouselApi]);
-
   const liveProductsById = React.useMemo(() => {
     return new Map(liveProducts.map((product) => [product.id, product] as const));
   }, [liveProducts]);
@@ -406,88 +362,6 @@ export default function HomePage() {
         return (right.offer.year ?? 0) - (left.offer.year ?? 0);
       });
   }, [filteredLiveOffers]);
-
-  async function handleInlineSignup(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-    const name = formData.get("name");
-    const email = formData.get("email");
-    const password = formData.get("password");
-    const confirmPassword = formData.get("confirmPassword");
-
-    if (!name || !email || !password || !confirmPassword) {
-      setSignupError("Bitte fülle alle Felder aus.");
-      setSignupSuccess("");
-      return;
-    }
-
-    if (password.toString() !== confirmPassword.toString()) {
-      setSignupError("Die Passwörter stimmen nicht überein.");
-      setSignupSuccess("");
-      return;
-    }
-
-    setIsSigningUp(true);
-    setSignupError("");
-    setSignupSuccess("");
-
-    const createAccountResponse = await createAccount(
-      name.toString(),
-      email.toString(),
-      password.toString(),
-    );
-
-    if (!createAccountResponse.success) {
-      setSignupError(
-        createAccountResponse.error?.message ??
-        "Die Registrierung ist fehlgeschlagen.",
-      );
-      setIsSigningUp(false);
-      return;
-    }
-
-    const loginResponse = await login(email.toString(), password.toString());
-
-    if (!loginResponse.success) {
-      setSignupError(
-        loginResponse.error?.message ??
-        "Der Login nach der Registrierung ist fehlgeschlagen.",
-      );
-      setIsSigningUp(false);
-      return;
-    }
-
-    event.currentTarget.reset();
-    setSignupSuccess("Konto erstellt. Du kannst jetzt direkt eine Nachricht senden.");
-    setIsSigningUp(false);
-  }
-
-  async function handleFeedbackSubmit(event: React.FormEvent) {
-    event.preventDefault();
-
-    if (!user || !feedbackText.trim()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitStatus("idle");
-
-    try {
-      await submitFeedbackMessage({
-        text: feedbackText.trim(),
-        userId: user.id,
-      });
-      setFeedbackText("");
-      setSubmitStatus("success");
-      setTimeout(() => setSubmitStatus("idle"), 3000);
-    } catch (error) {
-      console.error("Failed to submit feedback", error);
-      setSubmitStatus("error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   return (
     <PageShell
@@ -672,18 +546,6 @@ export default function HomePage() {
                               </div>
                               {product?.sorte ? (
                                 <p className="mt-1 text-sm text-muted-foreground">{product.sorte}</p>
-                              ) : null}
-                              {offer.tags.length > 0 ? (
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {offer.tags.map((tag) => (
-                                    <Badge
-                                      key={tag}
-                                      variant={tag.trim().toLowerCase() === "sonderangebot" ? "default" : "outline"}
-                                    >
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
                               ) : null}
                             </div>
 
@@ -891,199 +753,44 @@ export default function HomePage() {
           );
         })}
       </section>
-
-      <InView
-        as="section"
-        once
-        viewOptions={{ margin: "0px 0px -20% 0px" }}
-        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        variants={{
-          hidden: { opacity: 0, y: 22, scale: 0.96 },
-          visible: { opacity: 1, y: 0, scale: 1 },
-        }}
-        className="home-logo-buffer"
-      >
-        <div className="home-logo-buffer-mark" aria-hidden="true">
-          <img
-            src="/img/agroforst_ff_icon_bg.png"
-            alt=""
-            className="home-logo-buffer-image"
-          />
-        </div>
-      </InView>
-
-      <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
-        <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-10">
-          <div className="flex flex-col items-center gap-4 text-center lg:items-start lg:text-left">
-            <h2 className="font-display text-[2.1rem] leading-[0.95] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.8rem]">
-              Gemeinsam wollen wir lokale Landwirtschaft zirkulärer gestalten.
+      <section className="landing-reveal rounded-[2rem] px-5 py-8 sm:px-8 sm:py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">
+          <div className="max-w-3xl">
+            <h2 className="font-display text-[2.2rem] leading-[0.95] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3rem]">
+              Mehr über Hof, Permdal und Feedback
             </h2>
-            <p className="max-w-xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Unser Agroforst soll nicht nur Produkte liefern, sondern Beziehungen zwischen
-              Anbau, Angebot, Mitgliedschaft und Bestellung sichtbar machen.
+            <p className="mt-3 text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
+              Wenn du tiefer einsteigen willst, sind das die drei kurzen Wege.
             </p>
           </div>
 
-          <div className="home-schema-wrap mx-auto w-full max-w-3xl">
-            <img
-              src="/schema.svg"
-              alt="Skizze des Kreislaufs zwischen Agroforst, Produkten, Angeboten, Mitgliedschaft und Bestellung"
-              className="home-schema-image w-full bg-white object-contain"
-            />
+          <div className="grid gap-4 lg:grid-cols-3">
+            {homeInfoCards.map((card) => (
+              <Card
+                key={card.title}
+                className="flex h-full flex-col overflow-hidden rounded-[1.6rem] border-border/70 bg-background/90 shadow-brand-soft"
+              >
+                <CardHeader className="gap-2">
+                  <CardTitle className="text-2xl leading-tight tracking-tight text-foreground">
+                    {card.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 pt-0 text-sm leading-7 text-muted-foreground sm:text-base">
+                  {card.text}
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link to={card.href}>
+                      {card.cta}
+                      <ArrowRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
-
-      <section className="landing-reveal home-vision-panel relative overflow-hidden rounded-[2.2rem] px-5 py-8 sm:px-8 sm:py-10 lg:-mx-6 lg:px-10 xl:-mx-10 xl:px-12">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-          <div className="flex max-w-3xl flex-col items-center gap-3 text-center">
-            <h2 className="font-display text-[2.2rem] leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3rem]">
-              Was ist ein Agroforst?
-            </h2>
-            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Ein Agroforst verbindet Ackerbau, Gartenbau oder Tierhaltung mit Bäumen
-              und Sträuchern auf derselben Fläche. Statt alles strikt zu trennen,
-              arbeiten verschiedene Pflanzenebenen zusammen.
-            </p>
-          </div>
-
-          <div className="rounded-[1.8rem] border border-[var(--color-soil-900)]/10 bg-white/70 p-6 backdrop-blur-sm sm:p-7">
-            <div className="flex flex-col items-center gap-6 text-center">
-              <article>
-                <h3 className="font-display text-[1.55rem] leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)]">
-                  Bäume, Sträucher und Kulturen zusammen denken
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
-                  In einem Agroforst stehen Gehölze nicht nur am Rand, sondern werden
-                  bewusst in die landwirtschaftliche Fläche integriert. Zwischen oder
-                  unter ihnen wachsen weitere Kulturen, die davon profitieren können.
-                </p>
-              </article>
-
-              <article>
-                <h3 className="font-display text-[1.55rem] leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)]">
-                  Ein System mit mehreren Ebenen
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
-                  Unterschiedliche Wuchshöhen und Wurzeltiefen nutzen Licht, Wasser
-                  und Boden auf verschiedene Weise. Dadurch entsteht mehr Vielfalt
-                  und oft auch mehr Stabilität im Jahresverlauf.
-                </p>
-              </article>
-            </div>
-          </div>
-
-          <div className="rounded-[1.8rem] border border-[var(--color-soil-900)]/10 bg-[var(--color-sand-100)]/85 p-5 sm:p-6">
-            <div className="text-center">
-              <h3 className="font-display text-[1.7rem] leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)]">
-                Warum Agroforst sinnvoll ist
-              </h3>
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
-                Agroforst kann Wind abbremsen, Wasser besser in der Fläche halten und
-                Lebensräume für Insekten, Vögel und Bodenleben schaffen. Gleichzeitig
-                bleibt die Fläche produktiv und entwickelt sich über Jahre zu einem
-                widerstandsfähigeren Anbausystem.
-              </p>
-            </div>
-
-            <Accordion
-              type="multiple"
-              className="mx-auto mt-6 w-full max-w-xl px-2 sm:px-4"
-            >
-              <AccordionItem
-                value="mikroklima"
-                className="border-b border-[var(--color-soil-900)]/10"
-              >
-                <AccordionTrigger className="py-4 text-left text-base font-medium text-[var(--color-soil-900)] hover:no-underline">
-                  Mikroklima und Schutz
-                </AccordionTrigger>
-                <AccordionContent className="text-left text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
-                  Gehölze schaffen Windschutz, Schatten und ein ausgeglicheneres
-                  Mikroklima. Das kann Pflanzen und Boden in heißen oder trockenen
-                  Phasen entlasten.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="boden"
-                className="border-b border-[var(--color-soil-900)]/10"
-              >
-                <AccordionTrigger className="py-4 text-left text-base font-medium text-[var(--color-soil-900)] hover:no-underline">
-                  Boden und Wasser
-                </AccordionTrigger>
-                <AccordionContent className="text-left text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
-                  Wurzeln helfen, den Boden zu stabilisieren, Humus aufzubauen und
-                  Wasser länger in der Fläche zu halten. So wird das System robuster.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem
-                value="vielfalt"
-                className="border-b border-[var(--color-soil-900)]/10"
-              >
-                <AccordionTrigger className="py-4 text-left text-base font-medium text-[var(--color-soil-900)] hover:no-underline">
-                  Vielfalt statt Monokultur
-                </AccordionTrigger>
-                <AccordionContent className="text-left text-sm leading-6 text-[var(--color-soil-700)] sm:text-base">
-                  Verschiedene Arten auf einer Fläche fördern Biodiversität und
-                  machen die Bewirtschaftung langfristiger planbar. Mit jeder Saison
-                  wird das System lesbarer und oft widerstandsfähiger.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        </div>
-      </section>
-
-      {/* <YearWheelSection /> */}
-
-      <section className="landing-reveal home-promise-panel px-5 py-10 sm:px-8 sm:py-12 lg:px-10">
-        <div className="home-promise-shell flex flex-col items-center gap-6 text-center">
-          <h2 className="max-w-4xl font-display text-[2.3rem] leading-[0.94] tracking-[-0.05em] text-[var(--color-soil-900)] sm:text-[3rem] lg:text-[3.8rem]">
-            Was zwischen Hof und Gemeinschaft wachsen soll.
-          </h2>
-
-          <div className="home-promise-stage">
-            <div className="home-promise-stage-glow" aria-hidden="true" />
-            <TextLoop
-              className="home-promise-loop"
-              interval={3.6}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              variants={{
-                initial: { opacity: 0, y: 34, scale: 0.92, filter: "blur(10px)" },
-                animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
-                exit: { opacity: 0, y: -28, scale: 1.03, filter: "blur(8px)" },
-              }}
-            >
-              {corePromises.map((promise) => (
-                <span key={promise} className="home-promise-loop-item">
-                  {promise}
-                </span>
-              ))}
-            </TextLoop>
-          </div>
-        </div>
-      </section>
-
-      <InView
-        as="section"
-        once
-        viewOptions={{ margin: "0px 0px -20% 0px" }}
-        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        variants={{
-          hidden: { opacity: 0, y: 22, scale: 0.96 },
-          visible: { opacity: 1, y: 0, scale: 1 },
-        }}
-        className="home-logo-buffer"
-      >
-        <div className="home-logo-buffer-mark" aria-hidden="true">
-          <img
-            src="/img/agroforst_ff_icon_bg.png"
-            alt=""
-            className="home-logo-buffer-image"
-          />
-        </div>
-      </InView>
 
       <section className="home-gallery-shell landing-reveal px-1 py-6 sm:px-2 sm:py-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -1095,11 +802,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <Carousel
-            setApi={setCarouselApi}
-            opts={{ align: "start", loop: true }}
-            className="w-full"
-          >
+          <Carousel opts={{ align: "start", loop: true }} className="w-full">
             <CarouselContent>
               {galleryImages.map((image) => (
                 <CarouselItem key={image.src} className="basis-full">
@@ -1134,264 +837,6 @@ export default function HomePage() {
           </Carousel>
         </div>
       </section>
-
-      <section className="landing-reveal home-feedback-panel rounded-[2rem] px-5 py-6 sm:px-8 sm:py-8">
-        <div className="flex flex-col gap-6">
-          <div className="max-w-4xl self-center text-center">
-            <h2 className="mt-3 flex flex-col items-center gap-2 font-display text-4xl leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.3rem]">
-              <span>
-                Sag uns, was <span className="text-[var(--color-harvest-600)]">du</span>
-              </span>
-              <TextLoop
-                className="home-word-rotator"
-                interval={2.6}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {feedbackOptions.map((option) => (
-                  <span key={option} className="home-word-rotator-option">
-                    {option}
-                  </span>
-                ))}
-              </TextLoop>
-            </h2>
-          </div>
-
-          <div className="flex flex-col gap-8">
-            {!user ? (
-              <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 border-b border-[var(--color-soil-900)]/8 pb-8">
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <span className="font-accent text-[0.72rem] uppercase tracking-[0.22em] text-[var(--color-harvest-600)]">
-                    Konto erstellen
-                  </span>
-                  <h3 className="font-display text-3xl leading-[0.98] tracking-[-0.03em] text-[var(--color-soil-900)] sm:text-[2.3rem]">
-                    Erntepost
-                  </h3>
-                </div>
-
-                <form onSubmit={handleInlineSignup} className="grid w-full gap-4 lg:grid-cols-2">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="landing-signup-name">Name</Label>
-                    <Input
-                      id="landing-signup-name"
-                      name="name"
-                      autoComplete="name"
-                      placeholder="Dein Name"
-                      className="h-12 rounded-[1rem] border-[var(--color-soil-900)]/10 bg-white px-4"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="landing-signup-email">E-Mail</Label>
-                    <Input
-                      id="landing-signup-email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="email@beispiel.de"
-                      className="h-12 rounded-[1rem] border-[var(--color-soil-900)]/10 bg-white px-4"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="landing-signup-password">Passwort</Label>
-                    <Input
-                      id="landing-signup-password"
-                      name="password"
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Mindestens 8 Zeichen"
-                      className="h-12 rounded-[1rem] border-[var(--color-soil-900)]/10 bg-white px-4"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="landing-signup-confirm">Passwort wiederholen</Label>
-                    <Input
-                      id="landing-signup-confirm"
-                      name="confirmPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Passwort bestätigen"
-                      className="h-12 rounded-[1rem] border-[var(--color-soil-900)]/10 bg-white px-4"
-                    />
-                  </div>
-
-                  <div className="lg:col-span-2 flex justify-center pt-1">
-                    <Button
-                      type="submit"
-                      size="lg"
-                      disabled={isSigningUp}
-                      className="h-12 rounded-full bg-primary px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-primary-foreground hover:bg-primary/90"
-                    >
-                      {isSigningUp ? (
-                        <>
-                          <Loader2 className="size-4 animate-spin" />
-                          Konto wird erstellt
-                        </>
-                      ) : (
-                        <>
-                          Kostenlos anmelden
-                          <ArrowRight data-icon="inline-end" />
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  {signupError ? (
-                    <p className="lg:col-span-2 text-center text-sm text-destructive">{signupError}</p>
-                  ) : null}
-                  {signupSuccess ? (
-                    <p className="lg:col-span-2 text-center text-sm text-[var(--color-forest-800)]">{signupSuccess}</p>
-                  ) : null}
-                </form>
-              </div>
-            ) : null}
-
-            <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 text-center">
-              {user ? (
-                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-forest-700)]/14 bg-[var(--color-forest-50)] px-3 py-1.5 text-sm text-[var(--color-forest-800)]">
-                  <Mail className="size-4" />
-                  Eingeloggt als {user.email}
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 rounded-[1.2rem] border border-[var(--color-soil-900)]/10 bg-white/80 px-4 py-3 text-sm text-[var(--color-soil-700)]">
-                  <MapPin className="size-4 shrink-0 text-[var(--color-lilac-700)]" />
-                  Erst anmelden, dann senden.
-                </div>
-              )}
-
-              <form onSubmit={handleFeedbackSubmit} className="flex w-full flex-col gap-4">
-                <Textarea
-                  id="feedback-message"
-                  rows={7}
-                  disabled={!user || isSubmitting}
-                  value={feedbackText}
-                  onChange={(event) => setFeedbackText(event.target.value)}
-                  placeholder="Wonach hältst du Ausschau? Welche Produkte oder Informationen wären für dich besonders interessant?"
-                  className="min-h-[12rem] rounded-[1.5rem] border-[var(--color-soil-900)]/10 bg-white px-5 py-4 text-base shadow-none placeholder:text-center"
-                />
-
-                <div className="flex flex-col items-center gap-3">
-                  <Button
-                    type="submit"
-                    size="lg"
-                    disabled={!user || isSubmitting || !feedbackText.trim()}
-                    className="h-12 rounded-full bg-[var(--color-lilac-400)] px-6 text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-[var(--color-earth-700)] hover:bg-[var(--color-lilac-300)] disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        Nachricht wird gesendet
-                      </>
-                    ) : (
-                      "Nachricht senden"
-                    )}
-                  </Button>
-
-                  {submitStatus === "success" ? (
-                    <p className="text-sm text-[var(--color-forest-800)]">
-                      Danke. Die Nachricht ist angekommen.
-                    </p>
-                  ) : null}
-                  {submitStatus === "error" ? (
-                    <p className="text-sm text-destructive">
-                      Die Nachricht konnte nicht gesendet werden.
-                    </p>
-                  ) : null}
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <InView
-        as="section"
-        once
-        viewOptions={{ margin: "0px 0px -20% 0px" }}
-        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        variants={{
-          hidden: { opacity: 0, y: 22, scale: 0.96 },
-          visible: { opacity: 1, y: 0, scale: 1 },
-        }}
-        className="home-logo-buffer"
-      >
-        <div className="home-logo-buffer-mark" aria-hidden="true">
-          <img
-            src="/img/agroforst_ff_icon_bg.png"
-            alt=""
-            className="home-logo-buffer-image"
-          />
-        </div>
-      </InView>
-
-      <section className="landing-reveal home-team-panel overflow-hidden rounded-[2rem] px-5 py-7 sm:px-8 sm:py-9">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-5 text-center">
-          <h2 className="font-display text-4xl leading-[0.94] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[3.5rem]">
-            Frank & Family
-          </h2>
-
-          <p className="max-w-3xl font-display text-[1.7rem] leading-[1.02] tracking-[-0.035em] text-[var(--color-soil-900)] sm:text-[2.25rem]">
-            Familienbetrieb auf dem Feld und im Shop.
-          </p>
-
-          <p className="max-w-3xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-            Bald kommen auch <span className="home-team-script">Biete/Suche</span> und{" "}
-            <span className="home-team-script">Blog</span> dazu!
-          </p>
-        </div>
-      </section>
-
-      <InView
-        as="section"
-        once
-        viewOptions={{ margin: "0px 0px -12% 0px" }}
-        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        variants={{
-          hidden: { opacity: 0, y: 42, filter: "blur(10px)" },
-          visible: { opacity: 1, y: 0, filter: "blur(0px)" },
-        }}
-        className="home-permdal-panel overflow-hidden rounded-[2rem] px-5 py-8 sm:px-8 sm:py-10"
-      >
-        <div className="mx-auto flex max-w-5xl flex-col gap-8">
-          <div className="flex flex-col items-center gap-5 text-center">
-            <div className="inline-flex w-fit items-center gap-3 rounded-full border border-[var(--color-soil-900)]/10 bg-white/72 px-3 py-2 shadow-[0_16px_34px_-24px_rgba(35,22,15,0.28)]">
-              <img
-                src="/img/permdal-logo.png"
-                alt="Permdal"
-                className="h-7 w-auto object-contain"
-              />
-            </div>
-            <h2 className="max-w-3xl font-display text-[2.4rem] leading-[0.94] tracking-[-0.05em] text-[var(--color-soil-900)] sm:text-[3.2rem]">
-              Permdal-Produkte sind unsere Philosophie des Wachsens.
-            </h2>
-            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Für uns bedeutet Permdal nicht nur ein Zertifikat, sondern eine klare
-              Haltung: vielfältig anbauen, langfristig Boden aufbauen und Produkte so
-              wachsen lassen, dass Hof, Landschaft und Gemeinschaft zusammen stärker
-              werden.
-            </p>
-            <p className="max-w-2xl text-base leading-7 text-[var(--color-soil-700)] sm:text-lg">
-              Das Statut beschreibt genau diesen Rahmen. Wer verstehen will, wie wir
-              unsere Produkte denken, findet darin die Grundlage unserer Arbeit.
-            </p>
-          </div>
-
-          <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4">
-            <img
-              src={permdalCertificateImageUrl}
-              alt="Permdal-Statut"
-              className="home-permdal-certificate-image"
-            />
-
-            <a
-              href={permdalCertificatePdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-accent text-[0.72rem] uppercase tracking-[0.2em] text-[var(--color-harvest-600)] underline underline-offset-4"
-            >
-              PDF separat öffnen
-            </a>
-          </div>
-        </div>
-      </InView>
     </PageShell>
   );
 }
