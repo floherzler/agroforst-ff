@@ -185,8 +185,35 @@ function getCompactOfferPriceSummary(offer: Angebot) {
   return getOfferPriceSummary(offer).replace(/^ab\s+/i, "");
 }
 
+function hasOfferTag(offer: Angebot, tag: string) {
+  const needle = tag.trim().toLowerCase();
+  return offer.tags.some((entry) => entry.trim().toLowerCase() === needle);
+}
+
 function hasSpecialOfferTag(offer: Angebot) {
-  return offer.tags.some((tag) => tag.trim().toLowerCase() === "sonderangebot");
+  return hasOfferTag(offer, "sonderangebot");
+}
+
+function hasProjectionOfferTag(offer: Angebot) {
+  return hasOfferTag(offer, "projektion");
+}
+
+type LiveOfferRow = {
+  offer: Angebot;
+  product?: Produkt;
+};
+
+function sortLiveOfferRows(left: LiveOfferRow, right: LiveOfferRow) {
+  const productCompare = (left.product?.name || "ZZZ").localeCompare(
+    right.product?.name || "ZZZ",
+    "de",
+  );
+
+  if (productCompare !== 0) {
+    return productCompare;
+  }
+
+  return (right.offer.year ?? 0) - (left.offer.year ?? 0);
 }
 
 function HeaderInfo({
@@ -318,9 +345,9 @@ export default function HomePage() {
     return new Map(liveProducts.map((product) => [product.id, product] as const));
   }, [liveProducts]);
 
-  const filteredLiveOffers = React.useMemo(() => {
+  const visibleLiveOffers = React.useMemo(() => {
     return liveOffers
-      .filter((offer) => offer.produktId && offer.mengeVerfuegbar > 0)
+      .filter((offer) => offer.produktId)
       .map((offer) => ({
         offer,
         product: liveProductsById.get(offer.produktId),
@@ -336,23 +363,12 @@ export default function HomePage() {
 
         return product.hauptkategorie === liveCategory;
       })
-      .sort((left, right) => {
-        const productCompare = (left.product?.name || "ZZZ").localeCompare(
-          right.product?.name || "ZZZ",
-          "de",
-        );
-
-        if (productCompare !== 0) {
-          return productCompare;
-        }
-
-        return (right.offer.year ?? 0) - (left.offer.year ?? 0);
-      });
+      .sort(sortLiveOfferRows);
   }, [liveCategory, liveOffers, liveProductsById]);
 
   const featuredLiveOffers = React.useMemo(() => {
-    return [...filteredLiveOffers]
-      .filter(({ offer }) => hasSpecialOfferTag(offer))
+    return [...visibleLiveOffers]
+      .filter(({ offer }) => hasSpecialOfferTag(offer) && offer.mengeVerfuegbar > 0)
       .sort((left, right) => {
         const availabilityCompare =
           getAvailabilityPercentage(left.offer) - getAvailabilityPercentage(right.offer);
@@ -362,7 +378,13 @@ export default function HomePage() {
 
         return (right.offer.year ?? 0) - (left.offer.year ?? 0);
       });
-  }, [filteredLiveOffers]);
+  }, [visibleLiveOffers]);
+
+  const projectionLiveOffers = React.useMemo(() => {
+    return [...visibleLiveOffers]
+      .filter(({ offer }) => hasProjectionOfferTag(offer))
+      .sort(sortLiveOfferRows);
+  }, [visibleLiveOffers]);
 
   return (
     <PageShell
@@ -618,6 +640,298 @@ export default function HomePage() {
                   </TableHeader>
                   <TableBody>
                     {featuredLiveOffers.map(({ offer, product }) => {
+                      const imageUrl = getProductImageUrl(product?.imageId);
+                      const categoryLabel =
+                        displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") ||
+                        "Offen";
+                      const availabilityPercentage = getAvailabilityPercentage(offer);
+                      const availabilityIndicatorClass =
+                        getAvailabilityIndicatorClass(availabilityPercentage);
+
+                      return (
+                        <TableRow key={offer.id}>
+                          <TableCell className="font-medium whitespace-normal">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="size-11 rounded-xl border border-border/60">
+                                {imageUrl ? (
+                                  <AvatarImage
+                                    src={imageUrl}
+                                    alt={product?.name || "Produktbild"}
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <AvatarFallback className="rounded-xl bg-secondary text-primary">
+                                    {(product?.name || "??").substring(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5">
+                                  <Link
+                                    to="/angebote/$id"
+                                    params={{ id: offer.id }}
+                                    className="w-fit transition hover:text-primary"
+                                  >
+                                    {product?.name || "Unbekanntes Produkt"}
+                                  </Link>
+                                  <HeaderInfo title="Kategorie" description={categoryLabel} />
+                                </div>
+                                {product?.sorte ? (
+                                  <span className="text-xs text-muted-foreground">{product.sorte}</span>
+                                ) : null}
+                                {offer.tags.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 pt-1">
+                                    {offer.tags.map((tag) => (
+                                      <Badge
+                                        key={tag}
+                                        variant={tag.trim().toLowerCase() === "sonderangebot" ? "default" : "outline"}
+                                      >
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex min-w-[12rem] max-w-[14rem] flex-col gap-2">
+                              <p className="text-sm font-medium text-foreground">
+                                noch {formatAvailability(offer)}
+                              </p>
+                              <Progress
+                                value={availabilityPercentage}
+                                className="gap-0"
+                                trackClassName="h-1.5 bg-muted/70"
+                                indicatorClassName={availabilityIndicatorClass}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>{getOfferPriceSummary(offer)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatHarvestRange(offer.ernteProjektion)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild size="sm" variant="outline" className="rounded-full">
+                              <Link to="/angebote/$id" params={{ id: offer.id }}>
+                                Angebot öffnen
+                                <ArrowRight data-icon="inline-end" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card
+        id="projektion"
+        tone="strong"
+        className="home-live-products-panel overflow-hidden rounded-[2rem] scroll-mt-8 sm:scroll-mt-12"
+      >
+        <CardHeader className="gap-3 border-b border-border/70">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex max-w-2xl flex-col gap-2">
+              <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="font-display text-[2rem] leading-[0.96] tracking-[-0.04em] text-[var(--color-soil-900)] sm:text-[2.6rem]">
+                  Projektion
+                </span>
+                <Button asChild size="sm" variant="outline" className="rounded-full w-fit">
+                  <Link to="/produkte">
+                    Alle ansehen
+                    <ArrowRight data-icon="inline-end" />
+                  </Link>
+                </Button>
+              </CardTitle>
+            </div>
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <Tabs
+                value={liveCategory}
+                onValueChange={(value) => setLiveCategory(value as LiveProductCategory)}
+                className="w-full sm:w-auto"
+              >
+                <TabsList variant="pill" className="grid w-full grid-cols-4 p-1 sm:w-auto">
+                  {liveProductCategories.map((category) => (
+                    <TabsTrigger key={category} value={category} className="px-3 text-xs sm:text-sm">
+                      {displayValueLabel(category) || category}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoadingProducts ? (
+            <div className="px-5 py-5 sm:px-6">
+              <div className="grid gap-3 md:hidden">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-[1.35rem] border border-border/70 bg-background/80 px-4 py-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="size-12 rounded-xl" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-28" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <Skeleton className="h-12 rounded-xl" />
+                      <Skeleton className="h-12 rounded-xl" />
+                    </div>
+                    <Skeleton className="mt-4 h-10 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-hidden rounded-[1.5rem] border border-border/70 md:block">
+                <div className="grid gap-0">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-[1.75fr_1fr_1fr_auto] gap-3 border-b border-border/70 px-4 py-4 last:border-b-0"
+                    >
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-9 w-24 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : productsError ? (
+            <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
+              Die Live-Angebote konnten gerade nicht geladen werden.
+            </div>
+          ) : projectionLiveOffers.length === 0 ? (
+            <div className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
+              Für diese Kategorie sind aktuell keine Projektions-Angebote gepflegt.
+            </div>
+          ) : (
+            <div className="px-5 py-5 sm:px-6">
+              <div className="grid gap-3 md:hidden">
+                {projectionLiveOffers.map(({ offer, product }) => {
+                  const imageUrl = getProductImageUrl(product?.imageId);
+                  const categoryLabel =
+                    displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") ||
+                    "Offen";
+                  const availabilityPercentage = getAvailabilityPercentage(offer);
+                  const availabilityIndicatorClass =
+                    getAvailabilityIndicatorClass(availabilityPercentage);
+
+                  return (
+                    <article
+                      key={offer.id}
+                      className="rounded-[1.35rem] border border-permdal-200/70 px-4 py-4 shadow-brand-soft"
+                      style={unifiedCardSurfaceStyle}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="size-12 rounded-xl border border-border/60">
+                          {imageUrl ? (
+                            <AvatarImage
+                              src={imageUrl}
+                              alt={product?.name || "Produktbild"}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <AvatarFallback className="rounded-xl bg-secondary text-primary">
+                              {(product?.name || "??").substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-stretch justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <Link
+                                  to="/angebote/$id"
+                                  params={{ id: offer.id }}
+                                  className="w-fit truncate text-base font-medium transition hover:text-primary"
+                                >
+                                  {product?.name || "Unbekanntes Produkt"}
+                                </Link>
+                                <HeaderInfo title="Kategorie" description={categoryLabel} />
+                              </div>
+                              {product?.sorte ? (
+                                <p className="mt-1 text-sm text-muted-foreground">{product.sorte}</p>
+                              ) : null}
+                            </div>
+
+                            <div className="flex w-1/2 shrink-0 flex-col justify-between px-1 py-0.5">
+                              <p className="text-sm font-medium text-foreground">
+                                noch {formatAvailability(offer)}
+                              </p>
+                              <Progress
+                                value={availabilityPercentage}
+                                className="gap-0"
+                                trackClassName="h-1.5 bg-muted/70"
+                                indicatorClassName={availabilityIndicatorClass}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-3">
+                        <div className="min-w-0 space-y-2">
+                          <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                            Preis ab
+                          </p>
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {getCompactOfferPriceSummary(offer)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Nächste Ernte: {formatHarvestRange(offer.ernteProjektion)}
+                          </p>
+                        </div>
+                        <Button asChild size="sm" variant="outline" className="shrink-0 rounded-full">
+                          <Link to="/angebote/$id" params={{ id: offer.id }}>
+                            Angebot öffnen
+                            <ArrowRight data-icon="inline-end" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="hidden overflow-hidden rounded-[1.5rem] border border-border/70 bg-background/80 md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead>Produkt</TableHead>
+                      <TableHead>Verfügbar</TableHead>
+                      <TableHead>
+                        <span className="inline-flex items-center gap-1.5">
+                          Preis
+                          <HeaderInfo
+                            title="Preis ab"
+                            description='Das "ab" zeigt den günstigsten Preis pro Einheit aus den verfügbaren Teilungen.'
+                          />
+                        </span>
+                      </TableHead>
+                      <TableHead>Ernte</TableHead>
+                      <TableHead className="text-right">
+                        <span className="inline-flex items-center justify-end gap-1.5">
+                          Details
+                          <HeaderInfo
+                            title="Angebot öffnen"
+                            description="Auf der Angebotsseite wählst du deine gewünschte Menge als Kombination aus den verfügbaren Paketgrößen und kaufst dort weiter."
+                          />
+                        </span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectionLiveOffers.map(({ offer, product }) => {
                       const imageUrl = getProductImageUrl(product?.imageId);
                       const categoryLabel =
                         displayValueLabel(product?.unterkategorie || product?.hauptkategorie || "") ||

@@ -363,6 +363,7 @@ export function useZentraleAdmin({
     setOfferStatus({ state: "loading" });
 
     try {
+      const wasEditing = Boolean(selectedOffer);
       const produktId = offerForm.produktId.trim();
       if (!produktId) {
         throw new Error("Bitte zuerst ein Produkt für das Angebot wählen.");
@@ -406,11 +407,16 @@ export function useZentraleAdmin({
         tags: splitList(offerForm.tags),
       });
 
+      setStaffeln((current) => applyRealtimeRecord(current, "create", saved));
+      setSelectedProductId(saved.produktId);
       setSelectedOfferId(saved.id);
+      setOfferForm(offerToFormState(saved));
       setActivePanel("angebote");
       setOfferStatus({
         state: "success",
-        message: selectedOfferId ? "Angebot wurde aktualisiert." : "Angebot wurde angelegt und ist direkt in der Liste sichtbar.",
+        message: wasEditing
+          ? "Angebot wurde aktualisiert."
+          : "Angebot wurde angelegt und ist direkt in der Liste sichtbar.",
       });
     } catch (rawError) {
       const message =

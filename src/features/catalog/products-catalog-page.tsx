@@ -264,7 +264,6 @@ export default function ProductsCatalogPage() {
 
       return [
         row.product.name,
-        row.product.sorte ?? "",
         row.product.hauptkategorie,
         row.product.unterkategorie ?? "",
         row.offer.beschreibung ?? "",
@@ -290,7 +289,6 @@ export default function ProductsCatalogPage() {
 
       return [
         row.product.name,
-        row.product.sorte ?? "",
         row.product.hauptkategorie,
         row.product.unterkategorie ?? "",
         row.product.saisonalitaet.join(" "),
@@ -843,7 +841,7 @@ function applyRealtimeRecord<T extends { id: string }>(
 }
 
 function buildProductLabel(product: Produkt) {
-  return `${product.name}${product.sorte ? ` – ${product.sorte}` : ""}`;
+  return product.name;
 }
 
 function isSpecialOfferTag(tag: string) {
