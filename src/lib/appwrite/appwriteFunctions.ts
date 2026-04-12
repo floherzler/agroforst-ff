@@ -76,6 +76,12 @@ const feedbackMessageInputSchema = z.object({
   text: z.string().trim().min(1),
 });
 
+const newsletterMessageInputSchema = z.object({
+  subject: z.string().trim().min(1),
+  content: z.string().trim().min(1),
+  preheader: z.string().trim().optional(),
+});
+
 type ExecutionPayload = {
   success?: boolean;
   error?: string;
@@ -230,4 +236,20 @@ export async function submitFeedbackMessage(input: {
   await executeValidatedFunction<void>(appwriteConfig.feedbackFunctionId, {
     text: parsedInput.text,
   });
+}
+
+export async function sendNewsletterMessage(input: {
+  subject: string;
+  content: string;
+  preheader?: string;
+}): Promise<{ messageId?: string; topicId?: string }> {
+  const parsedInput = newsletterMessageInputSchema.parse(input);
+  return executeValidatedFunction<{ messageId?: string; topicId?: string }>(
+    appwriteConfig.newsletterFunctionId,
+    {
+      subject: parsedInput.subject,
+      content: parsedInput.content,
+      preheader: parsedInput.preheader,
+    },
+  );
 }

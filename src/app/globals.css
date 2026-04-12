@@ -48,20 +48,20 @@
 
   --color-background: #f6f1e8;
   --color-foreground: #1f2021;
-  --color-card: rgba(255, 255, 255, 0.94);
+  --color-card: color-mix(in srgb, var(--color-permdal-50) 82%, var(--color-grain-50) 18%);
   --color-card-foreground: #1f2021;
   --color-popover: #ffffff;
   --color-popover-foreground: #1f2021;
   --color-primary: var(--color-earth-500);
   --color-primary-foreground: var(--color-grain-50);
-  --color-secondary: color-mix(in srgb, var(--color-earth-100) 44%, var(--color-grain-50) 56%);
+  --color-secondary: color-mix(in srgb, var(--color-permdal-100) 58%, var(--color-lilac-50) 10%, var(--color-grain-50) 32%);
   --color-secondary-foreground: var(--color-earth-600);
-  --color-muted: color-mix(in srgb, var(--color-grain-50) 66%, var(--color-earth-50) 20%, var(--color-lilac-50) 14%);
+  --color-muted: color-mix(in srgb, var(--color-permdal-50) 64%, var(--color-grain-50) 22%, var(--color-lilac-50) 14%);
   --color-muted-foreground: #5f625d;
-  --color-accent: color-mix(in srgb, var(--color-lilac-100) 74%, var(--color-grain-50) 26%);
+  --color-accent: color-mix(in srgb, var(--color-lilac-100) 68%, var(--color-permdal-100) 18%, var(--color-grain-50) 14%);
   --color-accent-foreground: var(--color-earth-500);
-  --color-border: rgba(39, 38, 21, 0.1);
-  --color-input: rgba(39, 38, 21, 0.1);
+  --color-border: rgba(74, 118, 76, 0.16);
+  --color-input: rgba(74, 118, 76, 0.16);
   --color-ring: color-mix(in srgb, var(--color-lilac-500) 58%, var(--color-earth-400) 42%);
   --color-destructive: #b42318;
   --color-destructive-foreground: #ffffff;
@@ -69,12 +69,12 @@
   --color-success-foreground: var(--color-permdal-800);
   --color-warning: #f3e3b7;
   --color-warning-foreground: #6f5212;
-  --color-surface-plain: color-mix(in srgb, var(--color-background) 88%, #ffffff 12%);
-  --color-surface-soft: color-mix(in srgb, var(--color-background) 72%, var(--color-lilac-50) 14%, #ffffff 14%);
-  --color-surface-raised: rgba(255, 251, 246, 0.94);
+  --color-surface-plain: color-mix(in srgb, var(--color-permdal-50) 74%, var(--color-grain-50) 18%, #ffffff 8%);
+  --color-surface-soft: color-mix(in srgb, var(--color-permdal-100) 62%, var(--color-lilac-50) 10%, var(--color-grain-50) 28%);
+  --color-surface-raised: color-mix(in srgb, var(--color-permdal-100) 78%, var(--color-grain-50) 14%, #ffffff 8%);
   --color-surface-inverse: var(--color-earth-600);
-  --color-surface-brand: color-mix(in srgb, var(--color-earth-700) 78%, var(--color-lilac-700) 14%, var(--color-permdal-700) 8%);
-  --color-surface-outline: rgba(39, 38, 21, 0.1);
+  --color-surface-brand: color-mix(in srgb, var(--color-earth-700) 76%, var(--color-lilac-700) 12%, var(--color-permdal-700) 12%);
+  --color-surface-outline: rgba(74, 118, 76, 0.14);
 
   --font-body: "Geist Sans", "Segoe UI", sans-serif;
   --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "URW Palladio L", serif;
@@ -187,7 +187,7 @@
   }
 
   .bg-surface-card {
-    background-color: color-mix(in srgb, var(--color-card) 92%, #ffffff 8%);
+    background-color: color-mix(in srgb, var(--color-card) 94%, white 6%);
   }
 
   .bg-surface-card-strong {
@@ -204,20 +204,26 @@
 
   .surface-card {
     background:
-      linear-gradient(180deg, color-mix(in srgb, var(--color-surface-raised) 94%, #ffffff 6%), color-mix(in srgb, var(--color-surface-soft) 86%, #ffffff 14%)),
+      radial-gradient(circle at 14% 14%, rgba(166, 153, 211, 0.14), transparent 22%),
+      radial-gradient(circle at 84% 10%, rgba(121, 177, 123, 0.18), transparent 24%),
+      repeating-linear-gradient(115deg, rgba(53, 89, 54, 0.055) 0 1px, transparent 1px 10px),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-surface-raised) 92%, white 8%), color-mix(in srgb, var(--color-surface-soft) 84%, white 16%)),
       var(--color-surface-plain);
-    border: 1px solid var(--color-surface-outline);
+    border: 1px solid color-mix(in srgb, var(--color-surface-outline) 78%, var(--color-lilac-200) 22%);
     box-shadow: var(--shadow-soft);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px) saturate(1.08);
   }
 
   .surface-card-strong {
     background:
-      linear-gradient(180deg, color-mix(in srgb, var(--color-surface-raised) 98%, #ffffff 2%), color-mix(in srgb, var(--color-surface-soft) 90%, #ffffff 10%)),
+      radial-gradient(circle at 18% 14%, rgba(166, 153, 211, 0.16), transparent 22%),
+      radial-gradient(circle at 82% 12%, rgba(121, 177, 123, 0.22), transparent 24%),
+      repeating-linear-gradient(115deg, rgba(53, 89, 54, 0.065) 0 1px, transparent 1px 9px),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-surface-raised) 96%, white 4%), color-mix(in srgb, var(--color-surface-soft) 88%, white 12%)),
       var(--color-surface-raised);
-    border: 1px solid var(--color-surface-outline);
+    border: 1px solid color-mix(in srgb, var(--color-surface-outline) 72%, var(--color-lilac-200) 28%);
     box-shadow: var(--shadow-strong);
-    backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px) saturate(1.1);
   }
 
   .surface-band {

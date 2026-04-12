@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAngebote, listProdukte, subscribeToAngebote, subscribeToProdukte } from "@/lib/appwrite/appwriteProducts";
+import { unifiedCardSurfaceStyle } from "@/lib/card-surface";
 import {
   Popover,
   PopoverContent,
@@ -515,7 +516,8 @@ export default function HomePage() {
                   return (
                     <article
                       key={offer.id}
-                      className="rounded-[1.35rem] border border-border/70 bg-background/85 px-4 py-4"
+                      className="rounded-[1.35rem] border border-permdal-200/70 px-4 py-4 shadow-brand-soft"
+                      style={unifiedCardSurfaceStyle}
                     >
                       <div className="flex items-start gap-3">
                         <Avatar className="size-12 rounded-xl border border-border/60">
@@ -768,7 +770,9 @@ export default function HomePage() {
             {homeInfoCards.map((card) => (
               <Card
                 key={card.title}
-                className="flex h-full flex-col overflow-hidden rounded-[1.6rem] border-border/70 bg-background/90 shadow-brand-soft"
+                tone="plain"
+                style={unifiedCardSurfaceStyle}
+                className="flex h-full flex-col overflow-hidden rounded-[1.6rem] border-permdal-200/70 shadow-brand-soft"
               >
                 <CardHeader className="gap-2">
                   <CardTitle className="text-2xl leading-tight tracking-tight text-foreground">

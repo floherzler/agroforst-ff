@@ -36,17 +36,25 @@
             "commands": "npm install --omit=dev"
         },
         {
-            "$id": "submitFeedback",
-            "name": "submitFeedback",
-            "runtime": "node-22",
-            "path": "functions/submitFeedback",
-            "entrypoint": "src/main.js",
-            "commands": "npm install --omit=dev"
+          "$id": "submitFeedback",
+          "name": "submitFeedback",
+          "runtime": "node-22",
+          "path": "functions/submitFeedback",
+          "entrypoint": "src/main.js",
+          "commands": "npm install --omit=dev"
         },
         {
-            "$id": "verifyPayment",
-            "name": "verifyPayment",
-            "runtime": "node-22",
+          "$id": "sendNewsletter",
+          "name": "sendNewsletter",
+          "runtime": "node-22",
+          "path": "functions/sendNewsletter",
+          "entrypoint": "src/main.js",
+          "commands": "npm install --omit=dev"
+        },
+        {
+          "$id": "verifyPayment",
+          "name": "verifyPayment",
+          "runtime": "node-22",
             "path": "functions/verifyPayment",
             "entrypoint": "src/main.js",
             "commands": "npm install --omit=dev"

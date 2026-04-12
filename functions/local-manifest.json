@@ -30,6 +30,12 @@
       "entrypoint": "src/main.js",
       "commands": "npm install --omit=dev"
     },
+    "sendNewsletter": {
+      "source": "functions/sendNewsletter",
+      "runtime": "node-22",
+      "entrypoint": "src/main.js",
+      "commands": "npm install --omit=dev"
+    },
     "verifyPayment": {
       "source": "functions/verifyPayment",
       "runtime": "node-22",

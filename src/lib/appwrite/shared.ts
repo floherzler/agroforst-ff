@@ -30,6 +30,7 @@ export const appwriteConfig = {
   commerceEventTableId: getManagedTableId("commerce_events"),
   feedbackTableId: getManagedTableId("kunden_nachrichten"),
   feedbackFunctionId: getManagedFunctionId("submitFeedback"),
+  newsletterFunctionId: getManagedFunctionId("sendNewsletter"),
   orderFunctionId: getManagedFunctionId("createOrder"),
   orderLifecycleFunctionId: getManagedFunctionId("manageOrder"),
   membershipFunctionId: getManagedFunctionId("createMembership"),

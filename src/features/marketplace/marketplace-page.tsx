@@ -160,14 +160,6 @@ export default function MarketplacePage() {
         title="Marktplatz"
         badge="Live-Angebote"
         description="Ein reduzierter Überblick über sofort verfügbare Angebote. Für die komplette Produktauswahl springst du direkt in den Produktkatalog."
-        actions={
-          <Button asChild>
-            <Link to="/produkte">
-              Produkte durchsuchen
-              <ArrowRight data-icon="inline-end" />
-            </Link>
-          </Button>
-        }
       />
 
       <SurfaceSection className="p-5 sm:p-6">

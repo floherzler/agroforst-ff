@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
 
 import {
   EmptyState,
@@ -10,7 +9,6 @@ import {
   PageShell,
 } from "@/components/base/page-shell";
 import BlogPostList from "@/components/BlogPostList";
-import { Button } from "@/components/ui/button";
 import { listBlogPosts } from "@/lib/appwrite/appwriteProducts";
 
 export default function Page() {
@@ -37,11 +35,6 @@ export default function Page() {
       <PageHeader
         title="Blog"
         description="Neuigkeiten, Artikel und Updates aus unserem Team."
-        actions={
-          <Button asChild variant="outline">
-            <Link to="/produkte">Zu den Produkten</Link>
-          </Button>
-        }
       />
 
       {posts.length === 0 ? (

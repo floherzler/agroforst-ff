@@ -1,5 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 import { PageHeader, PageShell, SurfaceSection } from "@/components/base/page-shell";
 import { Button } from "@/components/ui/button";
@@ -14,22 +13,6 @@ export default function PermdalPage() {
         title="Permdal"
         badge="Statut und Zertifikat"
         description="Kurz, was das Permdal-Statut für unseren Betrieb bedeutet."
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/ueber-aff">
-                Über uns
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button asChild>
-              <a href={certificatePdfUrl} download target="_blank" rel="noreferrer">
-                <Download className="size-4" />
-                PDF öffnen
-              </a>
-            </Button>
-          </div>
-        )}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">

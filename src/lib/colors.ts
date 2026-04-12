@@ -95,7 +95,7 @@ export const colorCombinations = {
 
   // Cards
   card: {
-    background: 'bg-white/85',
+    background: 'bg-permdal-50/90',
     border: 'border-permdal-100',
     hover: 'hover:shadow-md',
   },

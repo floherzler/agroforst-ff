@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Eye,
   ImagePlus,
+  Mail,
   Plus,
   ReceiptText,
   Save,
@@ -59,6 +60,7 @@ import {
 } from "@/features/zentrale/admin-domain";
 import { formatHarvestRange, getOfferPriceSummary } from "@/features/catalog/catalog";
 import { useZentraleAdmin } from "@/features/zentrale/use-zentrale-admin";
+import { NewsletterBuilder } from "@/features/zentrale/newsletter-builder";
 import { listAdminMembershipPayments, listAdminMemberships, type MembershipPayment, type MembershipRecord } from "@/lib/appwrite/appwriteMemberships";
 import { listBackofficeEvents } from "@/lib/appwrite/appwriteEvents";
 import { verifyPayment, manageMembership, manageOrder } from "@/lib/appwrite/appwriteFunctions";
@@ -1355,7 +1357,7 @@ export function ZentraleAdminWorkspace({
   });
   const [drafts, setDrafts] = useState<Record<string, ProductDraftRecord>>({});
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
-  const [activePanel, setActivePanel] = useState<"produkte" | "angebote" | "biete-suche" | "zahlungen" | "mitgliedschaften" | "bestellungen" | "office">("produkte");
+  const [activePanel, setActivePanel] = useState<"produkte" | "angebote" | "biete-suche" | "newsletter" | "zahlungen" | "mitgliedschaften" | "bestellungen" | "office">("produkte");
   const [payments, setPayments] = useState<MembershipPayment[]>(initialPayments);
   const [memberships, setMemberships] = useState<MembershipRecord[]>(initialMemberships);
   const [orders, setOrders] = useState<AdminOrderRecord[]>(initialOrders);
@@ -1645,6 +1647,10 @@ export function ZentraleAdminWorkspace({
               <TabsTrigger value="biete-suche">
                 <ArrowRightLeft data-icon="inline-start" />
                 Biete/Suche
+              </TabsTrigger>
+              <TabsTrigger value="newsletter">
+                <Mail data-icon="inline-start" />
+                Newsletter
               </TabsTrigger>
               <TabsTrigger value="zahlungen">
                 <ReceiptText data-icon="inline-start" />
@@ -1987,6 +1993,16 @@ export function ZentraleAdminWorkspace({
               ))}
             </TableBody>
           </Table>
+            </CompactSection>
+          </TabsContent>
+
+          <TabsContent value="newsletter" className="mt-0 w-full">
+            <CompactSection
+              id="zentrale-newsletter"
+              title="Newsletter"
+              description="Bausteine aus freien Texten und aktuellen Angeboten. Lokaler Entwurf, noch ohne Versand."
+            >
+              <NewsletterBuilder offers={state.visibleOffers} productById={state.productById} />
             </CompactSection>
           </TabsContent>
 

@@ -11,22 +11,6 @@ export default function UeberAffPage() {
         title="Über Agroforst Frank Fege"
         badge="Hof, Team und Idee"
         description="Kurz, wer wir sind, wie wir arbeiten und warum Agroforst für uns mehr ist als nur ein Schlagwort."
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/permdal">
-                Permdal
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/produkte">
-                Produkte
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </div>
-        )}
       />
 
       <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">

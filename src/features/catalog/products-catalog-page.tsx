@@ -59,6 +59,7 @@ import {
   getOfferPriceSummary,
   getProductImageUrl,
 } from "@/features/catalog/catalog";
+import { unifiedCardSurfaceStyle } from "@/lib/card-surface";
 import { displayValueLabel } from "@/features/zentrale/admin-domain";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
@@ -313,22 +314,6 @@ export default function ProductsCatalogPage() {
       <PageHeader
         title="Produkte"
         description="Aktive Angebote und gesamter Bestand in einer Ansicht. Wechsel zwischen Angebot und Produkt, suche direkt und filter nach Schlagworten."
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/feedback">
-                Feedback
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/">
-                Zur Startseite
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </div>
-        )}
       />
 
       <SurfaceSection
@@ -617,9 +602,11 @@ export default function ProductsCatalogPage() {
             return (
               <Card
                 key={row.id}
+                tone="plain"
+                style={unifiedCardSurfaceStyle}
                 className={cn(
-                  "border-border/80 bg-card/95 shadow-brand-soft",
-                  hasOffers ? "ring-1 ring-inset ring-primary/10" : "ring-1 ring-inset ring-border/40",
+                  "border-permdal-200/70 shadow-brand-soft",
+                  hasOffers ? "ring-1 ring-inset ring-permdal-200/70" : "ring-1 ring-inset ring-border/40",
                 )}
               >
                 <CardHeader className="gap-3">
@@ -722,7 +709,11 @@ function OfferCard({ row }: { row: CatalogOfferRow }) {
   const offerAvailable = row.offer.mengeVerfuegbar > 0;
 
   return (
-    <Card className="border-border/80 bg-card/95 shadow-brand-soft">
+    <Card
+      tone="plain"
+      style={unifiedCardSurfaceStyle}
+      className="border-permdal-200/70 shadow-brand-soft"
+    >
       <CardHeader className="gap-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-2">

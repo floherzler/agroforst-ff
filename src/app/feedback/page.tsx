@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Loader2, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 
 import { PageHeader, PageShell, SurfaceSection, EmptyState } from "@/components/base/page-shell";
 import { Button } from "@/components/ui/button";
@@ -44,22 +44,6 @@ export default function FeedbackPage() {
         title="Feedback"
         badge="Nur mit bestätigter E-Mail"
         description="Sag uns kurz, was fehlt, was du dir wünschst oder was wir besser machen können."
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/produkte">
-                Produkte
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/">
-                Startseite
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </div>
-        )}
       />
 
       {!user ? (
